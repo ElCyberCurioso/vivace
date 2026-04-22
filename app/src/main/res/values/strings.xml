@@ -1,0 +1,25 @@
+<resources>
+    <string name="app_name">GuitarChords</string>
+    <string name="playlists">Listas</string>
+    <string name="new_playlist">Nueva lista</string>
+    <string name="playlist_name">Nombre de la lista</string>
+    <string name="songs">Canciones</string>
+    <string name="new_song">Nueva canción</string>
+    <string name="song_title">Título</string>
+    <string name="song_artist">Artista</string>
+    <string name="lyrics">Letra</string>
+    <string name="save">Guardar</string>
+    <string name="cancel">Cancelar</string>
+    <string name="delete">Borrar</string>
+    <string name="edit">Editar</string>
+    <string name="favorite">Favorita</string>
+    <string name="export_zip">Exportar ZIP</string>
+    <string name="import_zip">Importar ZIP</string>
+    <string name="share">Compartir</string>
+    <string name="print">Imprimir</string>
+    <string name="autoscroll">Auto-scroll</string>
+    <string name="font_size">Tamaño texto</string>
+    <string name="insert_chord">Insertar acorde</string>
+    <string name="variation">Variación</string>
+    <string name="confirm_delete">¿Borrar?</string>
+</resources>

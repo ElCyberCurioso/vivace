@@ -1,0 +1,60 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+gradle-app.setting
+!gradle-wrapper.properties
+
+# Android build outputs
+/app/build/
+**/build/
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+bin/
+gen/
+out/
+release/
+
+# Local configuration (SDK path, API keys)
+local.properties
+secrets.properties
+keystore.properties
+
+# Signing
+*.jks
+*.keystore
+
+# Native builds
+.externalNativeBuild/
+.cxx/
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+captures/
+.navigation/
+
+# Kotlin / KSP / KAPT caches
+.kotlin/
+
+# Logs & profiling
+*.log
+*.hprof
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors
+*.swp
+*.swo
+*~
+.vscode/
+
+# Python/tooling accidentally dropped in the tree
+__pycache__/
+*.pyc
