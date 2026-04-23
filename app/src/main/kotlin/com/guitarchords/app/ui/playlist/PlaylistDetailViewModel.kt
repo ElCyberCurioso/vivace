@@ -13,6 +13,7 @@ import com.guitarchords.app.data.Song
 import com.guitarchords.app.data.ZipManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
@@ -38,9 +39,17 @@ class PlaylistDetailViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { playlistFlow.value = repo.playlist(id) }
     }
 
+    val otherPlaylists = combine(repo.playlists(), playlistIdFlow) { all, currentId ->
+        all.filter { it.id != currentId }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     fun toggleFavorite(song: Song) = viewModelScope.launch { repo.toggleFavorite(song) }
 
     fun deleteSong(id: Long) = viewModelScope.launch { repo.deleteSong(id) }
+
+    fun moveSong(songId: Long, targetPlaylistId: Long?) = viewModelScope.launch {
+        repo.moveSong(songId, targetPlaylistId)
+    }
 
     fun exportZipShare(onReady: (Intent) -> Unit) = viewModelScope.launch {
         val id = playlistIdFlow.value

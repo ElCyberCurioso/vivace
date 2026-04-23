@@ -23,7 +23,10 @@ import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Piano
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -58,10 +61,16 @@ fun PlaylistsScreen(
     onOpenDictionary: () -> Unit = {},
     onOpenFinder: () -> Unit = {},
     onOpenTuner: () -> Unit = {},
+    onOpenSearch: () -> Unit = {},
+    onOpenFavorites: () -> Unit = {},
+    onAddSong: () -> Unit = {},
+    onOpenUnassigned: () -> Unit = {},
     vm: PlaylistsViewModel = viewModel()
 ) {
     val playlists by vm.playlists.collectAsStateWithLifecycle()
+    val unassignedCount by vm.unassignedCount.collectAsStateWithLifecycle()
     var showCreate by remember { mutableStateOf(false) }
+    var showFabChooser by remember { mutableStateOf(false) }
     var renaming by remember { mutableStateOf<Playlist?>(null) }
     var deleting by remember { mutableStateOf<Playlist?>(null) }
 
@@ -76,11 +85,17 @@ fun PlaylistsScreen(
             TopAppBar(
                 title = { Text("Listas") },
                 actions = {
+                    IconButton(onClick = onOpenSearch) {
+                        Icon(Icons.Default.Search, "Buscar canciones")
+                    }
+                    IconButton(onClick = onOpenFavorites) {
+                        Icon(Icons.Default.Star, "Favoritas")
+                    }
                     IconButton(onClick = onOpenTuner) {
                         Icon(Icons.Default.GraphicEq, "Afinador")
                     }
                     IconButton(onClick = onOpenFinder) {
-                        Icon(Icons.Default.Search, "Buscador de acordes")
+                        Icon(Icons.Default.Piano, "Buscador de acordes")
                     }
                     IconButton(onClick = onOpenDictionary) {
                         Icon(Icons.Default.MenuBook, "Diccionario")
@@ -94,12 +109,12 @@ fun PlaylistsScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showCreate = true }) {
-                Icon(Icons.Default.Add, "Nueva lista")
+            FloatingActionButton(onClick = { showFabChooser = true }) {
+                Icon(Icons.Default.Add, "Añadir")
             }
         }
     ) { pv ->
-        if (playlists.isEmpty()) {
+        if (playlists.isEmpty() && unassignedCount == 0) {
             EmptyState(pv)
         } else {
             LazyColumn(
@@ -109,6 +124,11 @@ fun PlaylistsScreen(
                     .fillMaxSize()
                     .padding(pv)
             ) {
+                if (unassignedCount > 0) {
+                    item(key = "unassigned") {
+                        UnassignedRow(count = unassignedCount, onClick = onOpenUnassigned)
+                    }
+                }
                 items(playlists, key = { it.id }) { pl ->
                     PlaylistRow(
                         playlist = pl,
@@ -119,6 +139,48 @@ fun PlaylistsScreen(
                 }
             }
         }
+    }
+
+    if (showFabChooser) {
+        AlertDialog(
+            onDismissRequest = { showFabChooser = false },
+            title = { Text("¿Qué quieres añadir?") },
+            text = {
+                Column {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                showFabChooser = false
+                                showCreate = true
+                            }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.LibraryMusic, null)
+                        Spacer(Modifier.size(12.dp))
+                        Text("Nueva lista", style = MaterialTheme.typography.bodyLarge)
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                showFabChooser = false
+                                onAddSong()
+                            }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.MusicNote, null)
+                        Spacer(Modifier.size(12.dp))
+                        Text("Nueva canción", style = MaterialTheme.typography.bodyLarge)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showFabChooser = false }) { Text("Cancelar") }
+            }
+        )
     }
 
     if (showCreate) {
@@ -174,6 +236,35 @@ private fun EmptyState(pv: PaddingValues) {
             Spacer(Modifier.height(12.dp))
             Text("Sin listas aún", style = MaterialTheme.typography.titleMedium)
             Text("Pulsa + para crear una", style = MaterialTheme.typography.bodyMedium)
+        }
+    }
+}
+
+@Composable
+private fun UnassignedRow(count: Int, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp)
+        ) {
+            Icon(Icons.Default.MusicNote, null)
+            Spacer(Modifier.size(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "Canciones sin lista",
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Text(
+                    "$count canción${if (count == 1) "" else "es"}",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
         }
     }
 }

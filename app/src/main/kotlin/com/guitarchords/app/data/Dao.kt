@@ -57,4 +57,33 @@ interface SongDao {
 
     @Query("DELETE FROM songs WHERE id = :id")
     suspend fun deleteById(id: Long)
+
+    @Query("SELECT * FROM songs WHERE favorite = 1 ORDER BY title COLLATE NOCASE ASC")
+    fun observeFavorites(): Flow<List<Song>>
+
+    @Query(
+        """
+        SELECT * FROM songs
+        WHERE title LIKE '%' || :q || '%' COLLATE NOCASE
+           OR artist LIKE '%' || :q || '%' COLLATE NOCASE
+           OR genre LIKE '%' || :q || '%' COLLATE NOCASE
+        ORDER BY title COLLATE NOCASE ASC
+        """
+    )
+    fun search(q: String): Flow<List<Song>>
+
+    @Query("UPDATE songs SET playlist_id = :newPlaylistId, position = :position WHERE id = :id")
+    suspend fun moveSong(id: Long, newPlaylistId: Long?, position: Int)
+
+    @Query("SELECT COALESCE(MAX(position), -1) + 1 FROM songs WHERE playlist_id = :playlistId")
+    suspend fun nextPosition(playlistId: Long): Int
+
+    @Query("SELECT COALESCE(MAX(position), -1) + 1 FROM songs WHERE playlist_id IS NULL")
+    suspend fun nextPositionUnassigned(): Int
+
+    @Query("SELECT * FROM songs WHERE playlist_id IS NULL ORDER BY position ASC, id ASC")
+    fun observeUnassigned(): Flow<List<Song>>
+
+    @Query("SELECT COUNT(*) FROM songs WHERE playlist_id IS NULL")
+    fun countUnassigned(): Flow<Int>
 }

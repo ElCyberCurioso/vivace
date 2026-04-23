@@ -1,4 +1,4 @@
-package com.guitarchords.app.ui.playlist
+package com.guitarchords.app.ui.unassigned
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -21,7 +21,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DriveFileMove
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LibraryMusic
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarOutline
@@ -37,8 +36,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,7 +43,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -55,33 +51,24 @@ import com.guitarchords.app.data.Song
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PlaylistDetailScreen(
-    playlistId: Long,
+fun UnassignedSongsScreen(
     onSongClick: (Long) -> Unit,
-    onAddSong: () -> Unit,
     onEditSong: (Long) -> Unit,
+    onAddSong: () -> Unit,
     onBack: () -> Unit,
-    vm: PlaylistDetailViewModel = viewModel()
+    vm: UnassignedSongsViewModel = viewModel()
 ) {
-    LaunchedEffect(playlistId) { vm.load(playlistId) }
-    val playlist by vm.playlist.collectAsState()
     val songs by vm.songs.collectAsStateWithLifecycle()
-    val otherPlaylists by vm.otherPlaylists.collectAsStateWithLifecycle()
-    val ctx = LocalContext.current
+    val playlists by vm.playlists.collectAsStateWithLifecycle()
     var deleting by remember { mutableStateOf<Song?>(null) }
     var moving by remember { mutableStateOf<Song?>(null) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(playlist?.name ?: "") },
+                title = { Text("Canciones sin lista") },
                 navigationIcon = {
                     IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Atrás") }
-                },
-                actions = {
-                    IconButton(onClick = {
-                        vm.exportZipShare { intent -> ctx.startActivity(intent) }
-                    }) { Icon(Icons.Default.Share, "Compartir") }
                 }
             )
         },
@@ -99,19 +86,16 @@ fun PlaylistDetailScreen(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Default.MusicNote, null, modifier = Modifier.size(72.dp))
                     Spacer(Modifier.size(8.dp))
-                    Text("Sin canciones")
+                    Text("Sin canciones sueltas")
                 }
             }
         } else {
-            val sorted = remember(songs) {
-                songs.sortedWith(compareByDescending<Song> { it.favorite }.thenBy { it.position }.thenBy { it.title })
-            }
             LazyColumn(
                 contentPadding = PaddingValues(12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxSize().padding(pv)
             ) {
-                items(sorted, key = { it.id }) { s ->
+                items(songs, key = { it.id }) { s ->
                     SongRow(
                         song = s,
                         onClick = { onSongClick(s.id) },
@@ -143,12 +127,12 @@ fun PlaylistDetailScreen(
     }
 
     moving?.let { s ->
-        MovePlaylistDialog(
+        AssignPlaylistDialog(
             songTitle = s.title,
-            targets = otherPlaylists,
+            targets = playlists,
             onDismiss = { moving = null },
             onPick = { target ->
-                vm.moveSong(s.id, target?.id)
+                vm.moveSong(s.id, target.id)
                 moving = null
             }
         )
@@ -156,44 +140,35 @@ fun PlaylistDetailScreen(
 }
 
 @Composable
-private fun MovePlaylistDialog(
+private fun AssignPlaylistDialog(
     songTitle: String,
     targets: List<Playlist>,
     onDismiss: () -> Unit,
-    onPick: (Playlist?) -> Unit
+    onPick: (Playlist) -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Mover \"$songTitle\"") },
+        title = { Text("Asignar \"$songTitle\" a lista") },
         text = {
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onPick(null) }
-                            .padding(vertical = 10.dp, horizontal = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Default.MusicNote, null)
-                        Spacer(Modifier.size(12.dp))
-                        Text("Sin lista", style = MaterialTheme.typography.bodyLarge)
-                    }
-                }
-                items(targets, key = { it.id }) { p ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onPick(p) }
-                            .padding(vertical = 10.dp, horizontal = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Default.LibraryMusic, null)
-                        Spacer(Modifier.size(12.dp))
-                        Text(p.name, style = MaterialTheme.typography.bodyLarge)
+            if (targets.isEmpty()) {
+                Text("No hay listas. Crea una lista primero.")
+            } else {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    items(targets, key = { it.id }) { p ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onPick(p) }
+                                .padding(vertical = 10.dp, horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.LibraryMusic, null)
+                            Spacer(Modifier.size(12.dp))
+                            Text(p.name, style = MaterialTheme.typography.bodyLarge)
+                        }
                     }
                 }
             }
@@ -240,7 +215,7 @@ private fun SongRow(
                 if (sub.isNotEmpty())
                     Text(sub, style = MaterialTheme.typography.bodySmall)
             }
-            IconButton(onClick = onMove) { Icon(Icons.Default.DriveFileMove, "Mover") }
+            IconButton(onClick = onMove) { Icon(Icons.Default.DriveFileMove, "Asignar a lista") }
             IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, "Editar") }
             IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, "Borrar") }
         }

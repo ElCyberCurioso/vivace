@@ -20,6 +20,10 @@ class PlaylistsViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList()
     )
 
+    val unassignedCount = repo.unassignedCount().stateIn(
+        viewModelScope, SharingStarted.WhileSubscribed(5_000), 0
+    )
+
     fun create(name: String) = viewModelScope.launch {
         if (name.isNotBlank()) repo.createPlaylist(name.trim())
     }

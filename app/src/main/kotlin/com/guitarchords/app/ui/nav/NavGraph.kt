@@ -7,12 +7,15 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.guitarchords.app.ui.dictionary.ChordDictionaryScreen
+import com.guitarchords.app.ui.favorites.FavoritesScreen
 import com.guitarchords.app.ui.finder.ChordFinderScreen
 import com.guitarchords.app.ui.playlist.PlaylistDetailScreen
 import com.guitarchords.app.ui.playlists.PlaylistsScreen
+import com.guitarchords.app.ui.search.SongSearchScreen
 import com.guitarchords.app.ui.song.SongEditorScreen
 import com.guitarchords.app.ui.song.SongViewScreen
 import com.guitarchords.app.ui.tuner.TunerScreen
+import com.guitarchords.app.ui.unassigned.UnassignedSongsScreen
 
 object Route {
     const val Playlists = "playlists"
@@ -23,6 +26,9 @@ object Route {
     const val ChordDictionary = "chords/dictionary"
     const val ChordFinder = "chords/finder"
     const val Tuner = "tuner"
+    const val SongSearch = "songs/search"
+    const val Favorites = "songs/favorites"
+    const val Unassigned = "songs/unassigned"
 
     fun playlistDetail(id: Long) = "playlist/$id"
     fun songView(id: Long) = "song/view/$id"
@@ -38,7 +44,11 @@ fun NavGraph(nav: NavHostController) {
                 onPlaylistClick = { nav.navigate(Route.playlistDetail(it)) },
                 onOpenDictionary = { nav.navigate(Route.ChordDictionary) },
                 onOpenFinder = { nav.navigate(Route.ChordFinder) },
-                onOpenTuner = { nav.navigate(Route.Tuner) }
+                onOpenTuner = { nav.navigate(Route.Tuner) },
+                onOpenSearch = { nav.navigate(Route.SongSearch) },
+                onOpenFavorites = { nav.navigate(Route.Favorites) },
+                onAddSong = { nav.navigate(Route.songNew(0L)) },
+                onOpenUnassigned = { nav.navigate(Route.Unassigned) }
             )
         }
         composable(Route.ChordDictionary) {
@@ -49,6 +59,26 @@ fun NavGraph(nav: NavHostController) {
         }
         composable(Route.Tuner) {
             TunerScreen(onBack = { nav.popBackStack() })
+        }
+        composable(Route.SongSearch) {
+            SongSearchScreen(
+                onSongClick = { nav.navigate(Route.songView(it)) },
+                onBack = { nav.popBackStack() }
+            )
+        }
+        composable(Route.Favorites) {
+            FavoritesScreen(
+                onSongClick = { nav.navigate(Route.songView(it)) },
+                onBack = { nav.popBackStack() }
+            )
+        }
+        composable(Route.Unassigned) {
+            UnassignedSongsScreen(
+                onSongClick = { nav.navigate(Route.songView(it)) },
+                onEditSong = { nav.navigate(Route.songEdit(it)) },
+                onAddSong = { nav.navigate(Route.songNew(0L)) },
+                onBack = { nav.popBackStack() }
+            )
         }
         composable(
             Route.PlaylistDetail,

@@ -9,6 +9,16 @@ class Repository(
     fun playlists(): Flow<List<Playlist>> = playlistDao.observeAll()
     fun songs(playlistId: Long): Flow<List<Song>> = songDao.observeByPlaylist(playlistId)
     fun song(id: Long): Flow<Song?> = songDao.observeById(id)
+    fun favorites(): Flow<List<Song>> = songDao.observeFavorites()
+    fun search(q: String): Flow<List<Song>> = songDao.search(q)
+    fun unassigned(): Flow<List<Song>> = songDao.observeUnassigned()
+    fun unassignedCount(): Flow<Int> = songDao.countUnassigned()
+
+    suspend fun moveSong(songId: Long, targetPlaylistId: Long?) {
+        val pos = if (targetPlaylistId == null) songDao.nextPositionUnassigned()
+                  else songDao.nextPosition(targetPlaylistId)
+        songDao.moveSong(songId, targetPlaylistId, pos)
+    }
 
     suspend fun playlist(id: Long): Playlist? = playlistDao.getById(id)
     suspend fun songsOf(playlistId: Long): List<Song> = songDao.getByPlaylist(playlistId)
@@ -38,6 +48,7 @@ class Repository(
                     playlistId = pid,
                     title = s.title,
                     artist = s.artist,
+                    genre = s.genre,
                     content = s.content,
                     favorite = s.favorite,
                     position = if (s.position != 0) s.position else idx
@@ -56,6 +67,7 @@ class Repository(
                 SongExport(
                     title = it.title,
                     artist = it.artist,
+                    genre = it.genre,
                     content = it.content,
                     favorite = it.favorite,
                     position = it.position

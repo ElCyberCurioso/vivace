@@ -20,6 +20,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
@@ -32,6 +33,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.foundation.clickable
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -45,8 +47,10 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.guitarchords.app.chords.ChordLibrary
+import com.guitarchords.app.data.Playlist
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,6 +73,8 @@ fun SongEditorScreen(
         }
     }
     var pickerOpen by remember { mutableStateOf(false) }
+    var playlistPickerOpen by remember { mutableStateOf(false) }
+    val playlists by vm.playlists.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -109,10 +115,24 @@ fun SongEditorScreen(
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(8.dp))
+            OutlinedTextField(
+                value = song.genre,
+                onValueChange = vm::updateGenre,
+                label = { Text("Género") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(8.dp))
+            val plName = song.playlistId?.let { pid -> playlists.firstOrNull { it.id == pid }?.name } ?: "Sin lista"
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
+                AssistChip(
+                    onClick = { playlistPickerOpen = true },
+                    label = { Text("Lista: $plName") },
+                    leadingIcon = { Icon(Icons.Default.LibraryMusic, null) }
+                )
                 AssistChip(
                     onClick = { pickerOpen = true },
                     label = { Text("Insertar acorde") },
@@ -144,6 +164,18 @@ fun SongEditorScreen(
         }
     }
 
+    if (playlistPickerOpen) {
+        PlaylistPickerDialog(
+            playlists = playlists,
+            currentId = song.playlistId,
+            onDismiss = { playlistPickerOpen = false },
+            onPick = {
+                vm.updatePlaylist(it)
+                playlistPickerOpen = false
+            }
+        )
+    }
+
     if (pickerOpen) {
         ChordPickerDialog(
             onDismiss = { pickerOpen = false },
@@ -160,6 +192,57 @@ fun SongEditorScreen(
             }
         )
     }
+}
+
+@Composable
+private fun PlaylistPickerDialog(
+    playlists: List<Playlist>,
+    currentId: Long?,
+    onDismiss: () -> Unit,
+    onPick: (Long?) -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Elige lista") },
+        text = {
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onPick(null) }
+                            .padding(vertical = 10.dp, horizontal = 4.dp)
+                    ) {
+                        Icon(Icons.Default.MusicNote, null)
+                        Spacer(Modifier.size(12.dp))
+                        Text(
+                            "Sin lista" + if (currentId == null) " ✓" else "",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
+                }
+                items(playlists) { p ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onPick(p.id) }
+                            .padding(vertical = 10.dp, horizontal = 4.dp)
+                    ) {
+                        Icon(Icons.Default.LibraryMusic, null)
+                        Spacer(Modifier.size(12.dp))
+                        Text(
+                            p.name + if (currentId == p.id) " ✓" else "",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Cerrar") } }
+    )
 }
 
 @Composable

@@ -18,6 +18,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Album
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -64,6 +65,7 @@ fun ChordDictionaryScreen(onBack: () -> Unit) {
     var root by remember { mutableStateOf<String?>(null) }
     var quality by remember { mutableStateOf<String?>(null) }
     var selected by remember { mutableStateOf<String?>(null) }
+    var showCircle by remember { mutableStateOf(false) }
 
     val all = remember { ChordLibrary.all() }
     val filtered = remember(root, quality, all) {
@@ -76,13 +78,26 @@ fun ChordDictionaryScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Diccionario de acordes") },
+                title = { Text(if (showCircle) "Círculo de quintas" else "Diccionario de acordes") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Atrás") }
+                    IconButton(onClick = {
+                        if (showCircle) showCircle = false else onBack()
+                    }) { Icon(Icons.Default.ArrowBack, "Atrás") }
+                },
+                actions = {
+                    IconButton(onClick = { showCircle = !showCircle }) {
+                        Icon(Icons.Default.Album, "Círculo de quintas")
+                    }
                 }
             )
         }
     ) { pv ->
+        if (showCircle) {
+            Box(Modifier.fillMaxSize().padding(pv)) {
+                CircleOfFifthsView(onChordClick = { selected = it })
+            }
+            return@Scaffold
+        }
         Column(Modifier.fillMaxSize().padding(pv)) {
             FilterRow(
                 label = "Raíz",

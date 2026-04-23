@@ -20,15 +20,16 @@ data class Playlist(
         entity = Playlist::class,
         parentColumns = ["id"],
         childColumns = ["playlist_id"],
-        onDelete = ForeignKey.CASCADE
+        onDelete = ForeignKey.SET_NULL
     )],
     indices = [Index("playlist_id")]
 )
 data class Song(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    @ColumnInfo(name = "playlist_id") val playlistId: Long,
+    @ColumnInfo(name = "playlist_id") val playlistId: Long? = null,
     val title: String,
     val artist: String = "",
+    val genre: String = "",
     val content: String = "",
     val favorite: Boolean = false,
     @ColumnInfo(name = "position") val position: Int = 0,
@@ -46,6 +47,7 @@ data class PlaylistExport(
 data class SongExport(
     val title: String,
     val artist: String = "",
+    val genre: String = "",
     val content: String = "",
     val favorite: Boolean = false,
     val position: Int = 0
