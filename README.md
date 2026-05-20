@@ -1,4 +1,4 @@
-# Guitar Chords
+# Vivace
 
 Aplicación Android para gestionar listas de canciones con acordes, pensada para guitarristas que quieren tocar con letra y cifrado en pantalla. Incluye diccionario de acordes, buscador inverso sobre un mástil interactivo y afinador por micrófono.
 
