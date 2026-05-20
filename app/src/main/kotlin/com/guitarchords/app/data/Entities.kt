@@ -32,6 +32,7 @@ data class Song(
     val genre: String = "",
     val content: String = "",
     val favorite: Boolean = false,
+    val capo: Int = 0,
     @ColumnInfo(name = "position") val position: Int = 0,
     @ColumnInfo(name = "updated_at") val updatedAt: Long = System.currentTimeMillis()
 )
@@ -50,5 +51,6 @@ data class SongExport(
     val genre: String = "",
     val content: String = "",
     val favorite: Boolean = false,
+    val capo: Int = 0,
     val position: Int = 0
 )

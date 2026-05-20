@@ -14,14 +14,18 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -41,15 +45,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.guitarchords.app.chords.ChordLibrary
+import com.guitarchords.app.chords.ChordParser
 import com.guitarchords.app.data.Playlist
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -126,7 +133,9 @@ fun SongEditorScreen(
             val plName = song.playlistId?.let { pid -> playlists.firstOrNull { it.id == pid }?.name } ?: "Sin lista"
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
             ) {
                 AssistChip(
                     onClick = { playlistPickerOpen = true },
@@ -138,11 +147,47 @@ fun SongEditorScreen(
                     label = { Text("Insertar acorde") },
                     leadingIcon = { Icon(Icons.Default.MusicNote, null) }
                 )
+                AssistChip(
+                    onClick = {
+                        val cursor = contentField.selection.start.coerceIn(0, contentField.text.length)
+                        val before = contentField.text.substring(0, cursor)
+                        val after = contentField.text.substring(cursor)
+                        val prefix = if (before.isEmpty() || before.endsWith("\n")) "" else "\n"
+                        val suffix = if (after.startsWith("\n") || after.isEmpty()) "" else "\n"
+                        val inserted = prefix + ChordParser.tabTemplate() + suffix
+                        val newText = before + inserted + after
+                        val newCursor = cursor + inserted.length
+                        contentField = TextFieldValue(newText, TextRange(newCursor))
+                        vm.updateContent(newText)
+                    },
+                    label = { Text("Insertar tablatura") },
+                    leadingIcon = { Icon(Icons.Default.GraphicEq, null) }
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Capo:", style = MaterialTheme.typography.labelMedium)
+                Spacer(Modifier.size(8.dp))
+                IconButton(
+                    onClick = { vm.updateCapo(song.capo - 1) },
+                    enabled = song.capo > 0
+                ) { Icon(Icons.Default.Remove, "Bajar capo") }
+                Text(
+                    if (song.capo == 0) "Sin capo" else "Traste ${song.capo}",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
+                IconButton(
+                    onClick = { vm.updateCapo(song.capo + 1) },
+                    enabled = song.capo < 12
+                ) { Icon(Icons.Default.Add, "Subir capo") }
             }
             Spacer(Modifier.height(8.dp))
             Text("Letra y acordes", style = MaterialTheme.typography.labelMedium)
             Text(
-                "Usa [Nombre] para acordes — ej: [Am] Casa",
+                "Usa {Nombre} para acordes — ej: {Am} Casa. Tablatura entre {tab}…{/tab}",
                 style = MaterialTheme.typography.bodySmall
             )
             Spacer(Modifier.height(4.dp))
@@ -183,7 +228,7 @@ fun SongEditorScreen(
                 val cursor = contentField.selection.start.coerceIn(0, contentField.text.length)
                 val before = contentField.text.substring(0, cursor)
                 val after = contentField.text.substring(cursor)
-                val inserted = "[$chordName]"
+                val inserted = "{$chordName}"
                 val newText = before + inserted + after
                 val newCursor = cursor + inserted.length
                 contentField = TextFieldValue(newText, TextRange(newCursor))

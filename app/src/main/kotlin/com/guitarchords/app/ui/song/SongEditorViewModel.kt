@@ -45,6 +45,7 @@ class SongEditorViewModel(app: Application) : AndroidViewModel(app) {
     fun updateGenre(v: String) { _song.value = _song.value.copy(genre = v) }
     fun updateContent(v: String) { _song.value = _song.value.copy(content = v) }
     fun updatePlaylist(id: Long?) { _song.value = _song.value.copy(playlistId = id) }
+    fun updateCapo(v: Int) { _song.value = _song.value.copy(capo = v.coerceIn(0, 12)) }
 
     fun save(onDone: (Long) -> Unit) = viewModelScope.launch {
         val current = _song.value.copy(

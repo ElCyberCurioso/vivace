@@ -51,6 +51,7 @@ class Repository(
                     genre = s.genre,
                     content = s.content,
                     favorite = s.favorite,
+                    capo = s.capo,
                     position = if (s.position != 0) s.position else idx
                 )
             )
@@ -70,6 +71,7 @@ class Repository(
                     genre = it.genre,
                     content = it.content,
                     favorite = it.favorite,
+                    capo = it.capo,
                     position = it.position
                 )
             }

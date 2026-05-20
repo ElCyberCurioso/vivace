@@ -166,6 +166,10 @@ private class SongPrintAdapter(
             y += subPaint.fontSpacing
             canvas.drawText(song.artist, geom.margin, y, subPaint)
         }
+        if (song.capo > 0) {
+            y += subPaint.fontSpacing
+            canvas.drawText("Capo: traste ${song.capo}", geom.margin, y, subPaint)
+        }
         y += 18f
 
         if (uniqueChords.isNotEmpty()) {

@@ -146,7 +146,7 @@ fun ChordDictionaryScreen(onBack: () -> Unit) {
                                 )
                                 Spacer(Modifier.height(4.dp))
                                 chord.variations.firstOrNull()?.let {
-                                    ChordDiagram(shape = it, showFingers = false)
+                                    ChordDiagram(shape = it)
                                 }
                             }
                         }

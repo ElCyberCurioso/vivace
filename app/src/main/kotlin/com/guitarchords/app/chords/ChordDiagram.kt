@@ -22,13 +22,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+private val NOTE_NAMES = arrayOf("C","C#","D","D#","E","F","F#","G","G#","A","A#","B")
+// Open-string note index (low E .. high E)
+private val OPEN_NOTES = intArrayOf(4, 9, 2, 7, 11, 4)
+
 @Composable
 fun ChordDiagram(
     shape: ChordShape,
     name: String? = null,
     modifier: Modifier = Modifier,
     color: Color = LocalContentColor.current,
-    showFingers: Boolean = true
+    showNotes: Boolean = true,
+    showFingers: Boolean = false
 ) {
     Column(
         modifier = modifier.wrapContentSize(),
@@ -43,7 +48,7 @@ fun ChordDiagram(
             Spacer(Modifier.height(4.dp))
         }
         Canvas(modifier = Modifier.size(width = 120.dp, height = 140.dp)) {
-            drawDiagram(shape, color, showFingers)
+            drawDiagram(shape, color, showNotes, showFingers)
         }
     }
 }
@@ -51,6 +56,7 @@ fun ChordDiagram(
 private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawDiagram(
     shape: ChordShape,
     color: Color,
+    showNotes: Boolean,
     showFingers: Boolean
 ) {
     val w = size.width
@@ -156,7 +162,20 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawDiagram(
                 center = androidx.compose.ui.geometry.Offset(x, y)
             )
         }
-        if (showFingers) {
+        if (showNotes) {
+            val noteIdx = ((OPEN_NOTES[s] + fret) % 12 + 12) % 12
+            val note = NOTE_NAMES[noteIdx]
+            drawContext.canvas.nativeCanvas.apply {
+                val paint = android.graphics.Paint().apply {
+                    this.color = android.graphics.Color.WHITE
+                    textSize = dotRadius * 1.05f
+                    isAntiAlias = true
+                    textAlign = android.graphics.Paint.Align.CENTER
+                    typeface = android.graphics.Typeface.DEFAULT_BOLD
+                }
+                drawText(note, x, y + dotRadius * 0.38f, paint)
+            }
+        } else if (showFingers) {
             val finger = shape.fingers.getOrNull(s) ?: 0
             if (finger in 1..4) {
                 drawContext.canvas.nativeCanvas.apply {
