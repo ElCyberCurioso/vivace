@@ -16,6 +16,9 @@ interface PlaylistDao {
     @Query("SELECT * FROM playlists WHERE id = :id")
     suspend fun getById(id: Long): Playlist?
 
+    @Query("SELECT * FROM playlists WHERE name = :name LIMIT 1")
+    suspend fun getByName(name: String): Playlist?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(playlist: Playlist): Long
 
@@ -86,4 +89,50 @@ interface SongDao {
 
     @Query("SELECT COUNT(*) FROM songs WHERE playlist_id IS NULL")
     fun countUnassigned(): Flow<Int>
+
+    @Query("SELECT * FROM songs WHERE remote_key = :key LIMIT 1")
+    suspend fun getByRemoteKey(key: String): Song?
+
+    @Query("SELECT * FROM songs WHERE dirty = 1")
+    suspend fun dirtySongs(): List<Song>
+
+    @Query("SELECT COUNT(*) FROM songs WHERE dirty = 1")
+    fun countDirty(): Flow<Int>
+
+    @Query(
+        "UPDATE songs SET remote_key = :key, remote_etag = :etag, " +
+            "remote_updated_at = :updated, dirty = 0 WHERE id = :id"
+    )
+    suspend fun markSynced(id: Long, key: String, etag: String, updated: Long)
+
+    /** Set only the title (used to pull titles from the Worker without touching content/dirty). */
+    @Query("UPDATE songs SET title = :title WHERE id = :id")
+    suspend fun setTitle(id: Long, title: String)
+
+    @Query("UPDATE songs SET artist = :artist WHERE id = :id")
+    suspend fun setArtist(id: Long, artist: String)
+
+    @Query("UPDATE songs SET capo = :capo WHERE id = :id")
+    suspend fun setCapo(id: Long, capo: Int)
+}
+
+@Dao
+interface SongVersionDao {
+    @Query("SELECT * FROM song_versions WHERE song_id = :songId ORDER BY position ASC, id ASC")
+    fun observeBySong(songId: Long): Flow<List<SongVersion>>
+
+    @Query("SELECT * FROM song_versions WHERE id = :id")
+    suspend fun getById(id: Long): SongVersion?
+
+    @Query("SELECT COALESCE(MAX(position), -1) + 1 FROM song_versions WHERE song_id = :songId")
+    suspend fun nextPosition(songId: Long): Int
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(version: SongVersion): Long
+
+    @Update
+    suspend fun update(version: SongVersion)
+
+    @Query("DELETE FROM song_versions WHERE id = :id")
+    suspend fun deleteById(id: Long)
 }

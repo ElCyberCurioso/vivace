@@ -4,23 +4,12 @@ object ChordRecognizer {
 
     private val OPEN_STRINGS = intArrayOf(40, 45, 50, 55, 59, 64)
 
-    private val QUALITY_INTERVALS: Map<String, Set<Int>> = linkedMapOf(
-        "" to setOf(0, 4, 7),
-        "m" to setOf(0, 3, 7),
-        "sus2" to setOf(0, 2, 7),
-        "sus4" to setOf(0, 5, 7),
-        "dim" to setOf(0, 3, 6),
-        "aug" to setOf(0, 4, 8),
-        "7" to setOf(0, 4, 7, 10),
-        "maj7" to setOf(0, 4, 7, 11),
-        "m7" to setOf(0, 3, 7, 10),
-        "m7b5" to setOf(0, 3, 6, 10),
-        "dim7" to setOf(0, 3, 6, 9),
-        "6" to setOf(0, 4, 7, 9),
-        "m6" to setOf(0, 3, 7, 9),
-        "add9" to setOf(0, 2, 4, 7),
-        "9" to setOf(0, 2, 4, 7, 10)
-    )
+    /** Pitch-class intervals (mod-12) per quality, derived from [MusicTheory.FORMULAS]. */
+    val QUALITY_INTERVALS: Map<String, Set<Int>> = linkedMapOf<String, Set<Int>>().apply {
+        MusicTheory.FORMULAS.forEach { f ->
+            put(f.quality, f.semitones.map { ((it % 12) + 12) % 12 }.toSet())
+        }
+    }
 
     data class Match(
         val name: String,

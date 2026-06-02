@@ -27,4 +27,8 @@ class UnassignedSongsViewModel(app: Application) : AndroidViewModel(app) {
     fun moveSong(songId: Long, targetPlaylistId: Long) = viewModelScope.launch {
         repo.moveSong(songId, targetPlaylistId)
     }
+
+    fun deleteSelected(ids: Set<Long>) = viewModelScope.launch { repo.deleteSongs(ids) }
+    fun moveSelected(ids: Set<Long>, target: Long?) = viewModelScope.launch { repo.moveSongs(ids, target) }
+    fun favoriteSelected(ids: Set<Long>, fav: Boolean) = viewModelScope.launch { repo.setFavoriteFor(ids, fav) }
 }

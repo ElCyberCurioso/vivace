@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -55,9 +56,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.guitarchords.app.chords.ChordLibrary
 import com.guitarchords.app.chords.ChordParser
 import com.guitarchords.app.data.Playlist
+import com.guitarchords.app.ui.components.ChordPickerDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -103,6 +104,7 @@ fun SongEditorScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(pv)
+                .imePadding()
                 .padding(12.dp)
                 .verticalScroll(rememberScrollState())
         ) {
@@ -290,40 +292,3 @@ private fun PlaylistPickerDialog(
     )
 }
 
-@Composable
-private fun ChordPickerDialog(onDismiss: () -> Unit, onPick: (String) -> Unit) {
-    var query by remember { mutableStateOf("") }
-    val all = remember { ChordLibrary.all().map { it.name } }
-    val filtered = remember(query) {
-        if (query.isBlank()) all else all.filter { it.startsWith(query, ignoreCase = true) }
-    }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Elige un acorde") },
-        text = {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = { query = it },
-                    singleLine = true,
-                    placeholder = { Text("Buscar (Am, F#m7…)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(Modifier.height(8.dp))
-                LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = 72.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(320.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    items(filtered) { name ->
-                        AssistChip(onClick = { onPick(name) }, label = { Text(name) })
-                    }
-                }
-            }
-        },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Cerrar") } }
-    )
-}

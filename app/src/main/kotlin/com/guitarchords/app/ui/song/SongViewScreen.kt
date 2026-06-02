@@ -1,6 +1,5 @@
 package com.guitarchords.app.ui.song
 
-import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,7 +24,9 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -62,20 +63,26 @@ import com.guitarchords.app.chords.ChordParser
 import com.guitarchords.app.chords.ChordTransposer
 import com.guitarchords.app.chords.ContentBlock
 import com.guitarchords.app.chords.RenderedLine
+import com.guitarchords.app.data.SongVersion
 import com.guitarchords.app.print.PrintAdapter
 import com.guitarchords.app.ui.components.ChordModal
+import com.guitarchords.app.ui.playlists.TextDialog
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlin.coroutines.cancellation.CancellationException
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SongViewScreen(
     songId: Long,
     onEdit: () -> Unit,
+    onEditVersion: (Long) -> Unit,
     onBack: () -> Unit,
     vm: SongViewModel = viewModel()
 ) {
     LaunchedEffect(songId) { vm.load(songId) }
     val song by vm.song.collectAsStateWithLifecycle()
+    val versions by vm.versions.collectAsStateWithLifecycle()
 
     var fontSize by remember { mutableIntStateOf(18) }
     var scrolling by remember { mutableStateOf(false) }
@@ -83,17 +90,43 @@ fun SongViewScreen(
     var selectedChord by remember { mutableStateOf<String?>(null) }
     var semitones by remember { mutableIntStateOf(0) }
     var controlsExpanded by remember { mutableStateOf(true) }
+    var selectedVersionId by remember { mutableStateOf<Long?>(null) }
+    var showAddVersion by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     val ctx = LocalContext.current
+
+    // Active version: null = the song's "Original" content/capo.
+    val activeVersion = versions.firstOrNull { it.id == selectedVersionId }
+    val activeContent = activeVersion?.content ?: song?.content ?: ""
+    val activeCapo = activeVersion?.capo ?: song?.capo ?: 0
+
+    // If the selected version was deleted, fall back to Original.
+    LaunchedEffect(versions) {
+        if (selectedVersionId != null && versions.none { it.id == selectedVersionId }) {
+            selectedVersionId = null
+        }
+    }
 
     LaunchedEffect(scrolling, speed) {
         if (!scrolling) return@LaunchedEffect
         val stepMs = 16L
-        while (scrolling) {
-            val delta = (speed * stepMs / 1000f)
+        var remainder = 0f   // carry sub-pixel movement so slow speeds still advance
+        while (scrolling && isActive) {
             val max = scrollState.maxValue
             if (scrollState.value >= max) { scrolling = false; break }
-            scrollState.scrollBy(delta)
+            remainder += speed * stepMs / 1000f
+            val step = remainder.toInt()
+            if (step > 0) {
+                try {
+                    scrollState.scrollTo((scrollState.value + step).coerceIn(0, max))
+                    remainder -= step
+                } catch (e: CancellationException) {
+                    // User grabbed the scroll and preempted us. If the effect itself
+                    // is still active, just resume auto-scroll from wherever they left it.
+                    if (!isActive) throw e
+                    remainder = 0f
+                }
+            }
             delay(stepMs)
         }
     }
@@ -107,9 +140,12 @@ fun SongViewScreen(
                 },
                 actions = {
                     IconButton(onClick = {
-                        song?.let {
-                            val shifted = if (semitones == 0) it
-                            else it.copy(content = ChordTransposer.transposeContent(it.content, semitones))
+                        song?.let { sng ->
+                            val base = sng.copy(content = activeContent, capo = activeCapo)
+                            val shifted = if (semitones == 0) base
+                            else base.copy(
+                                content = ChordTransposer.transposeContent(activeContent, semitones)
+                            )
                             PrintAdapter.print(ctx, shifted)
                         }
                     }) { Icon(Icons.Default.Print, "Imprimir") }
@@ -133,7 +169,7 @@ fun SongViewScreen(
         }
     ) { pv ->
         song?.let { s ->
-            val blocks = remember(s.content) { ChordParser.parseBlocks(s.content) }
+            val blocks = remember(activeContent) { ChordParser.parseBlocks(activeContent) }
             val rendered = remember(blocks, semitones) {
                 if (semitones == 0) blocks
                 else blocks.map { b ->
@@ -156,22 +192,30 @@ fun SongViewScreen(
                     .padding(horizontal = 12.dp)
                     .verticalScroll(scrollState)
             ) {
+                VersionBar(
+                    versions = versions,
+                    selectedId = selectedVersionId,
+                    onSelect = { selectedVersionId = it },
+                    onAdd = { showAddVersion = true },
+                    onEditSelected = { selectedVersionId?.let(onEditVersion) }
+                )
+                Spacer(Modifier.height(8.dp))
                 if (s.artist.isNotBlank()) {
                     Text(s.artist, style = MaterialTheme.typography.bodyMedium)
                 }
-                if (s.capo > 0) {
+                if (activeCapo > 0) {
                     Surface(
                         color = MaterialTheme.colorScheme.tertiaryContainer,
                         modifier = Modifier.padding(vertical = 4.dp)
                     ) {
                         Text(
-                            "Capo en traste ${s.capo}",
+                            "Capo en traste $activeCapo",
                             style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                         )
                     }
                 }
-                if (s.artist.isNotBlank() || s.capo > 0) {
+                if (s.artist.isNotBlank() || activeCapo > 0) {
                     Spacer(Modifier.height(8.dp))
                 }
                 rendered.forEach { block ->
@@ -198,11 +242,62 @@ fun SongViewScreen(
     selectedChord?.let {
         ChordModal(chordName = it, onDismiss = { selectedChord = null })
     }
+
+    if (showAddVersion) {
+        TextDialog(
+            title = "Nueva versión",
+            initial = "",
+            onDismiss = { showAddVersion = false },
+            onConfirm = { name ->
+                showAddVersion = false
+                vm.addVersion(name) { newId ->
+                    selectedVersionId = newId
+                    onEditVersion(newId)
+                }
+            }
+        )
+    }
 }
 
-private suspend fun ScrollState.scrollBy(delta: Float) {
-    val next = (value + delta).toInt().coerceIn(0, maxValue)
-    scrollTo(next)
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun VersionBar(
+    versions: List<SongVersion>,
+    selectedId: Long?,
+    onSelect: (Long?) -> Unit,
+    onAdd: () -> Unit,
+    onEditSelected: () -> Unit
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+    ) {
+        FilterChip(
+            selected = selectedId == null,
+            onClick = { onSelect(null) },
+            label = { Text("Original") }
+        )
+        versions.forEach { v ->
+            FilterChip(
+                selected = selectedId == v.id,
+                onClick = { onSelect(v.id) },
+                label = { Text(v.name) }
+            )
+        }
+        AssistChip(
+            onClick = onAdd,
+            label = { Text("Versión") },
+            leadingIcon = { Icon(Icons.Default.Add, null) }
+        )
+        if (selectedId != null && versions.any { it.id == selectedId }) {
+            IconButton(onClick = onEditSelected) {
+                Icon(Icons.Default.Edit, "Editar versión")
+            }
+        }
+    }
 }
 
 @Composable

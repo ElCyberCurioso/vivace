@@ -1,5 +1,6 @@
 package com.guitarchords.app.ui.playlist
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -27,6 +28,8 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -52,6 +55,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.guitarchords.app.data.Playlist
 import com.guitarchords.app.data.Song
+import com.guitarchords.app.ui.components.BulkDeleteDialog
+import com.guitarchords.app.ui.components.BulkMoveDialog
+import com.guitarchords.app.ui.components.SelectionTopBar
+import com.guitarchords.app.ui.components.rememberSongSelection
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,20 +77,36 @@ fun PlaylistDetailScreen(
     val ctx = LocalContext.current
     var deleting by remember { mutableStateOf<Song?>(null) }
     var moving by remember { mutableStateOf<Song?>(null) }
+    val selection = rememberSongSelection()
+    var bulkMoving by remember { mutableStateOf(false) }
+    var bulkDeleting by remember { mutableStateOf(false) }
+
+    BackHandler(enabled = selection.active) { selection.clear() }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(playlist?.name ?: "") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Atrás") }
-                },
-                actions = {
-                    IconButton(onClick = {
-                        vm.exportZipShare { intent -> ctx.startActivity(intent) }
-                    }) { Icon(Icons.Default.Share, "Compartir") }
-                }
-            )
+            if (selection.active) {
+                SelectionTopBar(
+                    count = selection.count,
+                    onClose = { selection.clear() },
+                    onSelectAll = { selection.setAll(songs.map { it.id }) },
+                    onFavorite = { vm.favoriteSelected(selection.selected, true); selection.clear() },
+                    onMove = { bulkMoving = true },
+                    onDelete = { bulkDeleting = true }
+                )
+            } else {
+                TopAppBar(
+                    title = { Text(playlist?.name ?: "") },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Atrás") }
+                    },
+                    actions = {
+                        IconButton(onClick = {
+                            vm.exportZipShare { intent -> ctx.startActivity(intent) }
+                        }) { Icon(Icons.Default.Share, "Compartir") }
+                    }
+                )
+            }
         },
         floatingActionButton = {
             FloatingActionButton(onClick = onAddSong) {
@@ -114,7 +137,11 @@ fun PlaylistDetailScreen(
                 items(sorted, key = { it.id }) { s ->
                     SongRow(
                         song = s,
+                        selectionActive = selection.active,
+                        selected = selection.isSelected(s.id),
                         onClick = { onSongClick(s.id) },
+                        onToggle = { selection.toggle(s.id) },
+                        onLongPress = { selection.start(s.id) },
                         onFav = { vm.toggleFavorite(s) },
                         onEdit = { onEditSong(s.id) },
                         onDelete = { deleting = s },
@@ -151,6 +178,31 @@ fun PlaylistDetailScreen(
                 vm.moveSong(s.id, target?.id)
                 moving = null
             }
+        )
+    }
+
+    if (bulkMoving) {
+        BulkMoveDialog(
+            count = selection.count,
+            targets = otherPlaylists,
+            includeUnassigned = true,
+            onDismiss = { bulkMoving = false },
+            onPick = { target ->
+                vm.moveSelected(selection.selected, target)
+                bulkMoving = false
+                selection.clear()
+            }
+        )
+    }
+    if (bulkDeleting) {
+        BulkDeleteDialog(
+            count = selection.count,
+            onConfirm = {
+                vm.deleteSelected(selection.selected)
+                bulkDeleting = false
+                selection.clear()
+            },
+            onDismiss = { bulkDeleting = false }
         )
     }
 }
@@ -205,28 +257,42 @@ private fun MovePlaylistDialog(
 @Composable
 private fun SongRow(
     song: Song,
+    selectionActive: Boolean,
+    selected: Boolean,
     onClick: () -> Unit,
+    onToggle: () -> Unit,
+    onLongPress: () -> Unit,
     onFav: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onMove: () -> Unit
 ) {
     Card(
+        colors = if (selected)
+            CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+        else CardDefaults.cardColors(),
         modifier = Modifier
             .fillMaxWidth()
-            .pointerInput(Unit) {
-                detectTapGestures(onTap = { onClick() }, onLongPress = { onEdit() })
+            .pointerInput(selectionActive) {
+                detectTapGestures(
+                    onTap = { if (selectionActive) onToggle() else onClick() },
+                    onLongPress = { onLongPress() }
+                )
             }
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth().padding(12.dp)
         ) {
-            IconButton(onClick = onFav) {
-                if (song.favorite)
-                    Icon(Icons.Default.Star, "Quitar favorita", tint = MaterialTheme.colorScheme.primary)
-                else
-                    Icon(Icons.Outlined.StarOutline, "Favorita")
+            if (selectionActive) {
+                Checkbox(checked = selected, onCheckedChange = { onToggle() })
+            } else {
+                IconButton(onClick = onFav) {
+                    if (song.favorite)
+                        Icon(Icons.Default.Star, "Quitar favorita", tint = MaterialTheme.colorScheme.primary)
+                    else
+                        Icon(Icons.Outlined.StarOutline, "Favorita")
+                }
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(song.title, style = MaterialTheme.typography.titleMedium)
@@ -240,9 +306,11 @@ private fun SongRow(
                 if (sub.isNotEmpty())
                     Text(sub, style = MaterialTheme.typography.bodySmall)
             }
-            IconButton(onClick = onMove) { Icon(Icons.Default.DriveFileMove, "Mover") }
-            IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, "Editar") }
-            IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, "Borrar") }
+            if (!selectionActive) {
+                IconButton(onClick = onMove) { Icon(Icons.Default.DriveFileMove, "Mover") }
+                IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, "Editar") }
+                IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, "Borrar") }
+            }
         }
     }
 }

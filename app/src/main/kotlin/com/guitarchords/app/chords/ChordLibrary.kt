@@ -8,17 +8,16 @@ object ChordLibrary {
         "Ab" to "G#", "Bb" to "A#", "Cb" to "B", "Fb" to "E"
     )
 
-    val QUALITIES = listOf(
-        "", "m", "7", "maj7", "m7", "sus2", "sus4",
-        "dim", "dim7", "m7b5", "aug", "add9", "6", "9", "m6"
-    )
+    /** Order kept in sync with [MusicTheory.FORMULAS] (priority for recognition). */
+    val QUALITIES: List<String> = MusicTheory.FORMULAS.map { it.quality }
 
     private data class Template(
         val offsets: List<Int>,
         val barreFingers: List<Int>,
         val openFingers: List<Int>,
         val barreString: Int,
-        val extraBarre: Barre? = null
+        val extraBarre: Barre? = null,
+        val barre: Boolean = true
     )
 
     private val eTemplates = mapOf(
@@ -51,6 +50,16 @@ object ChordLibrary {
             listOf(0, 2, 2, 2, 0, 0),
             listOf(1, 2, 3, 4, 1, 1),
             listOf(0, 1, 2, 3, 0, 0), 6
+        ),
+        "5" to Template(
+            listOf(0, 2, 2, -1, -1, -1),
+            listOf(1, 3, 4, 0, 0, 0),
+            listOf(0, 2, 3, 0, 0, 0), 6, barre = false
+        ),
+        "7sus4" to Template(
+            listOf(0, 2, 0, 2, 0, 0),
+            listOf(1, 3, 1, 4, 1, 1),
+            listOf(0, 2, 0, 3, 0, 0), 6
         )
     )
 
@@ -129,6 +138,55 @@ object ChordLibrary {
             listOf(-1, 0, 2, 2, 1, 2),
             listOf(0, 1, 3, 4, 2, 4),
             listOf(0, 0, 2, 3, 1, 4), 5
+        ),
+        "5" to Template(
+            listOf(-1, 0, 2, 2, -1, -1),
+            listOf(0, 1, 3, 4, 0, 0),
+            listOf(0, 0, 1, 2, 0, 0), 5, barre = false
+        ),
+        "7sus4" to Template(
+            listOf(-1, 0, 2, 0, 3, 3),
+            listOf(0, 1, 3, 1, 4, 4),
+            listOf(0, 0, 2, 0, 3, 4), 5
+        )
+    )
+
+    // D-shape movable voicings (root on the 4th string). No full barre.
+    private val dTemplates = mapOf(
+        "" to Template(
+            listOf(-1, -1, 0, 2, 3, 2),
+            listOf(0, 0, 1, 2, 4, 3),
+            listOf(0, 0, 1, 2, 4, 3), 4, barre = false
+        ),
+        "m" to Template(
+            listOf(-1, -1, 0, 2, 3, 1),
+            listOf(0, 0, 1, 3, 4, 2),
+            listOf(0, 0, 1, 3, 4, 2), 4, barre = false
+        ),
+        "7" to Template(
+            listOf(-1, -1, 0, 2, 1, 2),
+            listOf(0, 0, 1, 3, 2, 4),
+            listOf(0, 0, 1, 3, 2, 4), 4, barre = false
+        ),
+        "maj7" to Template(
+            listOf(-1, -1, 0, 2, 2, 2),
+            listOf(0, 0, 1, 2, 3, 4),
+            listOf(0, 0, 1, 2, 3, 4), 4, barre = false
+        ),
+        "m7" to Template(
+            listOf(-1, -1, 0, 2, 1, 1),
+            listOf(0, 0, 1, 3, 2, 2),
+            listOf(0, 0, 1, 3, 2, 2), 4, barre = false
+        ),
+        "sus2" to Template(
+            listOf(-1, -1, 0, 2, 3, 0),
+            listOf(0, 0, 1, 2, 3, 0),
+            listOf(0, 0, 1, 2, 3, 0), 4, barre = false
+        ),
+        "sus4" to Template(
+            listOf(-1, -1, 0, 2, 3, 3),
+            listOf(0, 0, 1, 2, 3, 4),
+            listOf(0, 0, 1, 2, 3, 4), 4, barre = false
         )
     )
 
@@ -188,6 +246,11 @@ object ChordLibrary {
     private fun build(root: String, quality: String, displayName: String = root + quality): Chord? {
         val rIdx = rootIndex(root)
         if (rIdx < 0) return null
+
+        // Prefer the bundled chords-db voicings when available.
+        val dbShapes = ChordDb.shapes(root, quality)
+        if (dbShapes.isNotEmpty()) return Chord(displayName, root, quality, dbShapes)
+
         val variations = mutableListOf<ChordShape>()
         val fullName = root + quality
 
@@ -208,19 +271,97 @@ object ChordLibrary {
             if (!variations.any { it.frets == shape.frets }) variations += shape
         }
 
+        val dRootFret = ((rIdx - 2 + 12) % 12)
+        dTemplates[quality]?.let { tpl ->
+            val rf = if (dRootFret == 0) 12 else dRootFret
+            val shape = buildFromTemplate(tpl, rf, 4)
+            if (!variations.any { it.frets == shape.frets }) variations += shape
+        }
+
         if (variations.isEmpty()) {
-            eTemplates[""]?.let { tpl ->
-                val rf = if (eRootFret == 0) 12 else eRootFret
-                variations += buildFromTemplate(tpl, rf, 6)
+            // Last-resort: try to auto-build a voicing from the interval set.
+            val intervals = ChordRecognizer.QUALITY_INTERVALS[quality]
+            if (intervals != null) {
+                autoVoicing(rIdx, intervals)?.let { variations += it }
             }
         }
 
         return Chord(displayName, root, quality, variations)
     }
 
+    private val OPEN_STRING_PC = intArrayOf(4, 9, 2, 7, 11, 4) // E A D G B e
+
+    /**
+     * Greedy chord-voicing generator used when no manual template exists.
+     *
+     * Slides a 4-fret window from fret 0 upward. For each string it picks the
+     * lowest fret in the window that hits a target pitch class, preferring
+     * notes not yet covered. The lowest sounded string must be the root.
+     *
+     * Permits omitting the 5th if every other tone is covered (common practice
+     * for extended chords on a 6-string guitar).
+     */
+    private fun autoVoicing(rootIdx: Int, intervals: Set<Int>): ChordShape? {
+        val targetPcs = intervals.map { ((rootIdx + it) % 12 + 12) % 12 }.toSet()
+        val rootPc = rootIdx % 12
+        val fifthPc = ((rootIdx + 7) % 12 + 12) % 12
+
+        for (baseFret in 0..12) {
+            val low = if (baseFret <= 4) 0 else baseFret
+            val high = baseFret + 4
+            val frets = IntArray(6) { -1 }
+            val pcsUsed = mutableSetOf<Int>()
+            var bassAssigned = false
+
+            for (s in 0..5) {
+                val open = OPEN_STRING_PC[s]
+                val range = (low..high).toList()
+                if (!bassAssigned) {
+                    val f = range.firstOrNull { ((open + it) % 12) == rootPc }
+                    if (f != null) {
+                        frets[s] = f
+                        pcsUsed += rootPc
+                        bassAssigned = true
+                    }
+                    continue
+                }
+                val missing = targetPcs - pcsUsed
+                val matchMissing = range.firstOrNull { ((open + it) % 12) in missing }
+                if (matchMissing != null) {
+                    frets[s] = matchMissing
+                    pcsUsed += (open + matchMissing) % 12
+                    continue
+                }
+                val anyTarget = range.firstOrNull { ((open + it) % 12) in targetPcs }
+                if (anyTarget != null) {
+                    frets[s] = anyTarget
+                    pcsUsed += (open + anyTarget) % 12
+                }
+            }
+
+            if (!bassAssigned) continue
+            val sounded = frets.count { it >= 0 }
+            if (sounded < 3) continue
+
+            val essential = targetPcs - setOf(fifthPc)
+            if (!pcsUsed.containsAll(essential)) continue
+            // Lowest sounded string must hold the root.
+            val lowestIdx = frets.indexOfFirst { it >= 0 }
+            val bassPc = (OPEN_STRING_PC[lowestIdx] + frets[lowestIdx]) % 12
+            if (bassPc != rootPc) continue
+
+            return ChordShape(frets.toList())
+        }
+        return null
+    }
+
     private fun buildFromTemplate(tpl: Template, rootFret: Int, barreString: Int): ChordShape {
         val frets = tpl.offsets.map { if (it < 0) -1 else it + rootFret }
-        val barres = if (rootFret >= 1 && rootFret <= 12) {
+        // A real barre only exists when two or more strings sit on the root fret
+        // (offset 0). Shapes like dim7/m7b5/6/aug touch the root fret on a single
+        // string, so a full barre there is spurious and misdraws the fingering.
+        val barredStrings = tpl.offsets.count { it == 0 }
+        val barres = if (tpl.barre && barredStrings >= 2 && rootFret in 1..12) {
             val list = mutableListOf(Barre(rootFret, barreString, 1))
             tpl.extraBarre?.let { list += it.copy(fret = it.fret + rootFret) }
             list

@@ -51,6 +51,10 @@ class PlaylistDetailViewModel(app: Application) : AndroidViewModel(app) {
         repo.moveSong(songId, targetPlaylistId)
     }
 
+    fun deleteSelected(ids: Set<Long>) = viewModelScope.launch { repo.deleteSongs(ids) }
+    fun moveSelected(ids: Set<Long>, target: Long?) = viewModelScope.launch { repo.moveSongs(ids, target) }
+    fun favoriteSelected(ids: Set<Long>, fav: Boolean) = viewModelScope.launch { repo.setFavoriteFor(ids, fav) }
+
     fun exportZipShare(onReady: (Intent) -> Unit) = viewModelScope.launch {
         val id = playlistIdFlow.value
         val exp = repo.exportPlaylist(id) ?: return@launch

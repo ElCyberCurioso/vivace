@@ -19,6 +19,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -40,6 +41,8 @@ import androidx.compose.ui.unit.dp
 import com.guitarchords.app.chords.ChordDiagram
 import com.guitarchords.app.chords.ChordLibrary
 import com.guitarchords.app.ui.components.ChordModal
+import com.guitarchords.app.ui.responsive.WidthClass
+import com.guitarchords.app.ui.responsive.rememberWidthClass
 
 private val QUALITY_LABEL = mapOf(
     "" to "maj",
@@ -59,13 +62,15 @@ private val QUALITY_LABEL = mapOf(
     "m6" to "m6"
 )
 
+private enum class DictTab { CHORDS, CIRCLE, GUIDE }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChordDictionaryScreen(onBack: () -> Unit) {
     var root by remember { mutableStateOf<String?>(null) }
     var quality by remember { mutableStateOf<String?>(null) }
     var selected by remember { mutableStateOf<String?>(null) }
-    var showCircle by remember { mutableStateOf(false) }
+    var tab by remember { mutableStateOf(DictTab.CHORDS) }
 
     val all = remember { ChordLibrary.all() }
     val filtered = remember(root, quality, all) {
@@ -78,23 +83,40 @@ fun ChordDictionaryScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (showCircle) "Círculo de quintas" else "Diccionario de acordes") },
+                title = {
+                    Text(
+                        when (tab) {
+                            DictTab.CHORDS -> "Diccionario de acordes"
+                            DictTab.CIRCLE -> "Círculo de quintas"
+                            DictTab.GUIDE -> "Guía de teoría"
+                        }
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = {
-                        if (showCircle) showCircle = false else onBack()
+                        if (tab != DictTab.CHORDS) tab = DictTab.CHORDS else onBack()
                     }) { Icon(Icons.Default.ArrowBack, "Atrás") }
                 },
                 actions = {
-                    IconButton(onClick = { showCircle = !showCircle }) {
-                        Icon(Icons.Default.Album, "Círculo de quintas")
-                    }
+                    IconButton(onClick = {
+                        tab = if (tab == DictTab.GUIDE) DictTab.CHORDS else DictTab.GUIDE
+                    }) { Icon(Icons.Default.School, "Guía de teoría") }
+                    IconButton(onClick = {
+                        tab = if (tab == DictTab.CIRCLE) DictTab.CHORDS else DictTab.CIRCLE
+                    }) { Icon(Icons.Default.Album, "Círculo de quintas") }
                 }
             )
         }
     ) { pv ->
-        if (showCircle) {
+        if (tab == DictTab.CIRCLE) {
             Box(Modifier.fillMaxSize().padding(pv)) {
                 CircleOfFifthsView(onChordClick = { selected = it })
+            }
+            return@Scaffold
+        }
+        if (tab == DictTab.GUIDE) {
+            Box(Modifier.fillMaxSize().padding(pv)) {
+                TheoryGuideView()
             }
             return@Scaffold
         }
@@ -119,8 +141,13 @@ fun ChordDictionaryScreen(onBack: () -> Unit) {
                     Text("Sin resultados")
                 }
             } else {
+                val tileMin = when (rememberWidthClass()) {
+                    WidthClass.COMPACT -> 140.dp
+                    WidthClass.MEDIUM -> 170.dp
+                    WidthClass.EXPANDED -> 200.dp
+                }
                 LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = 140.dp),
+                    columns = GridCells.Adaptive(minSize = tileMin),
                     contentPadding = PaddingValues(12.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -145,8 +172,14 @@ fun ChordDictionaryScreen(onBack: () -> Unit) {
                                     )
                                 )
                                 Spacer(Modifier.height(4.dp))
-                                chord.variations.firstOrNull()?.let {
-                                    ChordDiagram(shape = it)
+                                val first = chord.variations.firstOrNull()
+                                if (first != null) {
+                                    ChordDiagram(shape = first)
+                                } else {
+                                    Text(
+                                        "Sin diagrama",
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
                                 }
                             }
                         }

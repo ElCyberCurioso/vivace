@@ -13,5 +13,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "GuitarChords"
+rootProject.name = "Vivace"
 include(":app")

@@ -22,5 +22,12 @@ class FavoritesViewModel(app: Application) : AndroidViewModel(app) {
         songs.map { FavoriteItem(it, it.playlistId?.let { pid -> byId[pid]?.name } ?: "") }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    val playlists = repo.playlists()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     fun toggleFavorite(song: Song) = viewModelScope.launch { repo.toggleFavorite(song) }
+
+    fun deleteSelected(ids: Set<Long>) = viewModelScope.launch { repo.deleteSongs(ids) }
+    fun moveSelected(ids: Set<Long>, target: Long?) = viewModelScope.launch { repo.moveSongs(ids, target) }
+    fun favoriteSelected(ids: Set<Long>, fav: Boolean) = viewModelScope.launch { repo.setFavoriteFor(ids, fav) }
 }

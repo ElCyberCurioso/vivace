@@ -58,3 +58,9 @@ desktop.ini
 # Python/tooling accidentally dropped in the tree
 __pycache__/
 *.pyc
+
+# Cloudflare Worker
+worker/credentials.txt
+worker/.dev.vars
+worker/.wrangler/
+worker/node_modules/

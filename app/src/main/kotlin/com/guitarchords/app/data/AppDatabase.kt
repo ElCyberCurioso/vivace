@@ -8,13 +8,14 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [Playlist::class, Song::class],
-    version = 5,
+    entities = [Playlist::class, Song::class, SongVersion::class],
+    version = 7,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun playlistDao(): PlaylistDao
     abstract fun songDao(): SongDao
+    abstract fun songVersionDao(): SongVersionDao
 
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null
@@ -69,6 +70,37 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE songs ADD COLUMN remote_key TEXT")
+                db.execSQL("ALTER TABLE songs ADD COLUMN remote_etag TEXT")
+                db.execSQL("ALTER TABLE songs ADD COLUMN remote_updated_at INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE songs ADD COLUMN dirty INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        private val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS song_versions (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        song_id INTEGER NOT NULL,
+                        name TEXT NOT NULL,
+                        content TEXT NOT NULL,
+                        capo INTEGER NOT NULL,
+                        position INTEGER NOT NULL,
+                        updated_at INTEGER NOT NULL,
+                        FOREIGN KEY(song_id) REFERENCES songs(id) ON DELETE CASCADE
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_song_versions_song_id ON song_versions(song_id)"
+                )
+            }
+        }
+
         fun get(context: Context): AppDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
@@ -76,7 +108,10 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "guitarchords.db"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                    .addMigrations(
+                        MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4,
+                        MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7
+                    )
                     .build()
                     .also { INSTANCE = it }
             }

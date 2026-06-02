@@ -30,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.guitarchords.app.chords.ChordLibrary
 import com.guitarchords.app.chords.ChordDiagram
+import com.guitarchords.app.chords.MusicTheory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,8 +47,33 @@ fun ChordModal(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            if (chord == null || chord.variations.isEmpty()) {
+            if (chord == null) {
                 Text("Acorde desconocido: $chordName", style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(16.dp))
+            } else if (chord.variations.isEmpty()) {
+                Text(
+                    chord.name,
+                    style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold)
+                )
+                Spacer(Modifier.height(8.dp))
+                val formula = MusicTheory.FORMULAS.firstOrNull { it.quality == chord.quality }
+                if (formula != null) {
+                    Text(
+                        "Grados: ${formula.degrees}",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        "Notas: " + MusicTheory.notesFor(
+                            ChordLibrary.ROOTS.indexOf(chord.root).coerceAtLeast(0),
+                            formula.semitones
+                        ).joinToString(" · "),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+                Text(
+                    "Sin diagrama disponible para esta posición.",
+                    style = MaterialTheme.typography.bodySmall
+                )
                 Spacer(Modifier.height(16.dp))
             } else {
                 Text(chord.name, style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold))

@@ -33,6 +33,34 @@ data class Song(
     val content: String = "",
     val favorite: Boolean = false,
     val capo: Int = 0,
+    @ColumnInfo(name = "remote_key") val remoteKey: String? = null,
+    @ColumnInfo(name = "remote_etag") val remoteEtag: String? = null,
+    @ColumnInfo(name = "remote_updated_at") val remoteUpdatedAt: Long = 0,
+    val dirty: Boolean = false,
+    @ColumnInfo(name = "position") val position: Int = 0,
+    @ColumnInfo(name = "updated_at") val updatedAt: Long = System.currentTimeMillis()
+)
+
+/**
+ * An alternate version of a [Song] (different arrangement, key, capo, tab…).
+ * The song's own `content`/`capo` is the "Original"; extra versions live here.
+ */
+@Entity(
+    tableName = "song_versions",
+    foreignKeys = [ForeignKey(
+        entity = Song::class,
+        parentColumns = ["id"],
+        childColumns = ["song_id"],
+        onDelete = ForeignKey.CASCADE
+    )],
+    indices = [Index("song_id")]
+)
+data class SongVersion(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @ColumnInfo(name = "song_id") val songId: Long,
+    val name: String,
+    val content: String = "",
+    val capo: Int = 0,
     @ColumnInfo(name = "position") val position: Int = 0,
     @ColumnInfo(name = "updated_at") val updatedAt: Long = System.currentTimeMillis()
 )

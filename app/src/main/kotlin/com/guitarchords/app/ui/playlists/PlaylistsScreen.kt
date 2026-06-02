@@ -17,16 +17,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FileUpload
-import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.LibraryMusic
-import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Piano
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -58,13 +55,10 @@ import com.guitarchords.app.data.Playlist
 @Composable
 fun PlaylistsScreen(
     onPlaylistClick: (Long) -> Unit,
-    onOpenDictionary: () -> Unit = {},
-    onOpenFinder: () -> Unit = {},
-    onOpenTuner: () -> Unit = {},
     onOpenSearch: () -> Unit = {},
-    onOpenFavorites: () -> Unit = {},
     onAddSong: () -> Unit = {},
     onOpenUnassigned: () -> Unit = {},
+    onBack: () -> Unit = {},
     vm: PlaylistsViewModel = viewModel()
 ) {
     val playlists by vm.playlists.collectAsStateWithLifecycle()
@@ -84,21 +78,14 @@ fun PlaylistsScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Listas") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, "Atrás")
+                    }
+                },
                 actions = {
                     IconButton(onClick = onOpenSearch) {
                         Icon(Icons.Default.Search, "Buscar canciones")
-                    }
-                    IconButton(onClick = onOpenFavorites) {
-                        Icon(Icons.Default.Star, "Favoritas")
-                    }
-                    IconButton(onClick = onOpenTuner) {
-                        Icon(Icons.Default.GraphicEq, "Afinador")
-                    }
-                    IconButton(onClick = onOpenFinder) {
-                        Icon(Icons.Default.Piano, "Buscador de acordes")
-                    }
-                    IconButton(onClick = onOpenDictionary) {
-                        Icon(Icons.Default.MenuBook, "Diccionario")
                     }
                     IconButton(onClick = {
                         importLauncher.launch(arrayOf("application/zip", "*/*"))

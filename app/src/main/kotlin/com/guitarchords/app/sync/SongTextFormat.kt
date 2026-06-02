@@ -1,0 +1,87 @@
+package com.guitarchords.app.sync
+
+import com.guitarchords.app.data.Song
+
+/**
+ * Plain-text (.txt) file format for a single song stored in R2.
+ *
+ * A header block of `#key: value` lines, an optional `---` separator,
+ * then the song body (lyrics + {chords} + {tab} blocks).
+ *
+ * Example:
+ * ```
+ * #title: Wonderwall
+ * #artist: Oasis
+ * #genre: Rock
+ * #capo: 2
+ * #playlist: Favoritas
+ * ---
+ * {Em7}Today is gonna be the day...
+ * ```
+ */
+object SongTextFormat {
+
+    private val HEADER = Regex("^#([A-Za-z]+):[ \\t]?(.*)$")
+
+    data class Parsed(
+        val title: String,
+        val artist: String,
+        val genre: String,
+        val capo: Int,
+        val favorite: Boolean,
+        val playlist: String?,
+        val content: String
+    )
+
+    fun encode(song: Song, playlistName: String?): String = buildString {
+        append("#title: ").append(song.title).append('\n')
+        if (song.artist.isNotBlank()) append("#artist: ").append(song.artist).append('\n')
+        if (song.genre.isNotBlank()) append("#genre: ").append(song.genre).append('\n')
+        if (song.capo > 0) append("#capo: ").append(song.capo).append('\n')
+        if (song.favorite) append("#favorite: true\n")
+        if (!playlistName.isNullOrBlank()) append("#playlist: ").append(playlistName).append('\n')
+        append("---\n")
+        append(song.content)
+    }
+
+    fun decode(text: String): Parsed {
+        val lines = text.replace("\r\n", "\n").split('\n')
+        var title = ""
+        var artist = ""
+        var genre = ""
+        var capo = 0
+        var favorite = false
+        var playlist: String? = null
+        var i = 0
+        while (i < lines.size) {
+            val line = lines[i]
+            if (line.trim() == "---") { i++; break }
+            val m = HEADER.find(line)
+            if (m == null) {
+                // No explicit separator: header ends at the first non-#key line.
+                break
+            }
+            val key = m.groupValues[1].lowercase()
+            val value = m.groupValues[2].trim()
+            when (key) {
+                "title" -> title = value
+                "artist" -> artist = value
+                "genre" -> genre = value
+                "capo" -> capo = value.toIntOrNull()?.coerceIn(0, 12) ?: 0
+                "favorite" -> favorite = value.equals("true", ignoreCase = true)
+                "playlist" -> playlist = value.ifBlank { null }
+            }
+            i++
+        }
+        val content = lines.drop(i).joinToString("\n")
+        return Parsed(
+            title = title.ifBlank { "Sin título" },
+            artist = artist,
+            genre = genre,
+            capo = capo,
+            favorite = favorite,
+            playlist = playlist,
+            content = content
+        )
+    }
+}

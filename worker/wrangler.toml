@@ -1,0 +1,12 @@
+name = "guitarchords-sync"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+
+# R2 bucket binding. Change bucket_name to your own bucket.
+# Create it first with:  wrangler r2 bucket create guitarchords
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "guitarchords"
+
+# SYNC_TOKEN is NOT stored here. Set it as a secret:
+#   wrangler secret put SYNC_TOKEN
