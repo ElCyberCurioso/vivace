@@ -235,10 +235,9 @@ const ADMIN_HTML = `<!doctype html>
              font-family:ui-monospace,Menlo,Consolas,monospace; font-size:13px; }
   #previewWrap { flex:1; display:flex; flex-direction:column; min-width:0; }
   #previewWrap .hd { color:var(--muted); font-size:12px; margin-bottom:4px; }
-  .pc { color:var(--accent); white-space:pre; min-height:1.4em; line-height:1.4; }
-  .py { white-space:pre; min-height:1.4em; line-height:1.4; }
-  .pl { margin-bottom:3px; }
-  .ptab { color:var(--muted); white-space:pre; line-height:1.4; }
+  .pc { color:var(--accent); font-weight:600; }
+  .pl { margin:0; white-space:pre; line-height:1.3; }
+  .ptab { color:var(--muted); white-space:pre; line-height:1.3; }
   @media (max-width:760px){ #editSplit{flex-direction:column;} }
   .row { display:flex; gap:8px; align-items:center; }
   .row label { color:var(--muted); width:60px; }
@@ -358,26 +357,23 @@ function serialize(c) {
 function esc(s) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
-// Split one line into a chord row (chords at their column) and the bare lyric.
-function splitChordLine(line) {
-  let lyric = "", chordRow = "", i = 0;
+// Render one source line verbatim: keep exact text/columns, only swap the
+// {chord} braces for a coloured span. One source line stays one preview line.
+function renderLine(line) {
+  let html = "", i = 0;
   while (i < line.length) {
     if (line[i] === "{") {
       const end = line.indexOf("}", i);
       if (end !== -1) {
-        const chord = line.slice(i + 1, end);
-        const col = lyric.length;
-        if (chordRow.length < col) chordRow += " ".repeat(col - chordRow.length);
-        else if (chordRow.length > col) chordRow += " ";   // avoid overlap
-        chordRow += chord;
+        html += '<span class="pc">' + esc(line.slice(i + 1, end)) + "</span>";
         i = end + 1;
         continue;
       }
     }
-    lyric += line[i];
+    html += esc(line[i]);
     i++;
   }
-  return { chord: chordRow, lyric };
+  return html;
 }
 function renderPreview(text) {
   const lines = (text || "").replace(/\\r\\n/g, "\\n").split("\\n");
@@ -386,17 +382,27 @@ function renderPreview(text) {
     const t = line.trim();
     if (t === "{tab}" || t === "{/tab}") { tab = (t === "{tab}"); continue; }
     if (tab) { html += '<div class="ptab">' + (esc(line) || "&nbsp;") + "</div>"; continue; }
-    const { chord, lyric } = splitChordLine(line);
-    html += '<div class="pl">';
-    if (chord.trim()) html += '<div class="pc">' + esc(chord) + "</div>";
-    html += '<div class="py">' + (esc(lyric) || "&nbsp;") + "</div>";
-    html += "</div>";
+    html += '<div class="pl">' + (renderLine(line) || "&nbsp;") + "</div>";
   }
   return html;
 }
 function updatePreview() {
   preview.innerHTML = renderPreview(body.value);
 }
+// Keep textarea and preview scrolled together (proportional to scroll range).
+let syncing = false;
+function linkScroll(src, dst) {
+  src.addEventListener("scroll", function () {
+    if (syncing) return;
+    syncing = true;
+    const sMax = src.scrollHeight - src.clientHeight;
+    const dMax = dst.scrollHeight - dst.clientHeight;
+    dst.scrollTop = sMax > 0 ? (src.scrollTop / sMax) * dMax : 0;
+    requestAnimationFrame(function () { syncing = false; });
+  });
+}
+linkScroll(body, preview);
+linkScroll(preview, body);
 
 // ---- api ----
 async function api(method, path, body) {

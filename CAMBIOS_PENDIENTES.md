@@ -14,7 +14,8 @@ Nuevo directorio `worker/` — Worker que hace de frente al bucket R2.
   - Login por token (Bearer, guardado en localStorage), con timeout y errores explícitos.
   - Listado con búsqueda, editor de ficheros con **autoguardado (debounce 1.5 s)**.
   - Campos **Título / Autor / Capo** en una misma fila; se guardan en cabeceras `#title/#artist/#capo` y en `customMetadata` de R2.
-  - **Panel de vista previa** a la derecha: muestra los acordes `{X}` colocados sobre la letra.
+  - **Panel de vista previa** a la derecha: interpreta el texto **línea a línea igual que el fichero** (quita las llaves y resalta el acorde en su columna, sin meter saltos de línea ni espacios extra).
+  - **Scroll sincronizado** entre el editor y la vista previa (proporcional, en ambos sentidos).
   - DELETE de ficheros.
 - `worker/wrangler.toml`, `worker/package.json` *(nuevos)* — config/deploy.
 
