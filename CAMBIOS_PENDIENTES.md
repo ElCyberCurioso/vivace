@@ -1,95 +1,90 @@
 # Cambios pendientes de subir a GitHub
 
-Rama: `master` · Generado: 2026-06-02
+Rama: `master` · Generado: 2026-06-12
 
-Resumen de todo lo no commiteado: **30 ficheros modificados** + **22 nuevos**.
-Agrupado por funcionalidad.
-
----
-
-## 1. Worker de Cloudflare (R2 sync + panel de administración)
-Nuevo directorio `worker/` — Worker que hace de frente al bucket R2.
-
-- `worker/src/index.js` *(nuevo)* — API (`/list`, `/object` GET/PUT/DELETE) + **interfaz web de administración** servida en `GET /`:
-  - Login por token (Bearer, guardado en localStorage), con timeout y errores explícitos.
-  - Listado con búsqueda, editor de ficheros con **autoguardado (debounce 1.5 s)**.
-  - Campos **Título / Autor / Capo** en una misma fila; se guardan en cabeceras `#title/#artist/#capo` y en `customMetadata` de R2.
-  - **Panel de vista previa** a la derecha: interpreta el texto **línea a línea igual que el fichero** (quita las llaves y resalta el acorde en su columna, sin meter saltos de línea ni espacios extra).
-  - **Scroll sincronizado** entre el editor y la vista previa (proporcional, en ambos sentidos).
-  - DELETE de ficheros.
-- `worker/wrangler.toml`, `worker/package.json` *(nuevos)* — config/deploy.
-
-> Para desplegar: `cd worker && npx wrangler deploy`.
+Resumen de todo lo no commiteado: **48 ficheros modificados** + **nuevos**
+(~2.000 inserciones). Agrupado por funcionalidad.
 
 ---
 
-## 2. Sincronización de metadatos app ↔ worker (app side)
-El título/autor/capo fijados en el worker fluyen a la app al sincronizar.
+## 1. Modernización del stack Android
+- `build.gradle.kts`, `app/build.gradle.kts` *(mod)* — Kotlin 2.0.21
+  (+plugin.compose), compile/targetSdk 35, AGP 8.6.1, KSP, Compose BOM
+  2024.12.01, dependencias actualizadas.
+- `gradlew`, `gradlew.bat`, `gradle/wrapper/gradle-wrapper.jar` *(nuevos)* —
+  wrapper de Gradle 8.7 incluido en el repo.
+- `app/src/test/` *(nuevo)* — tests unitarios (ChordTransposer, SongTextFormat).
+- `AndroidManifest.xml` *(mod)* + `res/xml/backup_rules.xml`,
+  `res/xml/data_extraction_rules.xml` *(nuevos)* — reglas de backup.
 
-- `app/.../sync/` *(directorio nuevo)*: `R2Client.kt`, `SyncManager.kt`, `SyncModels.kt`, `SongTextFormat.kt`, `SyncPrefs.kt`.
-  - `SyncModels.RemoteObject` lleva `title/artist/capo` (de `/list`).
-  - `SyncManager.fillTitleFromRemote` rellena título/autor/capo en cada sync sin descargar el cuerpo y sin pisar valores ya puestos en el dispositivo.
-- `app/.../data/Repository.kt` *(mod)* — `setRemoteTitle/Artist/Capo`, ops en lote `deleteSongs/moveSongs/setFavoriteFor`.
-- `app/.../data/Dao.kt` *(mod)* — `setTitle/setArtist/setCapo`.
-- `app/.../ui/sync/` *(nuevo)* — `SyncScreen.kt`, `SyncViewModel.kt`.
+## 2. UI / i18n
+- `res/values-en/` *(nuevo)* — traducción completa al inglés (es por defecto).
+- `ui/theme/Type.kt` *(nuevo)*, `Theme.kt` *(mod)* — tipografía propia,
+  ExtendedColors, edge-to-edge + splash API.
+- `ui/components/EmptyState.kt` *(nuevo)* — estado vacío reutilizable.
+- Iconos AutoMirrored, icono monocromo (`mipmap-anydpi-v26`), predictive
+  back, transiciones de navegación (`MainActivity.kt`, `NavGraph.kt`,
+  `themes.xml`).
 
----
+## 3. Metrónomo
+- `metronome/` y `ui/metronome/` *(nuevos)* — MetronomeEngine con
+  AudioTrack estático, acento de compás, pantalla propia.
 
-## 3. Selección múltiple de canciones (4 pantallas)
-Mantener pulsado → checkbox; barra contextual con seleccionar todo / favorita / mover / borrar.
+## 4. Acordes personalizados
+- `chords/CustomChords.kt` *(nuevo)* — caché de digitaciones de usuario
+  con prioridad sobre chords-db.
+- `ui/components/FretboardInput.kt` *(nuevo)* — diagrama editable
+  compartido (finder + editor de acordes).
+- `ui/components/ChordShapeEditorDialog.kt` *(nuevo)* — editor de
+  digitaciones desde el modal de acorde.
+- `data/` *(mod)* — entidad CustomChord, DB v9.
 
-- `app/.../ui/components/SongSelection.kt` *(nuevo)* — estado + `SelectionTopBar`, `BulkMoveDialog`, `BulkDeleteDialog`.
-- Pantallas *(mod)*: `ui/unassigned/UnassignedSongsScreen.kt`, `ui/playlist/PlaylistDetailScreen.kt`, `ui/search/SongSearchScreen.kt`, `ui/favorites/FavoritesScreen.kt`.
-- ViewModels *(mod)*: los 4 correspondientes (`deleteSelected/moveSelected/favoriteSelected`, `playlists` expuesto donde faltaba).
+## 5. Sincronización R2 estilo git (app)
+- `sync/SyncManager.kt` *(mod)* — `sync()` solo descarga y planifica;
+  la subida pasa a `push()` explícito. Conflictos excluidos del push.
+- `sync/SyncModels.kt` *(mod)* — `PendingUpload`; `SyncResult` con
+  `pendingUploads`.
+- `ui/sync/SyncViewModel.kt`, `SyncScreen.kt` *(mod)* — diálogo
+  "Confirmar subida" con lista de cambios locales (marca "nueva");
+  conflictos resueltos canción a canción (Local/Servidor); los no
+  resueltos quedan en espera hasta el siguiente sync ("Más tarde").
+- `res/values*/strings.xml` *(mod)* — strings nuevas es/en.
 
----
+## 6. Buscador de acordes por diagrama (tablet)
+- `ui/finder/ChordFinderScreen.kt` *(mod)* — ancho máximo 380dp: en
+  tablets el 90 % del ancho (ratio 6:7) desbordaba la pantalla.
 
-## 4. Reproductor de canción
-- `app/.../ui/song/SongViewScreen.kt` *(mod)*:
-  - Auto-desplazamiento a velocidades lentas (<65 px/s) — acumulador sub-píxel.
-  - Si interrumpes el scroll a mano, **sigue auto-desplazando desde donde lo dejaste** (captura de `CancellationException`).
-
----
-
-## 5. Teclado tapaba el editor
-- `app/src/main/AndroidManifest.xml` *(mod)* — `windowSoftInputMode="adjustResize"`.
-- `app/.../ui/song/SongEditorScreen.kt` *(mod)* y `VersionEditorScreen.kt` *(nuevo)* — `.imePadding()`.
-
----
-
-## 6. Diagramas de acordes
-- `app/.../chords/ChordLibrary.kt` *(mod)*:
-  - Fix cejilla fantasma (solo cejilla si ≥2 cuerdas en el traste de la raíz).
-  - Consulta primero la base de datos de acordes; plantillas como respaldo.
-- `app/.../chords/ChordDb.kt` *(nuevo)* — loader de `guitar.json` (chords-db, MIT): convierte frets/fingers/barres y mapea tónicas/sufijos.
-- `app/src/main/assets/chords/guitar.json` *(nuevo, 378 KB)* — datos de acordes (chords-db).
-- `app/src/main/assets/chords/LICENSE.txt` *(nuevo)* — atribución MIT (obligatoria).
-- `app/.../GuitarChordsApp.kt` *(mod)* — `ChordDb.init(this)`.
-
----
-
-## 7. Otros cambios sin commitear (de trabajo previo en el árbol)
-Ficheros tocados/nuevos que ya estaban sin subir antes de esta tanda:
-
-- *(mod)* `.gitignore`, `README.md`, `settings.gradle.kts`, `MainActivity.kt`,
-  `chords/ChordRecognizer.kt`, `data/AppDatabase.kt`, `data/Entities.kt`,
-  `ui/components/ChordModal.kt`, `ui/dictionary/ChordDictionaryScreen.kt`,
-  `ui/nav/NavGraph.kt`, `ui/playlists/PlaylistsScreen.kt`,
-  `ui/song/SongViewModel.kt`, `ui/song/SongEditorScreen.kt`,
-  `res/drawable/ic_launcher_foreground.xml`, `res/values/colors.xml`, `res/values/strings.xml`.
-- *(nuevos)* `chords/MusicTheory.kt`, `ui/components/ChordPickerDialog.kt`,
-  `ui/dictionary/TheoryGuide.kt`, `ui/home/HomeScreen.kt`,
-  `ui/responsive/WindowSize.kt`, `ui/settings/SettingsScreen.kt`,
-  `ui/song/VersionEditorScreen.kt`, `ui/song/VersionEditorViewModel.kt`.
+## 7. Worker R2 — panel de administración (`worker/src/index.js`)
+- **Backup**: botón "⬇ Backup" descarga un ZIP con todas las partituras;
+  **Restaurar**: sube un ZIP (admite STORE y DEFLATE), confirma antes y
+  conserva las claves originales. ZIP construido/parseado 100 % en el
+  navegador — sin endpoints nuevos.
+- **Borrado masivo**: endpoint `POST /delete` (body `{ keys: [...] }`,
+  troceado a 1000 claves por llamada R2) + checkboxes por fichero,
+  seleccionar todo (visible), selección de rango con Mayús+clic y botón
+  "Eliminar (N)".
+- **Listado**: artista (línea 1) sobre título (línea 2); numeración
+  estable por orden alfabético de título; orden por artista; búsqueda
+  también por artista; sin rutas de fichero — botón "Storage ↗" abre el
+  bucket en el dashboard de Cloudflare (`[vars] STORAGE_URL` en
+  `wrangler.toml`).
+- **Capo**: botonera 0–12 en lugar del campo numérico.
+- **Detección de acordes**: botón "♪ Detectar acordes" envuelve en `{X}`
+  las líneas compuestas solo por acordes/separadores; respeta `{tab}` y
+  líneas ya marcadas.
+- Checks de desarrollo *(nuevos)*: `worker/check-admin.mjs` (sintaxis del
+  script embebido) y `worker/test-detect.mjs` (8 casos de detección).
 
 ---
 
 ## NO se sube (gitignored)
-- `worker/credentials.txt` — fichero local, ignorado por `.gitignore`.
-- `worker/node_modules/`, `worker/.wrangler/`, `worker/.dev.vars` — ignorados.
+- `worker/credentials.txt`, `worker/node_modules/`, `worker/.wrangler/`,
+  `worker/.dev.vars`.
 
 ---
 
 ## Pendiente de verificar antes/después de subir
-- **Compilar la app** (no se ejecutó Gradle aquí por riesgo de cuelgue de la VM).
-- **Desplegar el worker** (`npx wrangler deploy`).
+- App compilada ✅ (`compileDebugKotlin` OK, solo warnings preexistentes).
+- Worker verificado ✅ (sintaxis módulo + script admin, tests de detección).
+- **Desplegar el worker**: `cd worker && npx wrangler deploy`.
+- Probar el buscador por diagrama en la tablet.

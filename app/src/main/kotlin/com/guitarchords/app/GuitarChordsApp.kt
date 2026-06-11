@@ -2,6 +2,7 @@ package com.guitarchords.app
 
 import android.app.Application
 import com.guitarchords.app.chords.ChordDb
+import com.guitarchords.app.chords.CustomChords
 import com.guitarchords.app.data.AppDatabase
 import com.guitarchords.app.data.Repository
 
@@ -14,5 +15,6 @@ class GuitarChordsApp : Application() {
         val db = AppDatabase.get(this)
         repo = Repository(db.playlistDao(), db.songDao(), db.songVersionDao())
         ChordDb.init(this)
+        CustomChords.init(db.customChordDao())
     }
 }

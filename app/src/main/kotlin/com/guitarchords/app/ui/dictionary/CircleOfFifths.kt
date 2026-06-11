@@ -36,8 +36,10 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.guitarchords.app.R
 import kotlin.math.atan2
 import kotlin.math.hypot
 
@@ -116,12 +118,12 @@ fun CircleOfFifthsView(
             FilterChip(
                 selected = tonicMajor,
                 onClick = { tonicMajor = true },
-                label = { Text("Mayor (I)") }
+                label = { Text(stringResource(R.string.major_label)) }
             )
             FilterChip(
                 selected = !tonicMajor,
                 onClick = { tonicMajor = false },
-                label = { Text("Menor (i)") }
+                label = { Text(stringResource(R.string.minor_label)) }
             )
         }
 

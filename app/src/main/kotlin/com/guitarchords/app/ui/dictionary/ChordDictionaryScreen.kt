@@ -17,8 +17,9 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.MusicOff
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -36,11 +37,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.guitarchords.app.R
 import com.guitarchords.app.chords.ChordDiagram
 import com.guitarchords.app.chords.ChordLibrary
 import com.guitarchords.app.ui.components.ChordModal
+import com.guitarchords.app.ui.components.EmptyState
 import com.guitarchords.app.ui.responsive.WidthClass
 import com.guitarchords.app.ui.responsive.rememberWidthClass
 
@@ -86,24 +90,24 @@ fun ChordDictionaryScreen(onBack: () -> Unit) {
                 title = {
                     Text(
                         when (tab) {
-                            DictTab.CHORDS -> "Diccionario de acordes"
-                            DictTab.CIRCLE -> "Círculo de quintas"
-                            DictTab.GUIDE -> "Guía de teoría"
+                            DictTab.CHORDS -> stringResource(R.string.dictionary_title)
+                            DictTab.CIRCLE -> stringResource(R.string.circle_of_fifths)
+                            DictTab.GUIDE -> stringResource(R.string.theory_guide)
                         }
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = {
                         if (tab != DictTab.CHORDS) tab = DictTab.CHORDS else onBack()
-                    }) { Icon(Icons.Default.ArrowBack, "Atrás") }
+                    }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
                 },
                 actions = {
                     IconButton(onClick = {
                         tab = if (tab == DictTab.GUIDE) DictTab.CHORDS else DictTab.GUIDE
-                    }) { Icon(Icons.Default.School, "Guía de teoría") }
+                    }) { Icon(Icons.Default.School, stringResource(R.string.theory_guide)) }
                     IconButton(onClick = {
                         tab = if (tab == DictTab.CIRCLE) DictTab.CHORDS else DictTab.CIRCLE
-                    }) { Icon(Icons.Default.Album, "Círculo de quintas") }
+                    }) { Icon(Icons.Default.Album, stringResource(R.string.circle_of_fifths)) }
                 }
             )
         }
@@ -122,14 +126,14 @@ fun ChordDictionaryScreen(onBack: () -> Unit) {
         }
         Column(Modifier.fillMaxSize().padding(pv)) {
             FilterRow(
-                label = "Raíz",
+                label = stringResource(R.string.root),
                 options = ChordLibrary.ROOTS,
                 optionLabel = { it },
                 selected = root,
                 onSelect = { root = it }
             )
             FilterRow(
-                label = "Calidad",
+                label = stringResource(R.string.quality),
                 options = ChordLibrary.QUALITIES,
                 optionLabel = { QUALITY_LABEL[it] ?: it },
                 selected = quality,
@@ -137,9 +141,11 @@ fun ChordDictionaryScreen(onBack: () -> Unit) {
             )
             Spacer(Modifier.height(4.dp))
             if (filtered.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Sin resultados")
-                }
+                EmptyState(
+                    icon = Icons.Default.MusicOff,
+                    title = stringResource(R.string.no_results),
+                    subtitle = stringResource(R.string.change_filters)
+                )
             } else {
                 val tileMin = when (rememberWidthClass()) {
                     WidthClass.COMPACT -> 140.dp
@@ -177,7 +183,7 @@ fun ChordDictionaryScreen(onBack: () -> Unit) {
                                     ChordDiagram(shape = first)
                                 } else {
                                     Text(
-                                        "Sin diagrama",
+                                        stringResource(R.string.no_diagram),
                                         style = MaterialTheme.typography.labelSmall
                                     )
                                 }
@@ -217,7 +223,7 @@ private fun <T> FilterRow(
         FilterChip(
             selected = selected == null,
             onClick = { onSelect(null) },
-            label = { Text("Todas") },
+            label = { Text(stringResource(R.string.all_filter)) },
             modifier = Modifier.padding(end = 4.dp)
         )
         options.forEach { opt ->

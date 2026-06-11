@@ -10,26 +10,38 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.guitarchords.app.chords.ChordLibrary
+import com.guitarchords.app.R
 import com.guitarchords.app.chords.ChordDiagram
+import com.guitarchords.app.chords.ChordLibrary
+import com.guitarchords.app.chords.CustomChords
 import com.guitarchords.app.chords.MusicTheory
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -39,8 +51,18 @@ fun ChordModal(
     onDismiss: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState()
-    val chord = remember(chordName) { ChordLibrary.find(chordName) }
+    // Las digitaciones personalizadas pueden cambiar mientras el modal está
+    // abierto (alta/edición/borrado): la revisión fuerza re-resolver el acorde.
+    val revision by CustomChords.revision.collectAsState()
+    val chord = remember(chordName, revision) { ChordLibrary.find(chordName) }
+    val chordKey = remember(chordName) {
+        ChordLibrary.parseName(chordName)?.let { (root, qual) -> root + qual }
+    }
     var index by remember(chordName) { mutableIntStateOf(0) }
+
+    // null = cerrado; (customId?, fretsIniciales?) = editor abierto.
+    var editing by remember { mutableStateOf<Pair<Long?, List<Int>?>?>(null) }
+    var confirmDelete by remember { mutableStateOf<Long?>(null) }
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
@@ -48,7 +70,7 @@ fun ChordModal(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             if (chord == null) {
-                Text("Acorde desconocido: $chordName", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.unknown_chord, chordName), style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(16.dp))
             } else if (chord.variations.isEmpty()) {
                 Text(
@@ -59,27 +81,39 @@ fun ChordModal(
                 val formula = MusicTheory.FORMULAS.firstOrNull { it.quality == chord.quality }
                 if (formula != null) {
                     Text(
-                        "Grados: ${formula.degrees}",
+                        stringResource(R.string.degrees, formula.degrees),
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Text(
-                        "Notas: " + MusicTheory.notesFor(
-                            ChordLibrary.ROOTS.indexOf(chord.root).coerceAtLeast(0),
-                            formula.semitones
-                        ).joinToString(" · "),
+                        stringResource(
+                            R.string.notes,
+                            MusicTheory.notesFor(
+                                ChordLibrary.ROOTS.indexOf(chord.root).coerceAtLeast(0),
+                                formula.semitones
+                            ).joinToString(" · ")
+                        ),
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
                 Text(
-                    "Sin diagrama disponible para esta posición.",
+                    stringResource(R.string.no_diagram_position),
                     style = MaterialTheme.typography.bodySmall
                 )
+                if (chordKey != null) {
+                    Spacer(Modifier.height(8.dp))
+                    AssistChip(
+                        onClick = { editing = null to null },
+                        label = { Text(stringResource(R.string.add_custom_shape)) },
+                        leadingIcon = { Icon(Icons.Default.Add, null) }
+                    )
+                }
                 Spacer(Modifier.height(16.dp))
             } else {
                 Text(chord.name, style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold))
                 Spacer(Modifier.height(8.dp))
                 val total = chord.variations.size
                 val safe = index.coerceIn(0, total - 1)
+                val shape = chord.variations[safe]
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center,
@@ -88,21 +122,94 @@ fun ChordModal(
                     IconButton(
                         onClick = { if (safe > 0) index = safe - 1 },
                         enabled = safe > 0
-                    ) { Icon(Icons.Default.ChevronLeft, "Anterior") }
+                    ) { Icon(Icons.Default.ChevronLeft, stringResource(R.string.previous)) }
 
                     Box(modifier = Modifier.padding(horizontal = 24.dp)) {
-                        ChordDiagram(shape = chord.variations[safe])
+                        ChordDiagram(shape = shape)
                     }
 
                     IconButton(
                         onClick = { if (safe < total - 1) index = safe + 1 },
                         enabled = safe < total - 1
-                    ) { Icon(Icons.Default.ChevronRight, "Siguiente") }
+                    ) { Icon(Icons.Default.ChevronRight, stringResource(R.string.next)) }
                 }
                 Spacer(Modifier.height(8.dp))
-                Text("Variación ${safe + 1} / $total", style = MaterialTheme.typography.bodyMedium)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        stringResource(R.string.variation_n, safe + 1, total),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    if (shape.customId != null) {
+                        SuggestionChip(
+                            onClick = {},
+                            label = { Text(stringResource(R.string.custom_shape)) }
+                        )
+                    }
+                }
+                if (chordKey != null) {
+                    Spacer(Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        AssistChip(
+                            onClick = { editing = null to null },
+                            label = { Text(stringResource(R.string.add_custom_shape)) },
+                            leadingIcon = { Icon(Icons.Default.Add, null) }
+                        )
+                        if (shape.customId != null) {
+                            AssistChip(
+                                onClick = { editing = shape.customId to shape.frets },
+                                label = { Text(stringResource(R.string.edit)) },
+                                leadingIcon = { Icon(Icons.Default.Edit, null) }
+                            )
+                            AssistChip(
+                                onClick = { confirmDelete = shape.customId },
+                                label = { Text(stringResource(R.string.delete)) },
+                                leadingIcon = { Icon(Icons.Default.Delete, null) }
+                            )
+                        }
+                    }
+                }
                 Spacer(Modifier.height(16.dp))
             }
         }
+    }
+
+    editing?.let { (editId, initialFrets) ->
+        if (chordKey != null) {
+            ChordShapeEditorDialog(
+                chordName = chordKey,
+                initialFrets = initialFrets,
+                onSave = { frets ->
+                    if (editId == null) {
+                        CustomChords.add(chordKey, frets)
+                        index = 0   // la nueva digitación aparece la primera
+                    } else {
+                        CustomChords.update(editId, chordKey, frets)
+                    }
+                    editing = null
+                },
+                onDismiss = { editing = null }
+            )
+        }
+    }
+
+    confirmDelete?.let { id ->
+        AlertDialog(
+            onDismissRequest = { confirmDelete = null },
+            title = { Text(stringResource(R.string.delete_custom_shape)) },
+            text = { Text(stringResource(R.string.delete_custom_shape_msg)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    CustomChords.delete(id)
+                    confirmDelete = null
+                    index = 0
+                }) { Text(stringResource(R.string.delete)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmDelete = null }) { Text(stringResource(R.string.cancel)) }
+            }
+        )
     }
 }

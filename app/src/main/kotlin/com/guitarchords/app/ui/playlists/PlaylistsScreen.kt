@@ -3,21 +3,19 @@ package com.guitarchords.app.ui.playlists
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FileUpload
@@ -43,13 +41,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.clickable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.guitarchords.app.R
 import com.guitarchords.app.data.Playlist
+import com.guitarchords.app.ui.components.EmptyState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,32 +81,39 @@ fun PlaylistsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Listas") },
+                title = { Text(stringResource(R.string.playlists)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, "Atrás")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back))
                     }
                 },
                 actions = {
                     IconButton(onClick = onOpenSearch) {
-                        Icon(Icons.Default.Search, "Buscar canciones")
+                        Icon(Icons.Default.Search, stringResource(R.string.search_songs))
                     }
                     IconButton(onClick = {
                         importLauncher.launch(arrayOf("application/zip", "*/*"))
                     }) {
-                        Icon(Icons.Default.FileUpload, "Importar")
+                        Icon(Icons.Default.FileUpload, stringResource(R.string.import_file))
                     }
                 }
             )
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { showFabChooser = true }) {
-                Icon(Icons.Default.Add, "Añadir")
+                Icon(Icons.Default.Add, stringResource(R.string.add))
             }
         }
     ) { pv ->
         if (playlists.isEmpty() && unassignedCount == 0) {
-            EmptyState(pv)
+            EmptyState(
+                icon = Icons.Default.LibraryMusic,
+                title = stringResource(R.string.empty_playlists_title),
+                subtitle = stringResource(R.string.empty_playlists_subtitle),
+                actionLabel = stringResource(R.string.create_playlist),
+                onAction = { showCreate = true },
+                modifier = Modifier.padding(pv)
+            )
         } else {
             LazyColumn(
                 contentPadding = PaddingValues(12.dp),
@@ -131,7 +142,7 @@ fun PlaylistsScreen(
     if (showFabChooser) {
         AlertDialog(
             onDismissRequest = { showFabChooser = false },
-            title = { Text("¿Qué quieres añadir?") },
+            title = { Text(stringResource(R.string.fab_chooser_title)) },
             text = {
                 Column {
                     Row(
@@ -146,7 +157,7 @@ fun PlaylistsScreen(
                     ) {
                         Icon(Icons.Default.LibraryMusic, null)
                         Spacer(Modifier.size(12.dp))
-                        Text("Nueva lista", style = MaterialTheme.typography.bodyLarge)
+                        Text(stringResource(R.string.new_playlist), style = MaterialTheme.typography.bodyLarge)
                     }
                     Row(
                         modifier = Modifier
@@ -160,19 +171,19 @@ fun PlaylistsScreen(
                     ) {
                         Icon(Icons.Default.MusicNote, null)
                         Spacer(Modifier.size(12.dp))
-                        Text("Nueva canción", style = MaterialTheme.typography.bodyLarge)
+                        Text(stringResource(R.string.new_song), style = MaterialTheme.typography.bodyLarge)
                     }
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showFabChooser = false }) { Text("Cancelar") }
+                TextButton(onClick = { showFabChooser = false }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
 
     if (showCreate) {
         TextDialog(
-            title = "Nueva lista",
+            title = stringResource(R.string.new_playlist),
             initial = "",
             onDismiss = { showCreate = false },
             onConfirm = {
@@ -183,7 +194,7 @@ fun PlaylistsScreen(
     }
     renaming?.let { p ->
         TextDialog(
-            title = "Renombrar",
+            title = stringResource(R.string.rename),
             initial = p.name,
             onDismiss = { renaming = null },
             onConfirm = {
@@ -195,35 +206,18 @@ fun PlaylistsScreen(
     deleting?.let { p ->
         AlertDialog(
             onDismissRequest = { deleting = null },
-            title = { Text("Borrar lista") },
-            text = { Text("¿Borrar \"${p.name}\" y todas sus canciones?") },
+            title = { Text(stringResource(R.string.delete_playlist_title)) },
+            text = { Text(stringResource(R.string.delete_playlist_msg, p.name)) },
             confirmButton = {
                 TextButton(onClick = {
                     vm.delete(p.id)
                     deleting = null
-                }) { Text("Borrar") }
+                }) { Text(stringResource(R.string.delete)) }
             },
             dismissButton = {
-                TextButton(onClick = { deleting = null }) { Text("Cancelar") }
+                TextButton(onClick = { deleting = null }) { Text(stringResource(R.string.cancel)) }
             }
         )
-    }
-}
-
-@Composable
-private fun EmptyState(pv: PaddingValues) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(pv),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(Icons.Default.LibraryMusic, null, modifier = Modifier.size(72.dp))
-            Spacer(Modifier.height(12.dp))
-            Text("Sin listas aún", style = MaterialTheme.typography.titleMedium)
-            Text("Pulsa + para crear una", style = MaterialTheme.typography.bodyMedium)
-        }
     }
 }
 
@@ -244,11 +238,11 @@ private fun UnassignedRow(count: Int, onClick: () -> Unit) {
             Spacer(Modifier.size(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    "Canciones sin lista",
+                    stringResource(R.string.unassigned_songs),
                     style = MaterialTheme.typography.titleMedium
                 )
                 Text(
-                    "$count canción${if (count == 1) "" else "es"}",
+                    pluralStringResource(R.plurals.song_count, count, count),
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -263,13 +257,17 @@ private fun PlaylistRow(
     onRename: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val haptics = LocalHapticFeedback.current
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .pointerInput(Unit) {
                 detectTapGestures(
                     onTap = { onClick() },
-                    onLongPress = { onRename() }
+                    onLongPress = {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onRename()
+                    }
                 )
             }
     ) {
@@ -286,8 +284,8 @@ private fun PlaylistRow(
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.weight(1f)
             )
-            IconButton(onClick = onRename) { Icon(Icons.Default.Edit, "Renombrar") }
-            IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, "Borrar") }
+            IconButton(onClick = onRename) { Icon(Icons.Default.Edit, stringResource(R.string.rename)) }
+            IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, stringResource(R.string.delete)) }
         }
     }
 }
@@ -312,10 +310,10 @@ fun TextDialog(
             )
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(value) }) { Text("Guardar") }
+            TextButton(onClick = { onConfirm(value) }) { Text(stringResource(R.string.save)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancelar") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
         }
     )
 }

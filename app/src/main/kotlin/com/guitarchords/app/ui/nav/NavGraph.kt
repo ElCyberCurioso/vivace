@@ -1,5 +1,9 @@
 package com.guitarchords.app.ui.nav
 
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -10,6 +14,7 @@ import com.guitarchords.app.ui.dictionary.ChordDictionaryScreen
 import com.guitarchords.app.ui.favorites.FavoritesScreen
 import com.guitarchords.app.ui.finder.ChordFinderScreen
 import com.guitarchords.app.ui.home.HomeScreen
+import com.guitarchords.app.ui.metronome.MetronomeScreen
 import com.guitarchords.app.ui.playlist.PlaylistDetailScreen
 import com.guitarchords.app.ui.playlists.PlaylistsScreen
 import com.guitarchords.app.ui.search.SongSearchScreen
@@ -33,6 +38,7 @@ object Route {
     const val ChordDictionary = "chords/dictionary"
     const val ChordFinder = "chords/finder"
     const val Tuner = "tuner"
+    const val Metronome = "metronome"
     const val SongSearch = "songs/search"
     const val Favorites = "songs/favorites"
     const val Unassigned = "songs/unassigned"
@@ -47,12 +53,30 @@ object Route {
 
 @Composable
 fun NavGraph(nav: NavHostController) {
-    NavHost(nav, startDestination = Route.Home) {
+    NavHost(
+        nav,
+        startDestination = Route.Home,
+        enterTransition = {
+            slideIntoContainer(
+                AnimatedContentTransitionScope.SlideDirection.Start,
+                animationSpec = tween(260)
+            ) + fadeIn(tween(260))
+        },
+        exitTransition = { fadeOut(tween(180)) },
+        popEnterTransition = { fadeIn(tween(220)) },
+        popExitTransition = {
+            slideOutOfContainer(
+                AnimatedContentTransitionScope.SlideDirection.End,
+                animationSpec = tween(260)
+            ) + fadeOut(tween(260))
+        }
+    ) {
         composable(Route.Home) {
             HomeScreen(
                 onOpenPlaylists = { nav.navigate(Route.Playlists) },
                 onOpenFavorites = { nav.navigate(Route.Favorites) },
                 onOpenTuner = { nav.navigate(Route.Tuner) },
+                onOpenMetronome = { nav.navigate(Route.Metronome) },
                 onOpenFinder = { nav.navigate(Route.ChordFinder) },
                 onOpenDictionary = { nav.navigate(Route.ChordDictionary) },
                 onOpenSettings = { nav.navigate(Route.Settings) }
@@ -81,6 +105,9 @@ fun NavGraph(nav: NavHostController) {
         }
         composable(Route.Tuner) {
             TunerScreen(onBack = { nav.popBackStack() })
+        }
+        composable(Route.Metronome) {
+            MetronomeScreen(onBack = { nav.popBackStack() })
         }
         composable(Route.SongSearch) {
             SongSearchScreen(

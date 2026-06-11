@@ -10,9 +10,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DriveFileMove
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.DriveFileMove
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.SelectAll
@@ -35,7 +35,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.guitarchords.app.R
 import com.guitarchords.app.data.Playlist
 
 /**
@@ -80,18 +83,18 @@ fun SelectionTopBar(
             navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
             actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
         ),
-        title = { Text(if (count == 1) "1 seleccionada" else "$count seleccionadas") },
+        title = { Text(pluralStringResource(R.plurals.selected_count, count, count)) },
         navigationIcon = {
-            IconButton(onClick = onClose) { Icon(Icons.Default.Close, "Cancelar selección") }
+            IconButton(onClick = onClose) { Icon(Icons.Default.Close, stringResource(R.string.cancel_selection)) }
         },
         actions = {
-            IconButton(onClick = onSelectAll) { Icon(Icons.Default.SelectAll, "Seleccionar todo") }
+            IconButton(onClick = onSelectAll) { Icon(Icons.Default.SelectAll, stringResource(R.string.select_all)) }
             IconButton(onClick = onFavorite) {
-                if (favoriteIsRemove) Icon(Icons.Default.StarBorder, "Quitar de favoritas")
-                else Icon(Icons.Default.Star, "Marcar favorita")
+                if (favoriteIsRemove) Icon(Icons.Default.StarBorder, stringResource(R.string.remove_from_favorites))
+                else Icon(Icons.Default.Star, stringResource(R.string.mark_favorite))
             }
-            IconButton(onClick = onMove) { Icon(Icons.Default.DriveFileMove, "Mover a lista") }
-            IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, "Borrar") }
+            IconButton(onClick = onMove) { Icon(Icons.AutoMirrored.Filled.DriveFileMove, stringResource(R.string.move_to_list)) }
+            IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, stringResource(R.string.delete)) }
         }
     )
 }
@@ -107,10 +110,10 @@ fun BulkMoveDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (count == 1) "Mover 1 canción" else "Mover $count canciones") },
+        title = { Text(pluralStringResource(R.plurals.bulk_move_title, count, count)) },
         text = {
             if (targets.isEmpty() && !includeUnassigned) {
-                Text("No hay listas. Crea una lista primero.")
+                Text(stringResource(R.string.no_lists_yet))
             } else {
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -118,7 +121,7 @@ fun BulkMoveDialog(
                 ) {
                     if (includeUnassigned) {
                         item {
-                            PickRow(icon = Icons.Default.MusicNote, label = "Sin lista") { onPick(null) }
+                            PickRow(icon = Icons.Default.MusicNote, label = stringResource(R.string.no_playlist)) { onPick(null) }
                         }
                     }
                     items(targets, key = { it.id }) { p ->
@@ -127,7 +130,7 @@ fun BulkMoveDialog(
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Cerrar") } }
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.close)) } }
     )
 }
 
@@ -154,14 +157,9 @@ private fun PickRow(
 fun BulkDeleteDialog(count: Int, onConfirm: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Borrar canciones") },
-        text = {
-            Text(
-                if (count == 1) "¿Borrar 1 canción? Esta acción no se puede deshacer."
-                else "¿Borrar $count canciones? Esta acción no se puede deshacer."
-            )
-        },
-        confirmButton = { TextButton(onClick = onConfirm) { Text("Borrar") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+        title = { Text(stringResource(R.string.bulk_delete_title)) },
+        text = { Text(pluralStringResource(R.plurals.bulk_delete_msg, count, count)) },
+        confirmButton = { TextButton(onClick = onConfirm) { Text(stringResource(R.string.delete)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } }
     )
 }

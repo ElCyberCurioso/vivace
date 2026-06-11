@@ -2,17 +2,22 @@ package com.guitarchords.app.chords
 
 object ChordTransposer {
     private val CHROMA = listOf("C","C#","D","D#","E","F","F#","G","G#","A","A#","B")
+    private val CHROMA_FLAT = listOf("C","Db","D","Eb","E","F","Gb","G","Ab","A","Bb","B")
     private val FLAT = mapOf(
         "Db" to "C#", "Eb" to "D#", "Gb" to "F#",
         "Ab" to "G#", "Bb" to "A#", "Cb" to "B", "Fb" to "E"
     )
 
-    fun transposeChord(name: String, semitones: Int): String {
-        if (semitones == 0 || name.isEmpty()) return name
+    /**
+     * Transpone un acorde [semitones] semitonos. Con [preferFlats] los
+     * resultados alterados se escriben con bemoles (Bb) en vez de sostenidos (A#).
+     */
+    fun transposeChord(name: String, semitones: Int, preferFlats: Boolean = false): String {
+        if ((semitones == 0 && !preferFlats) || name.isEmpty()) return name
         val slash = name.indexOf('/')
         if (slash >= 0) {
-            val main = transposeChord(name.substring(0, slash), semitones)
-            val bass = transposeChord(name.substring(slash + 1), semitones)
+            val main = transposeChord(name.substring(0, slash), semitones, preferFlats)
+            val bass = transposeChord(name.substring(slash + 1), semitones, preferFlats)
             return "$main/$bass"
         }
         val root = when {
@@ -24,11 +29,12 @@ object ChordTransposer {
         val idx = CHROMA.indexOf(normalized)
         if (idx < 0) return name
         val shifted = ((idx + semitones) % 12 + 12) % 12
-        return CHROMA[shifted] + suffix
+        val scale = if (preferFlats) CHROMA_FLAT else CHROMA
+        return scale[shifted] + suffix
     }
 
-    fun transposeContent(content: String, semitones: Int): String {
-        if (semitones == 0) return content
+    fun transposeContent(content: String, semitones: Int, preferFlats: Boolean = false): String {
+        if (semitones == 0 && !preferFlats) return content
         val sb = StringBuilder()
         var i = 0
         var inTab = false
@@ -48,7 +54,7 @@ object ChordTransposer {
                             sb.append(content, i, end + 1)
                         }
                         inTab -> sb.append(content, i, end + 1)
-                        else -> sb.append('{').append(transposeChord(inner, semitones)).append('}')
+                        else -> sb.append('{').append(transposeChord(inner, semitones, preferFlats)).append('}')
                     }
                     i = end + 1
                     continue

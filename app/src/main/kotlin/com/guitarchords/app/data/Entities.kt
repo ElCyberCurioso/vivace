@@ -33,6 +33,8 @@ data class Song(
     val content: String = "",
     val favorite: Boolean = false,
     val capo: Int = 0,
+    /** URL de la web donde está la canción original (botón "Link" en el visor). */
+    @ColumnInfo(name = "source_url") val sourceUrl: String = "",
     @ColumnInfo(name = "remote_key") val remoteKey: String? = null,
     @ColumnInfo(name = "remote_etag") val remoteEtag: String? = null,
     @ColumnInfo(name = "remote_updated_at") val remoteUpdatedAt: Long = 0,
@@ -61,6 +63,23 @@ data class SongVersion(
     val name: String,
     val content: String = "",
     val capo: Int = 0,
+    /** URL de la web de origen de esta versión concreta (botón "Link"). */
+    @ColumnInfo(name = "source_url") val sourceUrl: String = "",
+    @ColumnInfo(name = "position") val position: Int = 0,
+    @ColumnInfo(name = "updated_at") val updatedAt: Long = System.currentTimeMillis()
+)
+
+/**
+ * Digitación de acorde definida por el usuario. Tiene prioridad sobre las
+ * posiciones de chords-db/plantillas al mostrar diagramas.
+ */
+@Entity(tableName = "custom_chords", indices = [Index("chord_key")])
+data class CustomChord(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    /** Nombre normalizado raíz+calidad, p. ej. "Bm" o "F#maj7". */
+    @ColumnInfo(name = "chord_key") val chordKey: String,
+    /** 6 trastes absolutos separados por comas, Mi grave primero; -1 = muda. */
+    val frets: String,
     @ColumnInfo(name = "position") val position: Int = 0,
     @ColumnInfo(name = "updated_at") val updatedAt: Long = System.currentTimeMillis()
 )
@@ -80,5 +99,6 @@ data class SongExport(
     val content: String = "",
     val favorite: Boolean = false,
     val capo: Int = 0,
+    val sourceUrl: String = "",
     val position: Int = 0
 )

@@ -1,25 +1,221 @@
 <resources>
     <string name="app_name">Vivace</string>
+
+    <!-- Genéricos -->
+    <string name="back">Atrás</string>
+    <string name="save">Guardar</string>
+    <string name="cancel">Cancelar</string>
+    <string name="close">Cerrar</string>
+    <string name="delete">Borrar</string>
+    <string name="edit">Editar</string>
+    <string name="share">Compartir</string>
+    <string name="print">Imprimir</string>
+    <string name="add">Añadir</string>
+    <string name="reset">Reset</string>
+    <string name="rename">Renombrar</string>
+    <string name="more_options">Más opciones</string>
+
+    <!-- Inicio -->
+    <string name="home_playlists">Listas de canciones</string>
+    <string name="home_favorites">Favoritas</string>
+    <string name="home_tuner">Afinador</string>
+    <string name="home_finder">Buscar por figura</string>
+    <string name="home_dictionary">Diccionario de acordes</string>
+    <string name="home_settings">Configuraciones</string>
+
+    <!-- Listas -->
     <string name="playlists">Listas</string>
     <string name="new_playlist">Nueva lista</string>
     <string name="playlist_name">Nombre de la lista</string>
-    <string name="songs">Canciones</string>
     <string name="new_song">Nueva canción</string>
+    <string name="search_songs">Buscar canciones</string>
+    <string name="import_file">Importar</string>
+    <string name="fab_chooser_title">¿Qué quieres añadir?</string>
+    <string name="empty_playlists_title">Sin listas aún</string>
+    <string name="empty_playlists_subtitle">Crea tu primera lista para organizar tus canciones</string>
+    <string name="create_playlist">Crear lista</string>
+    <string name="unassigned_songs">Canciones sin lista</string>
+    <plurals name="song_count">
+        <item quantity="one">%d canción</item>
+        <item quantity="other">%d canciones</item>
+    </plurals>
+    <string name="delete_playlist_title">Borrar lista</string>
+    <string name="delete_playlist_msg">¿Borrar «%1$s» y todas sus canciones?</string>
+    <string name="share_playlist">Compartir lista</string>
+
+    <!-- Detalle de lista / filas de canción -->
+    <string name="empty_songs_title">Sin canciones</string>
+    <string name="empty_songs_subtitle">Añade la primera canción con el botón +</string>
+    <string name="empty_unassigned_title">Sin canciones sueltas</string>
+    <string name="empty_unassigned_subtitle">Las canciones que no pertenezcan a ninguna lista aparecerán aquí</string>
+    <string name="delete_song_title">Borrar canción</string>
+    <string name="delete_song_msg">¿Borrar «%1$s»?</string>
+    <string name="move_song_title">Mover «%1$s»</string>
+    <string name="assign_to_playlist">Añadir a lista</string>
+    <string name="no_playlist">Sin lista</string>
+    <string name="move_to_playlist">Mover a otra lista</string>
+    <string name="drag_reorder">Arrastrar para reordenar</string>
+    <string name="favorite">Favorita</string>
+    <string name="remove_favorite">Quitar favorita</string>
+    <string name="in_playlist">en %1$s</string>
+
+    <!-- Selección múltiple -->
+    <plurals name="selected_count">
+        <item quantity="one">%d seleccionada</item>
+        <item quantity="other">%d seleccionadas</item>
+    </plurals>
+    <string name="cancel_selection">Cancelar selección</string>
+    <string name="select_all">Seleccionar todo</string>
+    <string name="mark_favorite">Marcar favorita</string>
+    <string name="remove_from_favorites">Quitar de favoritas</string>
+    <string name="move_to_list">Mover a lista</string>
+    <plurals name="bulk_move_title">
+        <item quantity="one">Mover %d canción</item>
+        <item quantity="other">Mover %d canciones</item>
+    </plurals>
+    <string name="no_lists_yet">No hay listas. Crea una lista primero.</string>
+    <string name="bulk_delete_title">Borrar canciones</string>
+    <plurals name="bulk_delete_msg">
+        <item quantity="one">¿Borrar %d canción? Esta acción no se puede deshacer.</item>
+        <item quantity="other">¿Borrar %d canciones? Esta acción no se puede deshacer.</item>
+    </plurals>
+
+    <!-- Visor de canción -->
+    <string name="capo_fret">Capo en traste %1$d</string>
+    <string name="original">Original</string>
+    <string name="version">Versión</string>
+    <string name="new_version">Nueva versión</string>
+    <string name="edit_version">Editar versión</string>
+    <string name="version_name">Nombre de la versión</string>
+    <string name="delete_version">Borrar versión</string>
+    <string name="delete_version_msg">¿Borrar esta versión? La canción original no se ve afectada.</string>
+    <string name="play">Reproducir</string>
+    <string name="pause">Pausa</string>
+    <string name="show_controls">Mostrar controles</string>
+    <string name="hide_controls">Ocultar controles</string>
+    <string name="speed_label">Vel</string>
+    <string name="tone">Tono</string>
+    <string name="tone_with_value">Tono %1$s</string>
+    <string name="semitone_down">Bajar semitono</string>
+    <string name="semitone_up">Subir semitono</string>
+    <string name="share_song">Compartir canción</string>
+
+    <!-- Editor -->
     <string name="song_title">Título</string>
     <string name="song_artist">Artista</string>
-    <string name="lyrics">Letra</string>
-    <string name="save">Guardar</string>
-    <string name="cancel">Cancelar</string>
-    <string name="delete">Borrar</string>
-    <string name="edit">Editar</string>
-    <string name="favorite">Favorita</string>
-    <string name="export_zip">Exportar ZIP</string>
-    <string name="import_zip">Importar ZIP</string>
-    <string name="share">Compartir</string>
-    <string name="print">Imprimir</string>
-    <string name="autoscroll">Auto-scroll</string>
-    <string name="font_size">Tamaño texto</string>
+    <string name="song_genre">Género</string>
+    <string name="playlist_label">Lista: %1$s</string>
     <string name="insert_chord">Insertar acorde</string>
-    <string name="variation">Variación</string>
-    <string name="confirm_delete">¿Borrar?</string>
+    <string name="insert_tab">Insertar tablatura</string>
+    <string name="capo_label">Capo:</string>
+    <string name="no_capo">Sin capo</string>
+    <string name="fret_n">Traste %1$d</string>
+    <string name="capo_down">Bajar capo</string>
+    <string name="capo_up">Subir capo</string>
+    <string name="lyrics_and_chords">Letra y acordes</string>
+    <string name="syntax_hint">Usa {Nombre} para acordes — ej: {Am} Casa. Tablatura entre {tab}…{/tab}</string>
+    <string name="write_here">Escribe aquí…</string>
+    <string name="choose_playlist">Elige lista</string>
+    <string name="untitled">Sin título</string>
+    <string name="source_url_label">URL de la canción original</string>
+    <string name="link">Link</string>
+    <string name="title_required">Ponle un título a la canción</string>
+
+    <!-- Diccionario -->
+    <string name="dictionary_title">Diccionario de acordes</string>
+    <string name="circle_of_fifths">Círculo de quintas</string>
+    <string name="theory_guide">Guía de teoría</string>
+    <string name="root">Raíz</string>
+    <string name="quality">Calidad</string>
+    <string name="all_filter">Todas</string>
+    <string name="no_results">Sin resultados</string>
+    <string name="change_filters">Cambia los filtros de raíz o calidad</string>
+    <string name="no_diagram">Sin diagrama</string>
+    <string name="view">Ver</string>
+    <string name="major_label">Mayor (I)</string>
+    <string name="minor_label">Menor (i)</string>
+    <string name="choose_chord">Elige un acorde</string>
+    <string name="search_chord_placeholder">Buscar (Am, F#m7…)</string>
+
+    <!-- Buscador de acordes -->
+    <string name="finder_title">Buscador de acordes</string>
+    <string name="clear">Limpiar</string>
+    <string name="matching_chords">Acordes coincidentes</string>
+    <string name="mark_frets_hint">Marca trastes para identificar un acorde</string>
+    <string name="base_fret">Traste base: %1$d</string>
+    <string name="fret_down">Menos traste</string>
+    <string name="fret_up">Más traste</string>
+
+    <!-- Digitaciones personalizadas -->
+    <string name="custom_shape">Personalizado</string>
+    <string name="add_custom_shape">Añadir digitación</string>
+    <string name="edit_custom_shape">Editar digitación</string>
+    <string name="delete_custom_shape">Borrar digitación</string>
+    <string name="delete_custom_shape_msg">¿Borrar esta digitación personalizada?</string>
+    <string name="custom_shape_hint">Toca el mástil para marcar los trastes; X/O alterna cuerda muda o al aire.</string>
+
+    <!-- Afinador -->
+    <string name="tuner_title">Afinador</string>
+    <string name="mic_permission_title">Permiso de micrófono necesario</string>
+    <string name="mic_permission_msg">Para detectar las notas de la guitarra en tiempo real.</string>
+    <string name="grant_permission">Conceder permiso</string>
+    <string name="play_a_string">Toca una cuerda</string>
+
+    <!-- Búsqueda -->
+    <string name="search_placeholder">Título, artista, género o letra…</string>
+    <string name="search_hint_title">Busca en tu cancionero</string>
+    <string name="search_hint_subtitle">Escribe un título, artista, género o parte de la letra</string>
+    <string name="try_another_search">Prueba con otra búsqueda</string>
+
+    <!-- Favoritas -->
+    <string name="favorites_title">Favoritas</string>
+    <string name="empty_favorites_title">Sin canciones favoritas</string>
+    <string name="empty_favorites_subtitle">Marca canciones con la estrella para verlas aquí</string>
+
+    <!-- Ajustes / Sync -->
+    <string name="settings_title">Configuraciones</string>
+    <string name="sync_r2_title">Sincronización R2</string>
+    <string name="sync_r2_subtitle">Conecta con tu bucket de Cloudflare R2 para descargar y subir canciones.</string>
+    <string name="sync_intro">Conecta con el contenedor R2 de Cloudflare a través del Worker. Solo se descarga y sube el contenido nuevo o modificado.</string>
+    <string name="sync_worker_url">URL del Worker</string>
+    <string name="sync_token">Token de acceso</string>
+    <string name="sync_now">Sincronizar ahora</string>
+    <string name="syncing">Sincronizando…</string>
+    <string name="last_sync">Última sincronización: %1$s</string>
+    <string name="never">nunca</string>
+    <string name="pending_uploads">Canciones con cambios sin subir: %1$d</string>
+    <string name="sync_result">Descargadas: %1$d  ·  Subidas: %2$d</string>
+    <string name="sync_conflicts_suffix">  ·  Conflictos: %1$d</string>
+    <string name="sync_missing_fields">Indica la URL del servidor y el token</string>
+    <string name="sync_error_generic">Error de sincronización</string>
+    <string name="sync_conflict_error">Error resolviendo conflictos</string>
+    <string name="conflicts_title">%1$d conflicto(s)</string>
+    <string name="conflicts_msg">Estas canciones se han modificado tanto en el dispositivo como en el servidor. Decide en cada una qué versión conservar; las no resueltas quedan en espera hasta el próximo sync:</string>
+    <string name="keep_local">Mantener local</string>
+    <string name="use_server">Usar servidor</string>
+    <string name="local_vs_server">local %1$s · servidor %2$s</string>
+    <string name="conflict_local_short">Local</string>
+    <string name="conflict_server_short">Servidor</string>
+    <string name="conflict_later">Más tarde</string>
+    <string name="push_confirm_title">Confirmar subida</string>
+    <string name="push_confirm_msg">Hay %1$d canción(es) con cambios locales. ¿Subirlas al servidor?</string>
+    <string name="push_upload">Subir</string>
+    <string name="push_not_now">Ahora no</string>
+    <string name="push_new_song">nueva</string>
+
+    <!-- Modal de acorde -->
+    <string name="unknown_chord">Acorde desconocido: %1$s</string>
+    <string name="degrees">Grados: %1$s</string>
+    <string name="notes">Notas: %1$s</string>
+    <string name="no_diagram_position">Sin diagrama disponible para esta posición.</string>
+    <string name="variation_n">Variación %1$d / %2$d</string>
+    <string name="previous">Anterior</string>
+    <string name="next">Siguiente</string>
+
+    <!-- Metrónomo -->
+    <string name="metronome_title">Metrónomo</string>
+    <string name="bpm">%1$d BPM</string>
+    <string name="start">Iniciar</string>
+    <string name="stop">Detener</string>
+    <string name="beats_per_bar">Pulsos por compás</string>
 </resources>

@@ -12,7 +12,8 @@ data class RemoteObject(
     /** Indexed metadata from the Worker (R2 customMetadata) so it flows without a body download. */
     val title: String = "",
     val artist: String = "",
-    val capo: String = ""
+    val capo: String = "",
+    val url: String = ""
 )
 
 /** Body + metadata of a single downloaded R2 object. */
@@ -32,9 +33,17 @@ data class SyncConflict(
     val remoteUpdatedAt: Long
 )
 
-/** Outcome of a sync run. */
+/** A dirty local song waiting for the user to confirm its upload. */
+data class PendingUpload(
+    val songId: Long,
+    val title: String,
+    val isNew: Boolean
+)
+
+/** Outcome of a sync run. Uploads only happen later, via an explicit push. */
 data class SyncResult(
     val downloaded: Int,
     val uploaded: Int,
+    val pendingUploads: List<PendingUpload>,
     val conflicts: List<SyncConflict>
 )

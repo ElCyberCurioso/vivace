@@ -70,6 +70,7 @@ interface SongDao {
         WHERE title LIKE '%' || :q || '%' COLLATE NOCASE
            OR artist LIKE '%' || :q || '%' COLLATE NOCASE
            OR genre LIKE '%' || :q || '%' COLLATE NOCASE
+           OR content LIKE '%' || :q || '%' COLLATE NOCASE
         ORDER BY title COLLATE NOCASE ASC
         """
     )
@@ -77,6 +78,9 @@ interface SongDao {
 
     @Query("UPDATE songs SET playlist_id = :newPlaylistId, position = :position WHERE id = :id")
     suspend fun moveSong(id: Long, newPlaylistId: Long?, position: Int)
+
+    @Query("UPDATE songs SET position = :position WHERE id = :id")
+    suspend fun setPosition(id: Long, position: Int)
 
     @Query("SELECT COALESCE(MAX(position), -1) + 1 FROM songs WHERE playlist_id = :playlistId")
     suspend fun nextPosition(playlistId: Long): Int
@@ -114,6 +118,27 @@ interface SongDao {
 
     @Query("UPDATE songs SET capo = :capo WHERE id = :id")
     suspend fun setCapo(id: Long, capo: Int)
+
+    @Query("UPDATE songs SET source_url = :url WHERE id = :id")
+    suspend fun setSourceUrl(id: Long, url: String)
+}
+
+@Dao
+interface CustomChordDao {
+    @Query("SELECT * FROM custom_chords ORDER BY chord_key ASC, position ASC, id ASC")
+    suspend fun all(): List<CustomChord>
+
+    @Query("SELECT COALESCE(MAX(position), -1) + 1 FROM custom_chords WHERE chord_key = :key")
+    suspend fun nextPosition(key: String): Int
+
+    @Insert
+    suspend fun insert(chord: CustomChord): Long
+
+    @Update
+    suspend fun update(chord: CustomChord)
+
+    @Query("DELETE FROM custom_chords WHERE id = :id")
+    suspend fun deleteById(id: Long)
 }
 
 @Dao

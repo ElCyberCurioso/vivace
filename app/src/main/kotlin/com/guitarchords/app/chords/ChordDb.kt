@@ -1,6 +1,10 @@
 package com.guitarchords.app.chords
 
 import android.content.Context
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
@@ -41,10 +45,12 @@ object ChordDb {
     @Volatile private var loaded = false
     private var data: Map<String, List<DbChord>> = emptyMap()
 
+    private val warmScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     /** Call once at app startup so [shapes] can read the bundled asset. */
     fun init(context: Context) {
         appContext = context.applicationContext
-        Thread { ensureLoaded() }.start()   // warm the cache off the main thread
+        warmScope.launch { ensureLoaded() }   // warm the cache off the main thread
     }
 
     private fun ensureLoaded() {
@@ -63,19 +69,49 @@ object ChordDb {
         }
     }
 
+    // Pitch class de las cuerdas al aire (Mi grave .. mi agudo).
+    private val OPEN_STRING_PC = intArrayOf(4, 9, 2, 7, 11, 4)
+    private val NOTE_PC = mapOf(
+        "C" to 0, "C#" to 1, "D" to 2, "D#" to 3, "E" to 4, "F" to 5,
+        "F#" to 6, "G" to 7, "G#" to 8, "A" to 9, "A#" to 10, "B" to 11
+    )
+
     /** All known voicings for a chord, or empty if the DB has no entry for it. */
     fun shapes(root: String, quality: String): List<ChordShape> {
         ensureLoaded()
         val dbKey = KEY_MAP[root] ?: root
         val suffix = SUFFIX_MAP[quality] ?: return emptyList()
         val chord = data[dbKey]?.firstOrNull { it.suffix == suffix } ?: return emptyList()
-        return chord.positions.mapNotNull { it.toShape() }
+        val rootPc = NOTE_PC[root] ?: return chord.positions.mapNotNull { it.toShape(null) }
+        return chord.positions.mapNotNull { it.toShape(rootPc) }
     }
 
-    private fun DbPos.toShape(): ChordShape? {
+    private fun DbPos.toShape(rootPc: Int?): ChordShape? {
         if (frets.size != 6) return null
-        val abs = frets.map { if (it <= 0) it else it + baseFret - 1 }
-        val fingers6 = if (fingers.size == 6) fingers else List(6) { 0 }
+        val abs = frets.map { if (it <= 0) it else it + baseFret - 1 }.toMutableList()
+        val fingers6 = (if (fingers.size == 6) fingers else List(6) { 0 }).toMutableList()
+
+        // chords-db trae voicings de cejilla completa con la 5ª en el bajo
+        // (Bm = 224432). Para el diagrama estándar silenciamos las cuerdas
+        // graves que no suenan la fundamental cuando esta aparece justo
+        // después (Bm → x24432, Cm → x35543).
+        if (rootPc != null) {
+            repeat(2) {
+                val lo = abs.indexOfFirst { it >= 0 }
+                if (lo !in 0..1) return@repeat
+                val loPc = (OPEN_STRING_PC[lo] + abs[lo]) % 12
+                if (loPc == rootPc) return@repeat
+                val nextRoot = (lo + 1..2).any { s ->
+                    abs[s] >= 0 && (OPEN_STRING_PC[s] + abs[s]) % 12 == rootPc
+                }
+                if (!nextRoot) return@repeat
+                abs[lo] = -1
+                fingers6[lo] = 0
+            }
+        }
+
+        // La cejilla solo abarca desde la cuerda sonada más grave hasta la más
+        // aguda que pisa ese traste — nunca cuerdas silenciadas.
         val barreList = barres.mapNotNull { rel ->
             val absBr = rel + baseFret - 1
             val idx = abs.indices.filter { abs[it] == absBr }

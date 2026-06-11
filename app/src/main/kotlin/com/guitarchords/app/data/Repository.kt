@@ -53,6 +53,10 @@ class Repository(
     suspend fun moveSongs(ids: Collection<Long>, targetPlaylistId: Long?) =
         ids.forEach { moveSong(it, targetPlaylistId) }
 
+    /** Persiste un orden manual: la posición pasa a ser el índice en [orderedIds]. */
+    suspend fun reorderSongs(orderedIds: List<Long>) =
+        orderedIds.forEachIndexed { index, id -> songDao.setPosition(id, index) }
+
     suspend fun setFavoriteFor(ids: Collection<Long>, fav: Boolean) =
         ids.forEach { songDao.setFavorite(it, fav) }
 
@@ -68,6 +72,7 @@ class Repository(
                     content = s.content,
                     favorite = s.favorite,
                     capo = s.capo,
+                    sourceUrl = s.sourceUrl,
                     position = if (s.position != 0) s.position else idx
                 )
             )
@@ -88,6 +93,7 @@ class Repository(
                     content = it.content,
                     favorite = it.favorite,
                     capo = it.capo,
+                    sourceUrl = it.sourceUrl,
                     position = it.position
                 )
             }
@@ -132,6 +138,7 @@ class Repository(
     suspend fun setRemoteTitle(id: Long, title: String) = songDao.setTitle(id, title)
     suspend fun setRemoteArtist(id: Long, artist: String) = songDao.setArtist(id, artist)
     suspend fun setRemoteCapo(id: Long, capo: Int) = songDao.setCapo(id, capo)
+    suspend fun setRemoteSourceUrl(id: Long, url: String) = songDao.setSourceUrl(id, url)
 
     private suspend fun findOrCreatePlaylist(name: String): Long =
         playlistDao.getByName(name)?.id ?: playlistDao.insert(Playlist(name = name))
@@ -157,6 +164,7 @@ class Repository(
                 content = parsed.content,
                 favorite = parsed.favorite,
                 capo = parsed.capo,
+                sourceUrl = parsed.sourceUrl,
                 remoteKey = ro.key,
                 remoteEtag = ro.etag,
                 remoteUpdatedAt = ro.uploaded,
@@ -179,6 +187,7 @@ class Repository(
                 content = parsed.content,
                 favorite = parsed.favorite,
                 capo = parsed.capo,
+                sourceUrl = parsed.sourceUrl,
                 remoteKey = ro.key,
                 remoteEtag = ro.etag,
                 remoteUpdatedAt = ro.uploaded,

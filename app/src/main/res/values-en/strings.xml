@@ -1,0 +1,221 @@
+<resources>
+    <string name="app_name">Vivace</string>
+
+    <!-- Generic -->
+    <string name="back">Back</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="close">Close</string>
+    <string name="delete">Delete</string>
+    <string name="edit">Edit</string>
+    <string name="share">Share</string>
+    <string name="print">Print</string>
+    <string name="add">Add</string>
+    <string name="reset">Reset</string>
+    <string name="rename">Rename</string>
+    <string name="more_options">More options</string>
+
+    <!-- Home -->
+    <string name="home_playlists">Song lists</string>
+    <string name="home_favorites">Favorites</string>
+    <string name="home_tuner">Tuner</string>
+    <string name="home_finder">Find by shape</string>
+    <string name="home_dictionary">Chord dictionary</string>
+    <string name="home_settings">Settings</string>
+
+    <!-- Playlists -->
+    <string name="playlists">Lists</string>
+    <string name="new_playlist">New list</string>
+    <string name="playlist_name">List name</string>
+    <string name="new_song">New song</string>
+    <string name="search_songs">Search songs</string>
+    <string name="import_file">Import</string>
+    <string name="fab_chooser_title">What do you want to add?</string>
+    <string name="empty_playlists_title">No lists yet</string>
+    <string name="empty_playlists_subtitle">Create your first list to organize your songs</string>
+    <string name="create_playlist">Create list</string>
+    <string name="unassigned_songs">Songs without a list</string>
+    <plurals name="song_count">
+        <item quantity="one">%d song</item>
+        <item quantity="other">%d songs</item>
+    </plurals>
+    <string name="delete_playlist_title">Delete list</string>
+    <string name="delete_playlist_msg">Delete “%1$s” and all its songs?</string>
+    <string name="share_playlist">Share list</string>
+
+    <!-- Playlist detail / song rows -->
+    <string name="empty_songs_title">No songs</string>
+    <string name="empty_songs_subtitle">Add the first song with the + button</string>
+    <string name="empty_unassigned_title">No loose songs</string>
+    <string name="empty_unassigned_subtitle">Songs that don\'t belong to any list will appear here</string>
+    <string name="delete_song_title">Delete song</string>
+    <string name="delete_song_msg">Delete “%1$s”?</string>
+    <string name="move_song_title">Move “%1$s”</string>
+    <string name="assign_to_playlist">Add to list</string>
+    <string name="no_playlist">No list</string>
+    <string name="move_to_playlist">Move to another list</string>
+    <string name="drag_reorder">Drag to reorder</string>
+    <string name="favorite">Favorite</string>
+    <string name="remove_favorite">Remove favorite</string>
+    <string name="in_playlist">in %1$s</string>
+
+    <!-- Multi-select -->
+    <plurals name="selected_count">
+        <item quantity="one">%d selected</item>
+        <item quantity="other">%d selected</item>
+    </plurals>
+    <string name="cancel_selection">Cancel selection</string>
+    <string name="select_all">Select all</string>
+    <string name="mark_favorite">Mark favorite</string>
+    <string name="remove_from_favorites">Remove from favorites</string>
+    <string name="move_to_list">Move to list</string>
+    <plurals name="bulk_move_title">
+        <item quantity="one">Move %d song</item>
+        <item quantity="other">Move %d songs</item>
+    </plurals>
+    <string name="no_lists_yet">There are no lists. Create one first.</string>
+    <string name="bulk_delete_title">Delete songs</string>
+    <plurals name="bulk_delete_msg">
+        <item quantity="one">Delete %d song? This cannot be undone.</item>
+        <item quantity="other">Delete %d songs? This cannot be undone.</item>
+    </plurals>
+
+    <!-- Song viewer -->
+    <string name="capo_fret">Capo on fret %1$d</string>
+    <string name="original">Original</string>
+    <string name="version">Version</string>
+    <string name="new_version">New version</string>
+    <string name="edit_version">Edit version</string>
+    <string name="version_name">Version name</string>
+    <string name="delete_version">Delete version</string>
+    <string name="delete_version_msg">Delete this version? The original song is not affected.</string>
+    <string name="play">Play</string>
+    <string name="pause">Pause</string>
+    <string name="show_controls">Show controls</string>
+    <string name="hide_controls">Hide controls</string>
+    <string name="speed_label">Speed</string>
+    <string name="tone">Key</string>
+    <string name="tone_with_value">Key %1$s</string>
+    <string name="semitone_down">Semitone down</string>
+    <string name="semitone_up">Semitone up</string>
+    <string name="share_song">Share song</string>
+
+    <!-- Editor -->
+    <string name="song_title">Title</string>
+    <string name="song_artist">Artist</string>
+    <string name="song_genre">Genre</string>
+    <string name="playlist_label">List: %1$s</string>
+    <string name="insert_chord">Insert chord</string>
+    <string name="insert_tab">Insert tablature</string>
+    <string name="capo_label">Capo:</string>
+    <string name="no_capo">No capo</string>
+    <string name="fret_n">Fret %1$d</string>
+    <string name="capo_down">Capo down</string>
+    <string name="capo_up">Capo up</string>
+    <string name="lyrics_and_chords">Lyrics and chords</string>
+    <string name="syntax_hint">Use {Name} for chords — e.g.: {Am} Home. Tablature between {tab}…{/tab}</string>
+    <string name="write_here">Write here…</string>
+    <string name="choose_playlist">Choose list</string>
+    <string name="untitled">Untitled</string>
+    <string name="source_url_label">Original song URL</string>
+    <string name="link">Link</string>
+    <string name="title_required">Give the song a title</string>
+
+    <!-- Dictionary -->
+    <string name="dictionary_title">Chord dictionary</string>
+    <string name="circle_of_fifths">Circle of fifths</string>
+    <string name="theory_guide">Theory guide</string>
+    <string name="root">Root</string>
+    <string name="quality">Quality</string>
+    <string name="all_filter">All</string>
+    <string name="no_results">No results</string>
+    <string name="change_filters">Change the root or quality filters</string>
+    <string name="no_diagram">No diagram</string>
+    <string name="view">View</string>
+    <string name="major_label">Major (I)</string>
+    <string name="minor_label">Minor (i)</string>
+    <string name="choose_chord">Choose a chord</string>
+    <string name="search_chord_placeholder">Search (Am, F#m7…)</string>
+
+    <!-- Chord finder -->
+    <string name="finder_title">Chord finder</string>
+    <string name="clear">Clear</string>
+    <string name="matching_chords">Matching chords</string>
+    <string name="mark_frets_hint">Mark frets to identify a chord</string>
+    <string name="base_fret">Base fret: %1$d</string>
+    <string name="fret_down">Fret down</string>
+    <string name="fret_up">Fret up</string>
+
+    <!-- Custom shapes -->
+    <string name="custom_shape">Custom</string>
+    <string name="add_custom_shape">Add fingering</string>
+    <string name="edit_custom_shape">Edit fingering</string>
+    <string name="delete_custom_shape">Delete fingering</string>
+    <string name="delete_custom_shape_msg">Delete this custom fingering?</string>
+    <string name="custom_shape_hint">Tap the fretboard to mark frets; X/O toggles muted or open string.</string>
+
+    <!-- Tuner -->
+    <string name="tuner_title">Tuner</string>
+    <string name="mic_permission_title">Microphone permission needed</string>
+    <string name="mic_permission_msg">To detect guitar notes in real time.</string>
+    <string name="grant_permission">Grant permission</string>
+    <string name="play_a_string">Play a string</string>
+
+    <!-- Search -->
+    <string name="search_placeholder">Title, artist, genre or lyrics…</string>
+    <string name="search_hint_title">Search your songbook</string>
+    <string name="search_hint_subtitle">Type a title, artist, genre or part of the lyrics</string>
+    <string name="try_another_search">Try another search</string>
+
+    <!-- Favorites -->
+    <string name="favorites_title">Favorites</string>
+    <string name="empty_favorites_title">No favorite songs</string>
+    <string name="empty_favorites_subtitle">Star songs to see them here</string>
+
+    <!-- Settings / Sync -->
+    <string name="settings_title">Settings</string>
+    <string name="sync_r2_title">R2 Sync</string>
+    <string name="sync_r2_subtitle">Connect to your Cloudflare R2 bucket to download and upload songs.</string>
+    <string name="sync_intro">Connects to the Cloudflare R2 bucket through the Worker. Only new or modified content is downloaded and uploaded.</string>
+    <string name="sync_worker_url">Worker URL</string>
+    <string name="sync_token">Access token</string>
+    <string name="sync_now">Sync now</string>
+    <string name="syncing">Syncing…</string>
+    <string name="last_sync">Last sync: %1$s</string>
+    <string name="never">never</string>
+    <string name="pending_uploads">Songs with unsent changes: %1$d</string>
+    <string name="sync_result">Downloaded: %1$d  ·  Uploaded: %2$d</string>
+    <string name="sync_conflicts_suffix">  ·  Conflicts: %1$d</string>
+    <string name="sync_missing_fields">Enter the server URL and the token</string>
+    <string name="sync_error_generic">Sync error</string>
+    <string name="sync_conflict_error">Error resolving conflicts</string>
+    <string name="conflicts_title">%1$d conflict(s)</string>
+    <string name="conflicts_msg">These songs were modified both on the device and on the server. Decide for each one which version to keep; unresolved ones stay on hold until the next sync:</string>
+    <string name="keep_local">Keep local</string>
+    <string name="use_server">Use server</string>
+    <string name="local_vs_server">local %1$s · server %2$s</string>
+    <string name="conflict_local_short">Local</string>
+    <string name="conflict_server_short">Server</string>
+    <string name="conflict_later">Later</string>
+    <string name="push_confirm_title">Confirm upload</string>
+    <string name="push_confirm_msg">%1$d song(s) have local changes. Upload them to the server?</string>
+    <string name="push_upload">Upload</string>
+    <string name="push_not_now">Not now</string>
+    <string name="push_new_song">new</string>
+
+    <!-- Chord modal -->
+    <string name="unknown_chord">Unknown chord: %1$s</string>
+    <string name="degrees">Degrees: %1$s</string>
+    <string name="notes">Notes: %1$s</string>
+    <string name="no_diagram_position">No diagram available for this position.</string>
+    <string name="variation_n">Variation %1$d / %2$d</string>
+    <string name="previous">Previous</string>
+    <string name="next">Next</string>
+
+    <!-- Metronome -->
+    <string name="metronome_title">Metronome</string>
+    <string name="bpm">%1$d BPM</string>
+    <string name="start">Start</string>
+    <string name="stop">Stop</string>
+    <string name="beats_per_bar">Beats per bar</string>
+</resources>

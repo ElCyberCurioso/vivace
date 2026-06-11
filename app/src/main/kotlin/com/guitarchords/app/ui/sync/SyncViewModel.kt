@@ -4,6 +4,8 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.guitarchords.app.GuitarChordsApp
+import com.guitarchords.app.R
+import com.guitarchords.app.sync.PendingUpload
 import com.guitarchords.app.sync.R2Client
 import com.guitarchords.app.sync.SyncConflict
 import com.guitarchords.app.sync.SyncManager
@@ -37,6 +39,10 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
     private val _conflicts = MutableStateFlow<List<SyncConflict>>(emptyList())
     val conflicts = _conflicts.asStateFlow()
 
+    /** Cambios locales detectados en el último sync, a la espera de confirmar la subida. */
+    private val _pendingPush = MutableStateFlow<List<PendingUpload>>(emptyList())
+    val pendingPush = _pendingPush.asStateFlow()
+
     private val _lastSync = MutableStateFlow(prefs.lastSync)
     val lastSync = _lastSync.asStateFlow()
 
@@ -45,7 +51,9 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
 
     fun sync(url: String, token: String) {
         if (url.isBlank() || token.isBlank()) {
-            _state.value = SyncUiState.Error("Indica la URL del servidor y el token")
+            _state.value = SyncUiState.Error(
+                getApplication<Application>().getString(R.string.sync_missing_fields)
+            )
             return
         }
         prefs.baseUrl = url.trim()
@@ -56,29 +64,64 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
                 val client = R2Client(prefs.baseUrl, prefs.token)
                 val result = manager.sync(client)
                 _conflicts.value = result.conflicts
+                _pendingPush.value = result.pendingUploads
                 prefs.lastSync = System.currentTimeMillis()
                 _lastSync.value = prefs.lastSync
                 _state.value = SyncUiState.Success(result)
             } catch (e: Exception) {
-                _state.value = SyncUiState.Error(e.message ?: "Error de sincronización")
+                _state.value = SyncUiState.Error(
+                    e.message ?: getApplication<Application>().getString(R.string.sync_error_generic)
+                )
             }
         }
     }
 
-    fun resolveAll(keepLocal: Boolean) {
-        val list = _conflicts.value
-        if (list.isEmpty()) return
+    /** Sube los cambios locales confirmados por el usuario. */
+    fun confirmPush() {
+        val ids = _pendingPush.value.map { it.songId }
+        if (ids.isEmpty()) return
+        val downloaded = (_state.value as? SyncUiState.Success)?.result?.downloaded ?: 0
         _state.value = SyncUiState.Running
         viewModelScope.launch {
             try {
                 val client = R2Client(prefs.baseUrl, prefs.token)
-                list.forEach { manager.resolveConflict(client, it, keepLocal) }
-                _conflicts.value = emptyList()
+                val uploaded = manager.push(client, ids)
+                _pendingPush.value = emptyList()
                 prefs.lastSync = System.currentTimeMillis()
                 _lastSync.value = prefs.lastSync
-                _state.value = SyncUiState.Idle
+                _state.value = SyncUiState.Success(
+                    SyncResult(downloaded, uploaded, emptyList(), _conflicts.value)
+                )
             } catch (e: Exception) {
-                _state.value = SyncUiState.Error(e.message ?: "Error resolviendo conflictos")
+                _state.value = SyncUiState.Error(
+                    e.message ?: getApplication<Application>().getString(R.string.sync_error_generic)
+                )
+            }
+        }
+    }
+
+    /** Pospone la subida: las canciones siguen marcadas como pendientes. */
+    fun cancelPush() { _pendingPush.value = emptyList() }
+
+    /**
+     * Resuelve UN conflicto: subir la versión local o quedarse con la del
+     * servidor. Los no resueltos quedan en espera (la canción sigue dirty y
+     * reaparecerán en el siguiente sync).
+     */
+    fun resolveOne(conflict: SyncConflict, keepLocal: Boolean) {
+        viewModelScope.launch {
+            try {
+                val client = R2Client(prefs.baseUrl, prefs.token)
+                manager.resolveConflict(client, conflict, keepLocal)
+                _conflicts.value = _conflicts.value - conflict
+                if (_conflicts.value.isEmpty()) {
+                    prefs.lastSync = System.currentTimeMillis()
+                    _lastSync.value = prefs.lastSync
+                }
+            } catch (e: Exception) {
+                _state.value = SyncUiState.Error(
+                    e.message ?: getApplication<Application>().getString(R.string.sync_conflict_error)
+                )
             }
         }
     }

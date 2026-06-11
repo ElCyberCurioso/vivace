@@ -10,3 +10,7 @@ bucket_name = "guitarchords"
 
 # SYNC_TOKEN is NOT stored here. Set it as a secret:
 #   wrangler secret put SYNC_TOKEN
+
+# Enlace del botón "Storage" del admin: el bucket en el dashboard de Cloudflare.
+[vars]
+STORAGE_URL = "https://dash.cloudflare.com/b87bc1a8f7e74107a115865b54ddc455/r2/default/buckets/guitarchords"

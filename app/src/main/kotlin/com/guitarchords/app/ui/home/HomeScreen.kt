@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Piano
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -33,9 +34,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.guitarchords.app.R
 import com.guitarchords.app.ui.responsive.WidthClass
 import com.guitarchords.app.ui.responsive.rememberWidthClass
 
@@ -51,17 +54,19 @@ fun HomeScreen(
     onOpenPlaylists: () -> Unit,
     onOpenFavorites: () -> Unit,
     onOpenTuner: () -> Unit,
+    onOpenMetronome: () -> Unit,
     onOpenFinder: () -> Unit,
     onOpenDictionary: () -> Unit,
     onOpenSettings: () -> Unit
 ) {
     val actions = listOf(
-        HomeAction("Listas de canciones", Icons.Default.LibraryMusic, onOpenPlaylists),
-        HomeAction("Favoritas", Icons.Default.Star, onOpenFavorites),
-        HomeAction("Afinador", Icons.Default.GraphicEq, onOpenTuner),
-        HomeAction("Buscar por figura", Icons.Default.Piano, onOpenFinder),
-        HomeAction("Diccionario de acordes", Icons.Default.MenuBook, onOpenDictionary),
-        HomeAction("Configuraciones", Icons.Default.Settings, onOpenSettings)
+        HomeAction(stringResource(R.string.home_playlists), Icons.Default.LibraryMusic, onOpenPlaylists),
+        HomeAction(stringResource(R.string.home_favorites), Icons.Default.Star, onOpenFavorites),
+        HomeAction(stringResource(R.string.home_tuner), Icons.Default.GraphicEq, onOpenTuner),
+        HomeAction(stringResource(R.string.metronome_title), Icons.Default.Timer, onOpenMetronome),
+        HomeAction(stringResource(R.string.home_finder), Icons.Default.Piano, onOpenFinder),
+        HomeAction(stringResource(R.string.home_dictionary), Icons.Default.MenuBook, onOpenDictionary),
+        HomeAction(stringResource(R.string.home_settings), Icons.Default.Settings, onOpenSettings)
     )
 
     Scaffold(

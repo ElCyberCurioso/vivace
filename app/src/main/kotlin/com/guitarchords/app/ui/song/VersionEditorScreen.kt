@@ -1,6 +1,7 @@
 package com.guitarchords.app.ui.song
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,17 +13,20 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -42,12 +46,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.guitarchords.app.R
 import com.guitarchords.app.chords.ChordParser
 import com.guitarchords.app.ui.components.ChordPickerDialog
 
@@ -77,28 +84,27 @@ fun VersionEditorScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Editar versión") },
+                title = { Text(stringResource(R.string.edit_version)) },
                 navigationIcon = {
-                    IconButton(onClick = onDone) { Icon(Icons.Default.ArrowBack, "Atrás") }
+                    IconButton(onClick = onDone) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
                 },
                 actions = {
                     IconButton(onClick = { confirmDelete = true }) {
-                        Icon(Icons.Default.Delete, "Borrar versión")
+                        Icon(Icons.Default.Delete, stringResource(R.string.delete_version))
                     }
                     IconButton(onClick = {
                         vm.updateContent(contentField.text)
                         vm.save { onDone() }
-                    }) { Icon(Icons.Default.Check, "Guardar") }
+                    }) { Icon(Icons.Default.Check, stringResource(R.string.save)) }
                 }
             )
         }
     ) { pv ->
         val v = version
         if (v == null) {
-            Text(
-                "Cargando…",
-                modifier = Modifier.padding(pv).padding(16.dp)
-            )
+            Box(Modifier.fillMaxSize().padding(pv), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
             return@Scaffold
         }
         Column(
@@ -112,23 +118,35 @@ fun VersionEditorScreen(
             OutlinedTextField(
                 value = v.name,
                 onValueChange = vm::updateName,
-                label = { Text("Nombre de la versión") },
+                label = { Text(stringResource(R.string.version_name)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(8.dp))
+            OutlinedTextField(
+                value = v.sourceUrl,
+                onValueChange = vm::updateSourceUrl,
+                label = { Text(stringResource(R.string.source_url_label)) },
+                placeholder = { Text("https://…") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                leadingIcon = { Icon(Icons.Default.Link, null) },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Capo:", style = MaterialTheme.typography.labelMedium)
+                Text(stringResource(R.string.capo_label), style = MaterialTheme.typography.labelMedium)
                 Spacer(Modifier.size(8.dp))
                 IconButton(onClick = { vm.updateCapo(v.capo - 1) }, enabled = v.capo > 0) {
-                    Icon(Icons.Default.Remove, "Bajar capo")
+                    Icon(Icons.Default.Remove, stringResource(R.string.capo_down))
                 }
                 Text(
-                    if (v.capo == 0) "Sin capo" else "Traste ${v.capo}",
+                    if (v.capo == 0) stringResource(R.string.no_capo)
+                    else stringResource(R.string.fret_n, v.capo),
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                 )
                 IconButton(onClick = { vm.updateCapo(v.capo + 1) }, enabled = v.capo < 12) {
-                    Icon(Icons.Default.Add, "Subir capo")
+                    Icon(Icons.Default.Add, stringResource(R.string.capo_up))
                 }
             }
             Spacer(Modifier.height(8.dp))
@@ -140,7 +158,7 @@ fun VersionEditorScreen(
             ) {
                 AssistChip(
                     onClick = { chordPicker = true },
-                    label = { Text("Insertar acorde") },
+                    label = { Text(stringResource(R.string.insert_chord)) },
                     leadingIcon = { Icon(Icons.Default.MusicNote, null) }
                 )
                 AssistChip(
@@ -156,12 +174,12 @@ fun VersionEditorScreen(
                         contentField = TextFieldValue(newText, TextRange(cursor + inserted.length))
                         vm.updateContent(newText)
                     },
-                    label = { Text("Insertar tablatura") },
+                    label = { Text(stringResource(R.string.insert_tab)) },
                     leadingIcon = { Icon(Icons.Default.GraphicEq, null) }
                 )
             }
             Spacer(Modifier.height(8.dp))
-            Text("Letra y acordes", style = MaterialTheme.typography.labelMedium)
+            Text(stringResource(R.string.lyrics_and_chords), style = MaterialTheme.typography.labelMedium)
             Spacer(Modifier.height(4.dp))
             OutlinedTextField(
                 value = contentField,
@@ -176,7 +194,7 @@ fun VersionEditorScreen(
                     fontFamily = FontFamily.Monospace,
                     fontSize = 14.sp
                 ),
-                placeholder = { Text("Escribe aquí…") }
+                placeholder = { Text(stringResource(R.string.write_here)) }
             )
         }
     }
@@ -200,16 +218,16 @@ fun VersionEditorScreen(
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text("Borrar versión") },
-            text = { Text("¿Borrar esta versión? La canción original no se ve afectada.") },
+            title = { Text(stringResource(R.string.delete_version)) },
+            text = { Text(stringResource(R.string.delete_version_msg)) },
             confirmButton = {
                 TextButton(onClick = {
                     confirmDelete = false
                     vm.delete { onDone() }
-                }) { Text("Borrar") }
+                }) { Text(stringResource(R.string.delete)) }
             },
             dismissButton = {
-                TextButton(onClick = { confirmDelete = false }) { Text("Cancelar") }
+                TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }

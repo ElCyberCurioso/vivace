@@ -25,6 +25,7 @@ class VersionEditorViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun updateName(v: String) { _version.value = _version.value?.copy(name = v) }
+    fun updateSourceUrl(v: String) { _version.value = _version.value?.copy(sourceUrl = v.trim()) }
     fun updateCapo(v: Int) { _version.value = _version.value?.copy(capo = v.coerceIn(0, 12)) }
     fun updateContent(v: String) { _version.value = _version.value?.copy(content = v) }
 

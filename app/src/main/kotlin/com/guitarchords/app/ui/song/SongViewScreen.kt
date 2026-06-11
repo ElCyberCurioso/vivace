@@ -1,5 +1,7 @@
 package com.guitarchords.app.ui.song
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,16 +17,24 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -37,6 +47,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -47,7 +58,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -59,12 +74,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.guitarchords.app.R
 import com.guitarchords.app.chords.ChordParser
 import com.guitarchords.app.chords.ChordTransposer
 import com.guitarchords.app.chords.ContentBlock
 import com.guitarchords.app.chords.RenderedLine
 import com.guitarchords.app.data.SongVersion
 import com.guitarchords.app.print.PrintAdapter
+import com.guitarchords.app.sync.SongTextFormat
 import com.guitarchords.app.ui.components.ChordModal
 import com.guitarchords.app.ui.playlists.TextDialog
 import kotlinx.coroutines.delay
@@ -89,16 +106,29 @@ fun SongViewScreen(
     var speed by remember { mutableFloatStateOf(30f) } // pixels per second
     var selectedChord by remember { mutableStateOf<String?>(null) }
     var semitones by remember { mutableIntStateOf(0) }
+    var useFlats by remember { mutableStateOf(false) }
     var controlsExpanded by remember { mutableStateOf(true) }
     var selectedVersionId by remember { mutableStateOf<Long?>(null) }
     var showAddVersion by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     val ctx = LocalContext.current
+    val view = LocalView.current
+    val haptics = LocalHapticFeedback.current
+    val shareTitle = stringResource(R.string.share_song)
+
+    // Modo escenario: con el auto-scroll activo la pantalla no se apaga.
+    DisposableEffect(scrolling) {
+        view.keepScreenOn = scrolling
+        onDispose { view.keepScreenOn = false }
+    }
 
     // Active version: null = the song's "Original" content/capo.
     val activeVersion = versions.firstOrNull { it.id == selectedVersionId }
     val activeContent = activeVersion?.content ?: song?.content ?: ""
     val activeCapo = activeVersion?.capo ?: song?.capo ?: 0
+    // URL de origen: la de la versión activa, o la de la canción como fallback.
+    val activeUrl = activeVersion?.sourceUrl?.takeIf { it.isNotBlank() }
+        ?: song?.sourceUrl.orEmpty()
 
     // If the selected version was deleted, fall back to Original.
     LaunchedEffect(versions) {
@@ -134,22 +164,54 @@ fun SongViewScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(song?.title ?: "") },
+                title = {},
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Atrás") }
+                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
                 },
                 actions = {
+                    if (activeUrl.isNotBlank()) {
+                        TextButton(onClick = {
+                            val raw = activeUrl.trim()
+                            val url = if (raw.startsWith("http://") || raw.startsWith("https://")) raw
+                            else "https://$raw"
+                            runCatching {
+                                ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                            }
+                        }) {
+                            Icon(Icons.Default.Link, null)
+                            Spacer(Modifier.size(4.dp))
+                            Text(stringResource(R.string.link))
+                        }
+                    }
+                    IconButton(onClick = {
+                        song?.let { sng ->
+                            val body = SongTextFormat.encode(
+                                sng.copy(
+                                    content = if (semitones == 0 && !useFlats) activeContent
+                                    else ChordTransposer.transposeContent(activeContent, semitones, useFlats),
+                                    capo = activeCapo
+                                ),
+                                playlistName = null
+                            )
+                            val send = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_SUBJECT, sng.title)
+                                putExtra(Intent.EXTRA_TEXT, body)
+                            }
+                            ctx.startActivity(Intent.createChooser(send, shareTitle))
+                        }
+                    }) { Icon(Icons.Default.Share, stringResource(R.string.share_song)) }
                     IconButton(onClick = {
                         song?.let { sng ->
                             val base = sng.copy(content = activeContent, capo = activeCapo)
-                            val shifted = if (semitones == 0) base
+                            val shifted = if (semitones == 0 && !useFlats) base
                             else base.copy(
-                                content = ChordTransposer.transposeContent(activeContent, semitones)
+                                content = ChordTransposer.transposeContent(activeContent, semitones, useFlats)
                             )
                             PrintAdapter.print(ctx, shifted)
                         }
-                    }) { Icon(Icons.Default.Print, "Imprimir") }
-                    IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, "Editar") }
+                    }) { Icon(Icons.Default.Print, stringResource(R.string.print)) }
+                    IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, stringResource(R.string.edit)) }
                 }
             )
         },
@@ -160,24 +222,32 @@ fun SongViewScreen(
                 fontSize = fontSize,
                 onFontSize = { fontSize = it.coerceIn(10, 48) },
                 scrolling = scrolling,
-                onToggleScroll = { scrolling = !scrolling },
+                onToggleScroll = {
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    scrolling = !scrolling
+                },
                 speed = speed,
                 onSpeed = { speed = it },
                 semitones = semitones,
-                onSemitones = { semitones = it.coerceIn(-11, 11) }
+                onSemitones = {
+                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    semitones = it.coerceIn(-11, 11)
+                },
+                useFlats = useFlats,
+                onUseFlats = { useFlats = it }
             )
         }
     ) { pv ->
         song?.let { s ->
             val blocks = remember(activeContent) { ChordParser.parseBlocks(activeContent) }
-            val rendered = remember(blocks, semitones) {
-                if (semitones == 0) blocks
+            val rendered = remember(blocks, semitones, useFlats) {
+                if (semitones == 0 && !useFlats) blocks
                 else blocks.map { b ->
                     when (b) {
                         is ContentBlock.Lyric -> b.copy(
                             line = b.line.copy(
                                 chords = b.line.chords.map { ct ->
-                                    ct.copy(chord = ChordTransposer.transposeChord(ct.chord, semitones))
+                                    ct.copy(chord = ChordTransposer.transposeChord(ct.chord, semitones, useFlats))
                                 }
                             )
                         )
@@ -192,6 +262,19 @@ fun SongViewScreen(
                     .padding(horizontal = 12.dp)
                     .verticalScroll(scrollState)
             ) {
+                // Cabecera de la partitura: título y artista viven aquí, no en la barra.
+                Text(
+                    s.title,
+                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
+                )
+                if (s.artist.isNotBlank()) {
+                    Text(
+                        s.artist,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
                 VersionBar(
                     versions = versions,
                     selectedId = selectedVersionId,
@@ -199,25 +282,19 @@ fun SongViewScreen(
                     onAdd = { showAddVersion = true },
                     onEditSelected = { selectedVersionId?.let(onEditVersion) }
                 )
-                Spacer(Modifier.height(8.dp))
-                if (s.artist.isNotBlank()) {
-                    Text(s.artist, style = MaterialTheme.typography.bodyMedium)
-                }
                 if (activeCapo > 0) {
                     Surface(
                         color = MaterialTheme.colorScheme.tertiaryContainer,
                         modifier = Modifier.padding(vertical = 4.dp)
                     ) {
                         Text(
-                            "Capo en traste $activeCapo",
+                            stringResource(R.string.capo_fret, activeCapo),
                             style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                         )
                     }
                 }
-                if (s.artist.isNotBlank() || activeCapo > 0) {
-                    Spacer(Modifier.height(8.dp))
-                }
+                Spacer(Modifier.height(8.dp))
                 rendered.forEach { block ->
                     when (block) {
                         is ContentBlock.Lyric -> SongLine(
@@ -235,7 +312,7 @@ fun SongViewScreen(
                 Spacer(Modifier.height(80.dp))
             }
         } ?: Box(Modifier.fillMaxSize().padding(pv), contentAlignment = Alignment.Center) {
-            Text("Cargando…")
+            CircularProgressIndicator()
         }
     }
 
@@ -245,7 +322,7 @@ fun SongViewScreen(
 
     if (showAddVersion) {
         TextDialog(
-            title = "Nueva versión",
+            title = stringResource(R.string.new_version),
             initial = "",
             onDismiss = { showAddVersion = false },
             onConfirm = { name ->
@@ -278,7 +355,7 @@ private fun VersionBar(
         FilterChip(
             selected = selectedId == null,
             onClick = { onSelect(null) },
-            label = { Text("Original") }
+            label = { Text(stringResource(R.string.original)) }
         )
         versions.forEach { v ->
             FilterChip(
@@ -289,12 +366,12 @@ private fun VersionBar(
         }
         AssistChip(
             onClick = onAdd,
-            label = { Text("Versión") },
+            label = { Text(stringResource(R.string.version)) },
             leadingIcon = { Icon(Icons.Default.Add, null) }
         )
         if (selectedId != null && versions.any { it.id == selectedId }) {
             IconButton(onClick = onEditSelected) {
-                Icon(Icons.Default.Edit, "Editar versión")
+                Icon(Icons.Default.Edit, stringResource(R.string.edit_version))
             }
         }
     }
@@ -394,7 +471,9 @@ private fun BottomControls(
     speed: Float,
     onSpeed: (Float) -> Unit,
     semitones: Int,
-    onSemitones: (Int) -> Unit
+    onSemitones: (Int) -> Unit,
+    useFlats: Boolean,
+    onUseFlats: (Boolean) -> Unit
 ) {
     Surface(tonalElevation = 2.dp) {
         Column(
@@ -409,23 +488,31 @@ private fun BottomControls(
                 IconButton(onClick = onToggleScroll) {
                     Icon(
                         if (scrolling) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        if (scrolling) "Pausa" else "Reproducir"
+                        if (scrolling) stringResource(R.string.pause) else stringResource(R.string.play)
                     )
                 }
                 if (!expanded) {
                     Text("${speed.toInt()} px/s", style = MaterialTheme.typography.bodySmall)
                     Spacer(Modifier.size(12.dp))
-                    Text("Tono ${semitoneLabel(semitones)}", style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        stringResource(R.string.tone_with_value, semitoneLabel(semitones)),
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
                 Spacer(Modifier.weight(1f))
                 IconButton(onClick = onToggleExpanded) {
                     Icon(
                         if (expanded) Icons.Default.ExpandMore else Icons.Default.ExpandLess,
-                        if (expanded) "Ocultar controles" else "Mostrar controles"
+                        if (expanded) stringResource(R.string.hide_controls) else stringResource(R.string.show_controls)
                     )
                 }
             }
-            if (expanded) {
+            AnimatedVisibility(
+                visible = expanded,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("A", style = MaterialTheme.typography.bodySmall)
                     Slider(
@@ -437,7 +524,7 @@ private fun BottomControls(
                     Text("A", style = MaterialTheme.typography.titleLarge)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Vel", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.speed_label), style = MaterialTheme.typography.bodySmall)
                     Slider(
                         value = speed,
                         onValueChange = onSpeed,
@@ -451,22 +538,28 @@ private fun BottomControls(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)
                 ) {
-                    Text("Tono", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.tone), style = MaterialTheme.typography.bodySmall)
                     IconButton(onClick = { onSemitones(semitones - 1) }) {
-                        Icon(Icons.Default.Remove, "Bajar semitono")
+                        Icon(Icons.Default.Remove, stringResource(R.string.semitone_down))
                     }
                     Text(
                         semitoneLabel(semitones),
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                     )
                     IconButton(onClick = { onSemitones(semitones + 1) }) {
-                        Icon(Icons.Default.Add, "Subir semitono")
+                        Icon(Icons.Default.Add, stringResource(R.string.semitone_up))
                     }
+                    FilterChip(
+                        selected = useFlats,
+                        onClick = { onUseFlats(!useFlats) },
+                        label = { Text("♭") }
+                    )
                     Spacer(Modifier.weight(1f))
                     TextButton(
                         onClick = { onSemitones(0) },
                         enabled = semitones != 0
-                    ) { Text("Reset") }
+                    ) { Text(stringResource(R.string.reset)) }
+                }
                 }
             }
         }

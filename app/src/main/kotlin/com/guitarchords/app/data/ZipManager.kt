@@ -34,18 +34,37 @@ object ZipManager {
         )
     }
 
+    /** Límite de descompresión: corta imports malformados o maliciosos (zip bomb). */
+    private const val MAX_PAYLOAD_BYTES = 20L * 1024 * 1024
+
     fun importFromStream(input: InputStream): PlaylistExport? {
         ZipInputStream(input.buffered()).use { zis ->
             var entry = zis.nextEntry
             while (entry != null) {
                 if (entry.name == "playlist.json") {
-                    val bytes = zis.readBytes()
-                    return json.decodeFromString(PlaylistExport.serializer(), String(bytes, Charsets.UTF_8))
+                    val bytes = readBounded(zis) ?: return null
+                    return runCatching {
+                        json.decodeFromString(PlaylistExport.serializer(), String(bytes, Charsets.UTF_8))
+                    }.getOrNull()
                 }
                 entry = zis.nextEntry
             }
         }
         return null
+    }
+
+    private fun readBounded(zis: ZipInputStream): ByteArray? {
+        val out = java.io.ByteArrayOutputStream()
+        val buf = ByteArray(64 * 1024)
+        var total = 0L
+        while (true) {
+            val n = zis.read(buf)
+            if (n < 0) break
+            total += n
+            if (total > MAX_PAYLOAD_BYTES) return null
+            out.write(buf, 0, n)
+        }
+        return out.toByteArray()
     }
 
     fun importFromUri(context: Context, uri: Uri): PlaylistExport? {

@@ -15,7 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.Card
@@ -36,11 +36,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.guitarchords.app.R
 import com.guitarchords.app.ui.components.BulkDeleteDialog
 import com.guitarchords.app.ui.components.BulkMoveDialog
+import com.guitarchords.app.ui.components.EmptyState
 import com.guitarchords.app.ui.components.SelectionTopBar
 import com.guitarchords.app.ui.components.rememberSongSelection
 
@@ -73,29 +76,21 @@ fun FavoritesScreen(
                 )
             } else {
                 TopAppBar(
-                    title = { Text("Favoritas") },
+                    title = { Text(stringResource(R.string.favorites_title)) },
                     navigationIcon = {
-                        IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Atrás") }
+                        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
                     }
                 )
             }
         }
     ) { pv ->
         if (items.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(pv),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        Icons.Outlined.StarOutline,
-                        null,
-                        modifier = Modifier.size(72.dp)
-                    )
-                    Spacer(Modifier.size(8.dp))
-                    Text("Sin canciones favoritas")
-                }
-            }
+            EmptyState(
+                icon = Icons.Outlined.StarOutline,
+                title = stringResource(R.string.empty_favorites_title),
+                subtitle = stringResource(R.string.empty_favorites_subtitle),
+                modifier = Modifier.padding(pv)
+            )
         } else {
             LazyColumn(
                 contentPadding = PaddingValues(12.dp),
@@ -135,7 +130,7 @@ fun FavoritesScreen(
                                 IconButton(onClick = { vm.toggleFavorite(fav.song) }) {
                                     Icon(
                                         Icons.Default.Star,
-                                        "Quitar favorita",
+                                        stringResource(R.string.remove_favorite),
                                         tint = MaterialTheme.colorScheme.primary
                                     )
                                 }
@@ -160,7 +155,7 @@ fun FavoritesScreen(
                                 }
                                 if (fav.playlistName.isNotBlank()) {
                                     Text(
-                                        "en ${fav.playlistName}",
+                                        stringResource(R.string.in_playlist, fav.playlistName),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )

@@ -5,11 +5,15 @@ import com.guitarchords.app.data.Song
 import java.util.UUID
 
 /**
- * Two-way differential sync between the local database and an R2 bucket.
+ * Two-way differential sync between the local database and an R2 bucket,
+ * modelled after git:
  *
- * Pull: download objects that are new on the server or changed since the last
- *       sync. If a changed object was also edited locally -> [SyncConflict].
- * Push: upload songs flagged `dirty` (created or edited on the device).
+ * Pull: applied automatically — objects that are new on the server or changed
+ *       since the last sync are downloaded, UNLESS the song was also edited
+ *       locally; then it becomes a [SyncConflict] and nothing moves until the
+ *       user resolves that song explicitly ([resolveConflict]).
+ * Push: never automatic. [sync] only reports the dirty songs as
+ *       [PendingUpload]s; the caller must confirm and invoke [push].
  *
  * Only new/changed content moves in either direction; unchanged songs are
  * compared by ETag and skipped.
@@ -18,9 +22,7 @@ class SyncManager(private val repo: Repository) {
 
     suspend fun sync(client: R2Client): SyncResult {
         val remote = client.list()
-        val remoteByKey = remote.associateBy { it.key }
         var downloaded = 0
-        var uploaded = 0
         val conflicts = mutableListOf<SyncConflict>()
 
         // ---- PULL ----
@@ -52,28 +54,31 @@ class SyncManager(private val repo: Repository) {
             }
         }
 
-        // ---- PUSH ----
-        for (song in repo.dirtySongs()) {
-            val key = song.remoteKey
-            if (key == null) {
-                // Brand-new local song: assign a stable remote key.
-                val newKey = "songs/" + UUID.randomUUID() + ".txt"
-                val res = client.put(newKey, repo.encodeSong(song))
-                repo.markSynced(song.id, res.key.ifBlank { newKey }, res.etag, res.uploaded)
-                uploaded++
-            } else {
-                val ro = remoteByKey[key]
-                if (ro != null && ro.etag != song.remoteEtag) {
-                    // Server moved too -> already recorded as a conflict in PULL.
-                    continue
-                }
-                val res = client.put(key, repo.encodeSong(song))
-                repo.markSynced(song.id, key, res.etag, res.uploaded)
-                uploaded++
-            }
-        }
+        // ---- PUSH PLAN ----
+        // Dirty songs are only reported; the upload happens in [push] once the
+        // user confirms. Songs already in conflict are excluded: they must be
+        // resolved one by one first.
+        val conflictIds = conflicts.mapTo(HashSet()) { it.songId }
+        val pending = repo.dirtySongs()
+            .filter { it.id !in conflictIds }
+            .map { PendingUpload(it.id, it.title, isNew = it.remoteKey == null) }
 
-        return SyncResult(downloaded, uploaded, conflicts)
+        return SyncResult(downloaded, 0, pending, conflicts)
+    }
+
+    /** Upload the confirmed dirty songs. Returns how many were actually sent. */
+    suspend fun push(client: R2Client, songIds: List<Long>): Int {
+        var uploaded = 0
+        for (id in songIds) {
+            val song = repo.songOnce(id) ?: continue
+            if (!song.dirty) continue
+            // Brand-new local song: assign a stable remote key.
+            val key = song.remoteKey ?: ("songs/" + UUID.randomUUID() + ".txt")
+            val res = client.put(key, repo.encodeSong(song))
+            repo.markSynced(song.id, res.key.ifBlank { key }, res.etag, res.uploaded)
+            uploaded++
+        }
+        return uploaded
     }
 
     /**
@@ -97,6 +102,11 @@ class SyncManager(private val repo: Repository) {
         val remoteCapo = ro.capo.trim().toIntOrNull()?.coerceIn(0, 12)
         if (remoteCapo != null && remoteCapo > 0 && local.capo == 0) {
             repo.setRemoteCapo(local.id, remoteCapo)
+        }
+
+        val remoteUrl = ro.url.trim()
+        if (remoteUrl.isNotEmpty() && local.sourceUrl.isBlank()) {
+            repo.setRemoteSourceUrl(local.id, remoteUrl)
         }
     }
 

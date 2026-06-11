@@ -19,7 +19,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.guitarchords.app.R
 import com.guitarchords.app.chords.ChordLibrary
 
 /** Searchable grid of chord names. Returns the picked chord name via [onPick]. */
@@ -32,14 +34,14 @@ fun ChordPickerDialog(onDismiss: () -> Unit, onPick: (String) -> Unit) {
     }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Elige un acorde") },
+        title = { Text(stringResource(R.string.choose_chord)) },
         text = {
             Column(modifier = Modifier.fillMaxWidth()) {
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it },
                     singleLine = true,
-                    placeholder = { Text("Buscar (Am, F#m7…)") },
+                    placeholder = { Text(stringResource(R.string.search_chord_placeholder)) },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(8.dp))
@@ -57,6 +59,6 @@ fun ChordPickerDialog(onDismiss: () -> Unit, onPick: (String) -> Unit) {
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Cerrar") } }
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.close)) } }
     )
 }

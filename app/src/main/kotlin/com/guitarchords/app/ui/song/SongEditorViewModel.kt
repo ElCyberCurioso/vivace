@@ -43,6 +43,7 @@ class SongEditorViewModel(app: Application) : AndroidViewModel(app) {
     fun updateTitle(v: String) { _song.value = _song.value.copy(title = v) }
     fun updateArtist(v: String) { _song.value = _song.value.copy(artist = v) }
     fun updateGenre(v: String) { _song.value = _song.value.copy(genre = v) }
+    fun updateSourceUrl(v: String) { _song.value = _song.value.copy(sourceUrl = v.trim()) }
     fun updateContent(v: String) { _song.value = _song.value.copy(content = v) }
     fun updatePlaylist(id: Long?) { _song.value = _song.value.copy(playlistId = id) }
     fun updateCapo(v: Int) { _song.value = _song.value.copy(capo = v.coerceIn(0, 12)) }

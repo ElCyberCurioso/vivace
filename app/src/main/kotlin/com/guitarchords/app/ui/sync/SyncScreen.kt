@@ -1,18 +1,18 @@
 package com.guitarchords.app.ui.sync
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -32,11 +32,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.guitarchords.app.R
+import com.guitarchords.app.sync.PendingUpload
 import com.guitarchords.app.sync.SyncConflict
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -53,6 +57,7 @@ fun SyncScreen(
 
     val state by vm.state.collectAsStateWithLifecycle()
     val conflicts by vm.conflicts.collectAsStateWithLifecycle()
+    val pendingPush by vm.pendingPush.collectAsStateWithLifecycle()
     val lastSync by vm.lastSync.collectAsStateWithLifecycle()
     val pending by vm.pendingUploads.collectAsStateWithLifecycle()
 
@@ -61,9 +66,9 @@ fun SyncScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Sincronización R2") },
+                title = { Text(stringResource(R.string.sync_r2_title)) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Atrás") }
+                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
                 }
             )
         }
@@ -76,8 +81,7 @@ fun SyncScreen(
                 .verticalScroll(rememberScrollState())
         ) {
             Text(
-                "Conecta con el contenedor R2 de Cloudflare a través del Worker. " +
-                    "Solo se descarga y sube el contenido nuevo o modificado.",
+                stringResource(R.string.sync_intro),
                 style = MaterialTheme.typography.bodyMedium
             )
             Spacer(Modifier.height(16.dp))
@@ -85,7 +89,7 @@ fun SyncScreen(
             OutlinedTextField(
                 value = url,
                 onValueChange = { url = it },
-                label = { Text("URL del Worker") },
+                label = { Text(stringResource(R.string.sync_worker_url)) },
                 placeholder = { Text("https://guitarchords-sync.tu-cuenta.workers.dev") },
                 singleLine = true,
                 enabled = !running,
@@ -95,7 +99,7 @@ fun SyncScreen(
             OutlinedTextField(
                 value = token,
                 onValueChange = { token = it },
-                label = { Text("Token de acceso") },
+                label = { Text(stringResource(R.string.sync_token)) },
                 singleLine = true,
                 enabled = !running,
                 visualTransformation = PasswordVisualTransformation(),
@@ -114,11 +118,11 @@ fun SyncScreen(
                         strokeWidth = 2.dp
                     )
                     Spacer(Modifier.size(8.dp))
-                    Text("Sincronizando…")
+                    Text(stringResource(R.string.syncing))
                 } else {
                     Icon(Icons.Default.CloudSync, null)
                     Spacer(Modifier.size(8.dp))
-                    Text("Sincronizar ahora")
+                    Text(stringResource(R.string.sync_now))
                 }
             }
 
@@ -127,12 +131,14 @@ fun SyncScreen(
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(12.dp)) {
                     Text(
-                        "Última sincronización: " +
-                            if (lastSync == 0L) "nunca" else formatTime(lastSync),
+                        stringResource(
+                            R.string.last_sync,
+                            if (lastSync == 0L) stringResource(R.string.never) else formatTime(lastSync)
+                        ),
                         style = MaterialTheme.typography.bodySmall
                     )
                     Text(
-                        "Canciones con cambios sin subir: $pending",
+                        stringResource(R.string.pending_uploads, pending),
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
@@ -144,8 +150,10 @@ fun SyncScreen(
                 is SyncUiState.Success -> {
                     val r = s.result
                     Text(
-                        "Descargadas: ${r.downloaded}  ·  Subidas: ${r.uploaded}" +
-                            if (r.conflicts.isNotEmpty()) "  ·  Conflictos: ${r.conflicts.size}" else "",
+                        stringResource(R.string.sync_result, r.downloaded, r.uploaded) +
+                            if (r.conflicts.isNotEmpty())
+                                stringResource(R.string.sync_conflicts_suffix, r.conflicts.size)
+                            else "",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -162,59 +170,115 @@ fun SyncScreen(
         }
     }
 
+    // Como en git: primero se integran los conflictos, después se confirma el push.
     if (conflicts.isNotEmpty() && !running) {
         ConflictDialog(
             conflicts = conflicts,
-            onKeepLocal = { vm.resolveAll(keepLocal = true) },
-            onKeepRemote = { vm.resolveAll(keepLocal = false) },
+            onResolve = { c, keepLocal -> vm.resolveOne(c, keepLocal) },
             onDismiss = { vm.dismissConflicts() }
+        )
+    } else if (pendingPush.isNotEmpty() && !running) {
+        PushConfirmDialog(
+            pending = pendingPush,
+            onConfirm = { vm.confirmPush() },
+            onCancel = { vm.cancelPush() }
         )
     }
 }
 
 @Composable
-private fun ConflictDialog(
-    conflicts: List<SyncConflict>,
-    onKeepLocal: () -> Unit,
-    onKeepRemote: () -> Unit,
-    onDismiss: () -> Unit
+private fun PushConfirmDialog(
+    pending: List<PendingUpload>,
+    onConfirm: () -> Unit,
+    onCancel: () -> Unit
 ) {
     AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("${conflicts.size} conflicto(s)") },
+        onDismissRequest = onCancel,
+        title = { Text(stringResource(R.string.push_confirm_title)) },
         text = {
             Column {
                 Text(
-                    "Estas canciones se han modificado tanto en el dispositivo " +
-                        "como en el servidor. Elige qué versión conservar para todas:",
+                    stringResource(R.string.push_confirm_msg, pending.size),
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Spacer(Modifier.height(8.dp))
-                conflicts.forEach { c ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
+                Column(
+                    Modifier
+                        .heightIn(max = 240.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    pending.forEach { p ->
                         Text(
-                            c.title,
+                            "• " + p.title.ifBlank { stringResource(R.string.untitled) } +
+                                if (p.isNew) "  (" + stringResource(R.string.push_new_song) + ")" else "",
                             style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Text(
-                            "local " + shortTime(c.localUpdatedAt) +
-                                " · servidor " + shortTime(c.remoteUpdatedAt),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            modifier = Modifier.padding(vertical = 2.dp)
                         )
                     }
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = onKeepLocal) { Text("Mantener local") }
+            TextButton(onClick = onConfirm) { Text(stringResource(R.string.push_upload)) }
         },
         dismissButton = {
-            TextButton(onClick = onKeepRemote) { Text("Usar servidor") }
+            TextButton(onClick = onCancel) { Text(stringResource(R.string.push_not_now)) }
+        }
+    )
+}
+
+@Composable
+private fun ConflictDialog(
+    conflicts: List<SyncConflict>,
+    onResolve: (SyncConflict, Boolean) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.conflicts_title, conflicts.size)) },
+        text = {
+            Column {
+                Text(
+                    stringResource(R.string.conflicts_msg),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(Modifier.height(8.dp))
+                Column(
+                    Modifier
+                        .heightIn(max = 320.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    conflicts.forEach { c ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(c.title, style = MaterialTheme.typography.bodySmall)
+                                Text(
+                                    stringResource(
+                                        R.string.local_vs_server,
+                                        shortTime(c.localUpdatedAt),
+                                        shortTime(c.remoteUpdatedAt)
+                                    ),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            TextButton(onClick = { onResolve(c, true) }) {
+                                Text(stringResource(R.string.conflict_local_short))
+                            }
+                            TextButton(onClick = { onResolve(c, false) }) {
+                                Text(stringResource(R.string.conflict_server_short))
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.conflict_later)) }
         }
     )
 }

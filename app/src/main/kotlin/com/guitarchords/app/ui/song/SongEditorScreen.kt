@@ -21,9 +21,10 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Remove
@@ -51,11 +52,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.guitarchords.app.R
 import com.guitarchords.app.chords.ChordParser
 import com.guitarchords.app.data.Playlist
 import com.guitarchords.app.ui.components.ChordPickerDialog
@@ -87,15 +91,15 @@ fun SongEditorScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (songId == 0L) "Nueva canción" else "Editar") },
+                title = { Text(if (songId == 0L) stringResource(R.string.new_song) else stringResource(R.string.edit)) },
                 navigationIcon = {
-                    IconButton(onClick = onDone) { Icon(Icons.Default.ArrowBack, "Atrás") }
+                    IconButton(onClick = onDone) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
                 },
                 actions = {
                     IconButton(onClick = {
                         vm.updateContent(contentField.text)
                         vm.save { onDone() }
-                    }) { Icon(Icons.Default.Check, "Guardar") }
+                    }) { Icon(Icons.Default.Check, stringResource(R.string.save)) }
                 }
             )
         }
@@ -111,7 +115,7 @@ fun SongEditorScreen(
             OutlinedTextField(
                 value = song.title,
                 onValueChange = vm::updateTitle,
-                label = { Text("Título") },
+                label = { Text(stringResource(R.string.song_title)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -119,7 +123,7 @@ fun SongEditorScreen(
             OutlinedTextField(
                 value = song.artist,
                 onValueChange = vm::updateArtist,
-                label = { Text("Artista") },
+                label = { Text(stringResource(R.string.song_artist)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -127,12 +131,24 @@ fun SongEditorScreen(
             OutlinedTextField(
                 value = song.genre,
                 onValueChange = vm::updateGenre,
-                label = { Text("Género") },
+                label = { Text(stringResource(R.string.song_genre)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(8.dp))
-            val plName = song.playlistId?.let { pid -> playlists.firstOrNull { it.id == pid }?.name } ?: "Sin lista"
+            OutlinedTextField(
+                value = song.sourceUrl,
+                onValueChange = vm::updateSourceUrl,
+                label = { Text(stringResource(R.string.source_url_label)) },
+                placeholder = { Text("https://…") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                leadingIcon = { Icon(Icons.Default.Link, null) },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(8.dp))
+            val plName = song.playlistId?.let { pid -> playlists.firstOrNull { it.id == pid }?.name }
+                ?: stringResource(R.string.no_playlist)
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier
@@ -141,12 +157,12 @@ fun SongEditorScreen(
             ) {
                 AssistChip(
                     onClick = { playlistPickerOpen = true },
-                    label = { Text("Lista: $plName") },
+                    label = { Text(stringResource(R.string.playlist_label, plName)) },
                     leadingIcon = { Icon(Icons.Default.LibraryMusic, null) }
                 )
                 AssistChip(
                     onClick = { pickerOpen = true },
-                    label = { Text("Insertar acorde") },
+                    label = { Text(stringResource(R.string.insert_chord)) },
                     leadingIcon = { Icon(Icons.Default.MusicNote, null) }
                 )
                 AssistChip(
@@ -162,7 +178,7 @@ fun SongEditorScreen(
                         contentField = TextFieldValue(newText, TextRange(newCursor))
                         vm.updateContent(newText)
                     },
-                    label = { Text("Insertar tablatura") },
+                    label = { Text(stringResource(R.string.insert_tab)) },
                     leadingIcon = { Icon(Icons.Default.GraphicEq, null) }
                 )
             }
@@ -171,25 +187,26 @@ fun SongEditorScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Capo:", style = MaterialTheme.typography.labelMedium)
+                Text(stringResource(R.string.capo_label), style = MaterialTheme.typography.labelMedium)
                 Spacer(Modifier.size(8.dp))
                 IconButton(
                     onClick = { vm.updateCapo(song.capo - 1) },
                     enabled = song.capo > 0
-                ) { Icon(Icons.Default.Remove, "Bajar capo") }
+                ) { Icon(Icons.Default.Remove, stringResource(R.string.capo_down)) }
                 Text(
-                    if (song.capo == 0) "Sin capo" else "Traste ${song.capo}",
+                    if (song.capo == 0) stringResource(R.string.no_capo)
+                    else stringResource(R.string.fret_n, song.capo),
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                 )
                 IconButton(
                     onClick = { vm.updateCapo(song.capo + 1) },
                     enabled = song.capo < 12
-                ) { Icon(Icons.Default.Add, "Subir capo") }
+                ) { Icon(Icons.Default.Add, stringResource(R.string.capo_up)) }
             }
             Spacer(Modifier.height(8.dp))
-            Text("Letra y acordes", style = MaterialTheme.typography.labelMedium)
+            Text(stringResource(R.string.lyrics_and_chords), style = MaterialTheme.typography.labelMedium)
             Text(
-                "Usa {Nombre} para acordes — ej: {Am} Casa. Tablatura entre {tab}…{/tab}",
+                stringResource(R.string.syntax_hint),
                 style = MaterialTheme.typography.bodySmall
             )
             Spacer(Modifier.height(4.dp))
@@ -206,7 +223,7 @@ fun SongEditorScreen(
                     fontFamily = FontFamily.Monospace,
                     fontSize = 14.sp
                 ),
-                placeholder = { Text("Escribe aquí…") }
+                placeholder = { Text(stringResource(R.string.write_here)) }
             )
         }
     }
@@ -250,7 +267,7 @@ private fun PlaylistPickerDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Elige lista") },
+        title = { Text(stringResource(R.string.choose_playlist)) },
         text = {
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -266,7 +283,7 @@ private fun PlaylistPickerDialog(
                         Icon(Icons.Default.MusicNote, null)
                         Spacer(Modifier.size(12.dp))
                         Text(
-                            "Sin lista" + if (currentId == null) " ✓" else "",
+                            stringResource(R.string.no_playlist) + if (currentId == null) " ✓" else "",
                             style = MaterialTheme.typography.bodyLarge
                         )
                     }
@@ -288,7 +305,7 @@ private fun PlaylistPickerDialog(
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Cerrar") } }
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.close)) } }
     )
 }
 

@@ -16,7 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -41,12 +41,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.guitarchords.app.R
 import com.guitarchords.app.tuner.TunerEngine
+import com.guitarchords.app.ui.theme.extendedColors
 import kotlin.math.abs
 import kotlin.math.ln
 import kotlin.math.roundToInt
@@ -94,9 +99,9 @@ fun TunerScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Afinador") },
+                title = { Text(stringResource(R.string.tuner_title)) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Atrás") }
+                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
                 }
             )
         }
@@ -128,14 +133,14 @@ private fun PermissionPrompt(onRequest: () -> Unit) {
     ) {
         Icon(Icons.Default.Mic, null, modifier = Modifier.height(64.dp))
         Text(
-            "Permiso de micrófono necesario",
+            stringResource(R.string.mic_permission_title),
             style = MaterialTheme.typography.titleMedium
         )
         Text(
-            "Para detectar las notas de la guitarra en tiempo real.",
+            stringResource(R.string.mic_permission_msg),
             style = MaterialTheme.typography.bodyMedium
         )
-        Button(onClick = onRequest) { Text("Conceder permiso") }
+        Button(onClick = onRequest) { Text(stringResource(R.string.grant_permission)) }
     }
 }
 
@@ -149,6 +154,12 @@ private fun TunerContent(freq: Float, level: Float) {
     val active = freq > 0f && level > 0.01f && target != null
     val inTune = active && abs(cents) < 5f
 
+    // Pulso háptico al entrar en tono.
+    val haptics = LocalHapticFeedback.current
+    LaunchedEffect(inTune) {
+        if (inTune) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+    }
+
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -157,10 +168,10 @@ private fun TunerContent(freq: Float, level: Float) {
         Text(
             if (active) target!!.name else "—",
             style = MaterialTheme.typography.displayLarge.copy(fontWeight = FontWeight.Bold),
-            color = if (inTune) Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSurface
+            color = if (inTune) MaterialTheme.extendedColors.success else MaterialTheme.colorScheme.onSurface
         )
         Text(
-            if (active) "%.1f Hz".format(freq) else "Toca una cuerda",
+            if (active) "%.1f Hz".format(freq) else stringResource(R.string.play_a_string),
             style = MaterialTheme.typography.titleMedium
         )
 
@@ -177,8 +188,8 @@ private fun TunerContent(freq: Float, level: Float) {
             style = MaterialTheme.typography.titleMedium,
             color = when {
                 !active -> MaterialTheme.colorScheme.onSurfaceVariant
-                inTune -> Color(0xFF2E7D32)
-                abs(cents) < 15 -> Color(0xFFF9A825)
+                inTune -> MaterialTheme.extendedColors.success
+                abs(cents) < 15 -> MaterialTheme.extendedColors.warning
                 else -> MaterialTheme.colorScheme.error
             }
         )
@@ -195,8 +206,8 @@ private fun Needle(
     modifier: Modifier = Modifier
 ) {
     val surface = MaterialTheme.colorScheme.onSurface
-    val good = Color(0xFF2E7D32)
-    val warn = Color(0xFFF9A825)
+    val good = MaterialTheme.extendedColors.success
+    val warn = MaterialTheme.extendedColors.warning
     val bad = MaterialTheme.colorScheme.error
     val inactive = MaterialTheme.colorScheme.onSurfaceVariant
 

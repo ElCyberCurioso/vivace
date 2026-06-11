@@ -5,7 +5,9 @@ data class Barre(val fret: Int, val fromString: Int, val toString: Int)
 data class ChordShape(
     val frets: List<Int>,
     val fingers: List<Int> = List(6) { 0 },
-    val barres: List<Barre> = emptyList()
+    val barres: List<Barre> = emptyList(),
+    /** Id en custom_chords si la digitación la definió el usuario. */
+    val customId: Long? = null
 ) {
     val baseFret: Int
         get() {

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Backup clásico (API < 31). Se excluyen las prefs cifradas: su clave vive
+     en el Keystore del dispositivo y no sobrevive a una restauración. -->
+<full-backup-content>
+    <exclude domain="sharedpref" path="guitarchords_sync_secure.xml" />
+</full-backup-content>

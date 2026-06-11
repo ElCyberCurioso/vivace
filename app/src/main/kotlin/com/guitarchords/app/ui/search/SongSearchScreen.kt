@@ -15,7 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
@@ -38,11 +38,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.guitarchords.app.R
 import com.guitarchords.app.ui.components.BulkDeleteDialog
 import com.guitarchords.app.ui.components.BulkMoveDialog
+import com.guitarchords.app.ui.components.EmptyState
 import com.guitarchords.app.ui.components.SelectionTopBar
 import com.guitarchords.app.ui.components.rememberSongSelection
 
@@ -75,9 +78,9 @@ fun SongSearchScreen(
                 )
             } else {
                 TopAppBar(
-                    title = { Text("Buscar canciones") },
+                    title = { Text(stringResource(R.string.search_songs)) },
                     navigationIcon = {
-                        IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Atrás") }
+                        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
                     }
                 )
             }
@@ -93,12 +96,12 @@ fun SongSearchScreen(
                 value = query,
                 onValueChange = vm::setQuery,
                 singleLine = true,
-                placeholder = { Text("Título, artista o género…") },
+                placeholder = { Text(stringResource(R.string.search_placeholder)) },
                 leadingIcon = { Icon(Icons.Default.Search, null) },
                 trailingIcon = {
                     if (query.isNotEmpty()) {
                         IconButton(onClick = { vm.setQuery("") }) {
-                            Icon(Icons.Default.Clear, "Limpiar")
+                            Icon(Icons.Default.Clear, stringResource(R.string.clear))
                         }
                     }
                 },
@@ -106,8 +109,16 @@ fun SongSearchScreen(
             )
             Spacer(Modifier.height(12.dp))
             when {
-                query.isBlank() -> HintMessage("Escribe para buscar")
-                hits.isEmpty() -> HintMessage("Sin resultados")
+                query.isBlank() -> EmptyState(
+                    icon = Icons.Default.Search,
+                    title = stringResource(R.string.search_hint_title),
+                    subtitle = stringResource(R.string.search_hint_subtitle)
+                )
+                hits.isEmpty() -> EmptyState(
+                    icon = Icons.Default.Search,
+                    title = stringResource(R.string.no_results),
+                    subtitle = stringResource(R.string.try_another_search)
+                )
                 else -> LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     contentPadding = PaddingValues(vertical = 4.dp)
@@ -150,13 +161,6 @@ fun SongSearchScreen(
             },
             onDismiss = { bulkDeleting = false }
         )
-    }
-}
-
-@Composable
-private fun HintMessage(text: String) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(text, style = MaterialTheme.typography.bodyMedium)
     }
 }
 
@@ -213,7 +217,7 @@ private fun HitRow(
                 }
                 if (hit.playlistName.isNotBlank()) {
                     Text(
-                        "en ${hit.playlistName}",
+                        stringResource(R.string.in_playlist, hit.playlistName),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

@@ -30,6 +30,7 @@ object SongTextFormat {
         val capo: Int,
         val favorite: Boolean,
         val playlist: String?,
+        val sourceUrl: String,
         val content: String
     )
 
@@ -39,6 +40,7 @@ object SongTextFormat {
         if (song.genre.isNotBlank()) append("#genre: ").append(song.genre).append('\n')
         if (song.capo > 0) append("#capo: ").append(song.capo).append('\n')
         if (song.favorite) append("#favorite: true\n")
+        if (song.sourceUrl.isNotBlank()) append("#url: ").append(song.sourceUrl).append('\n')
         if (!playlistName.isNullOrBlank()) append("#playlist: ").append(playlistName).append('\n')
         append("---\n")
         append(song.content)
@@ -52,6 +54,7 @@ object SongTextFormat {
         var capo = 0
         var favorite = false
         var playlist: String? = null
+        var sourceUrl = ""
         var i = 0
         while (i < lines.size) {
             val line = lines[i]
@@ -70,6 +73,7 @@ object SongTextFormat {
                 "capo" -> capo = value.toIntOrNull()?.coerceIn(0, 12) ?: 0
                 "favorite" -> favorite = value.equals("true", ignoreCase = true)
                 "playlist" -> playlist = value.ifBlank { null }
+                "url" -> sourceUrl = value
             }
             i++
         }
@@ -81,6 +85,7 @@ object SongTextFormat {
             capo = capo,
             favorite = favorite,
             playlist = playlist,
+            sourceUrl = sourceUrl,
             content = content
         )
     }

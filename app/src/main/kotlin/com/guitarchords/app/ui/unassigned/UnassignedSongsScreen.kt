@@ -17,9 +17,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.DriveFileMove
+import androidx.compose.material.icons.automirrored.filled.DriveFileMove
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.MusicNote
@@ -46,13 +46,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.guitarchords.app.R
 import com.guitarchords.app.data.Playlist
 import com.guitarchords.app.data.Song
 import com.guitarchords.app.ui.components.BulkDeleteDialog
 import com.guitarchords.app.ui.components.BulkMoveDialog
+import com.guitarchords.app.ui.components.EmptyState
 import com.guitarchords.app.ui.components.SelectionTopBar
 import com.guitarchords.app.ui.components.rememberSongSelection
 
@@ -88,30 +91,26 @@ fun UnassignedSongsScreen(
                 )
             } else {
                 TopAppBar(
-                    title = { Text("Canciones sin lista") },
+                    title = { Text(stringResource(R.string.unassigned_songs)) },
                     navigationIcon = {
-                        IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Atrás") }
+                        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
                     }
                 )
             }
         },
         floatingActionButton = {
             FloatingActionButton(onClick = onAddSong) {
-                Icon(Icons.Default.Add, "Nueva canción")
+                Icon(Icons.Default.Add, stringResource(R.string.new_song))
             }
         }
     ) { pv ->
         if (songs.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(pv),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.MusicNote, null, modifier = Modifier.size(72.dp))
-                    Spacer(Modifier.size(8.dp))
-                    Text("Sin canciones sueltas")
-                }
-            }
+            EmptyState(
+                icon = Icons.Default.MusicNote,
+                title = stringResource(R.string.empty_unassigned_title),
+                subtitle = stringResource(R.string.empty_unassigned_subtitle),
+                modifier = Modifier.padding(pv)
+            )
         } else {
             LazyColumn(
                 contentPadding = PaddingValues(12.dp),
@@ -139,16 +138,16 @@ fun UnassignedSongsScreen(
     deleting?.let { s ->
         AlertDialog(
             onDismissRequest = { deleting = null },
-            title = { Text("Borrar canción") },
-            text = { Text("¿Borrar \"${s.title}\"?") },
+            title = { Text(stringResource(R.string.delete_song_title)) },
+            text = { Text(stringResource(R.string.delete_song_msg, s.title)) },
             confirmButton = {
                 TextButton(onClick = {
                     vm.deleteSong(s.id)
                     deleting = null
-                }) { Text("Borrar") }
+                }) { Text(stringResource(R.string.delete)) }
             },
             dismissButton = {
-                TextButton(onClick = { deleting = null }) { Text("Cancelar") }
+                TextButton(onClick = { deleting = null }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
@@ -200,10 +199,10 @@ private fun AssignPlaylistDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Asignar \"$songTitle\" a lista") },
+        title = { Text(stringResource(R.string.move_song_title, songTitle)) },
         text = {
             if (targets.isEmpty()) {
-                Text("No hay listas. Crea una lista primero.")
+                Text(stringResource(R.string.no_lists_yet))
             } else {
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -225,7 +224,7 @@ private fun AssignPlaylistDialog(
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Cerrar") } }
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.close)) } }
     )
 }
 
@@ -264,9 +263,9 @@ private fun SongRow(
             } else {
                 IconButton(onClick = onFav) {
                     if (song.favorite)
-                        Icon(Icons.Default.Star, "Quitar favorita", tint = MaterialTheme.colorScheme.primary)
+                        Icon(Icons.Default.Star, stringResource(R.string.remove_favorite), tint = MaterialTheme.colorScheme.primary)
                     else
-                        Icon(Icons.Outlined.StarOutline, "Favorita")
+                        Icon(Icons.Outlined.StarOutline, stringResource(R.string.favorite))
                 }
             }
             Column(modifier = Modifier.weight(1f)) {
@@ -282,9 +281,9 @@ private fun SongRow(
                     Text(sub, style = MaterialTheme.typography.bodySmall)
             }
             if (!selectionActive) {
-                IconButton(onClick = onMove) { Icon(Icons.Default.DriveFileMove, "Asignar a lista") }
-                IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, "Editar") }
-                IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, "Borrar") }
+                IconButton(onClick = onMove) { Icon(Icons.AutoMirrored.Filled.DriveFileMove, stringResource(R.string.assign_to_playlist)) }
+                IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, stringResource(R.string.edit)) }
+                IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, stringResource(R.string.delete)) }
             }
         }
     }

@@ -238,18 +238,37 @@ object ChordLibrary {
         return root to cleanQual
     }
 
-    fun find(name: String): Chord? {
-        val (root, qual) = parseName(name) ?: return null
-        return build(root, qual, name)
+    /** Nota de bajo de un acorde slash ("D/F#" → "F#"), o null si no la hay. */
+    private fun parseBass(name: String): String? {
+        val bass = name.trim().substringAfter("/", "").trim()
+        if (bass.isEmpty()) return null
+        val m = Regex("^([A-G])([#b]?)$").find(bass) ?: return null
+        return normalize(m.value)
     }
 
-    private fun build(root: String, quality: String, displayName: String = root + quality): Chord? {
+    fun find(name: String): Chord? {
+        val (root, qual) = parseName(name) ?: return null
+        return build(root, qual, name, parseBass(name))
+    }
+
+    private fun build(
+        root: String,
+        quality: String,
+        displayName: String = root + quality,
+        bass: String? = null
+    ): Chord? {
         val rIdx = rootIndex(root)
         if (rIdx < 0) return null
+        val bassIdx = bass?.let { rootIndex(it) }?.takeIf { it >= 0 && it != rIdx }
+
+        // Las digitaciones del usuario van siempre primero.
+        val custom = CustomChords.shapesFor(root + quality)
 
         // Prefer the bundled chords-db voicings when available.
         val dbShapes = ChordDb.shapes(root, quality)
-        if (dbShapes.isNotEmpty()) return Chord(displayName, root, quality, dbShapes)
+        if (dbShapes.isNotEmpty()) {
+            return Chord(displayName, root, quality, applyBass(custom + dbShapes, bassIdx))
+        }
 
         val variations = mutableListOf<ChordShape>()
         val fullName = root + quality
@@ -286,7 +305,57 @@ object ChordLibrary {
             }
         }
 
-        return Chord(displayName, root, quality, variations)
+        return Chord(displayName, root, quality, applyBass(custom + variations, bassIdx))
+    }
+
+    /**
+     * Adapta los voicings de un acorde slash para que la nota más grave sea el
+     * bajo indicado (D/F# → marca F# en la 6ª cuerda, traste 2). Si en alguna
+     * variación no hay forma razonable de colocar el bajo, se deja tal cual.
+     */
+    private fun applyBass(shapes: List<ChordShape>, bassIdx: Int?): List<ChordShape> {
+        if (bassIdx == null) return shapes
+        val bassPc = ((bassIdx % 12) + 12) % 12
+        return shapes.map { withBass(it, bassPc) ?: it }
+    }
+
+    private fun withBass(shape: ChordShape, bassPc: Int): ChordShape? {
+        val lowest = shape.frets.indexOfFirst { it >= 0 }
+        if (lowest < 0) return null
+        val lowestPc = (OPEN_STRING_PC[lowest] + shape.frets[lowest]) % 12
+        if (lowestPc == bassPc) return shape
+
+        // Trastes alcanzables sin salir de la posición de la mano.
+        val positives = shape.frets.filter { it > 0 }
+        val minFret = positives.minOrNull() ?: 0
+        val maxFret = positives.maxOrNull() ?: 0
+        val candidates = buildList {
+            add(0)
+            val from = maxOf(1, minFret - 1)
+            val to = maxOf(maxFret + 1, 4)
+            addAll(from..to)
+        }
+
+        // El bajo debe quedar en una de las tres cuerdas graves y pasar a ser
+        // la nota más grave del acorde (las cuerdas por debajo se silencian).
+        for (s in 0..2) {
+            val f = candidates.firstOrNull { (OPEN_STRING_PC[s] + it) % 12 == bassPc } ?: continue
+            val newFrets = shape.frets.toMutableList()
+            for (i in 0 until s) newFrets[i] = -1
+            newFrets[s] = f
+            // Debe seguir sonando algo del acorde por encima del bajo.
+            if (newFrets.drop(s + 1).none { it >= 0 }) continue
+            val newFingers = shape.fingers.toMutableList().also {
+                for (i in 0..s) if (i < it.size) it[i] = 0
+            }
+            // Las cejillas que quedaran colgando sobre cuerdas mudas se descartan.
+            val newBarres = shape.barres.filter { b ->
+                val hi = maxOf(b.fromString, b.toString)
+                6 - hi >= s
+            }
+            return ChordShape(newFrets, newFingers, newBarres, shape.customId)
+        }
+        return null
     }
 
     private val OPEN_STRING_PC = intArrayOf(4, 9, 2, 7, 11, 4) // E A D G B e

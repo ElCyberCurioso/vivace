@@ -51,6 +51,8 @@ class PlaylistDetailViewModel(app: Application) : AndroidViewModel(app) {
         repo.moveSong(songId, targetPlaylistId)
     }
 
+    fun persistOrder(orderedIds: List<Long>) = viewModelScope.launch { repo.reorderSongs(orderedIds) }
+
     fun deleteSelected(ids: Set<Long>) = viewModelScope.launch { repo.deleteSongs(ids) }
     fun moveSelected(ids: Set<Long>, target: Long?) = viewModelScope.launch { repo.moveSongs(ids, target) }
     fun favoriteSelected(ids: Set<Long>, fav: Boolean) = viewModelScope.launch { repo.setFavoriteFor(ids, fav) }
