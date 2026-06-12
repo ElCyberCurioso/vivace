@@ -18,6 +18,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -60,6 +61,10 @@ fun SyncScreen(
     val pendingPush by vm.pendingPush.collectAsStateWithLifecycle()
     val lastSync by vm.lastSync.collectAsStateWithLifecycle()
     val pending by vm.pendingUploads.collectAsStateWithLifecycle()
+    val chordSyncing by vm.chordSyncing.collectAsStateWithLifecycle()
+    val chordsLastSync by vm.chordsLastSync.collectAsStateWithLifecycle()
+    val pendingChords by vm.pendingChords.collectAsStateWithLifecycle()
+    val chordMsg by vm.chordMsg.collectAsStateWithLifecycle()
 
     val running = state is SyncUiState.Running
 
@@ -166,6 +171,60 @@ fun SyncScreen(
                     )
                 }
                 else -> {}
+            }
+
+            Spacer(Modifier.height(24.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(16.dp))
+
+            // Acordes personalizados: se sincronizan solos en cuanto hay internet;
+            // este bloque informa del estado y permite forzarlo a mano.
+            Text(
+                stringResource(R.string.chords_sync_title),
+                style = MaterialTheme.typography.titleMedium
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                stringResource(R.string.chords_sync_intro),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(12.dp))
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(12.dp)) {
+                    Text(
+                        stringResource(
+                            R.string.chords_last_sync,
+                            if (chordsLastSync == 0L) stringResource(R.string.never)
+                            else formatTime(chordsLastSync)
+                        ),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        stringResource(R.string.chords_pending, pendingChords),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            Button(
+                onClick = { vm.syncChords(url, token) },
+                enabled = !chordSyncing,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                if (chordSyncing) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.size(8.dp))
+                    Text(stringResource(R.string.chords_syncing))
+                } else {
+                    Icon(Icons.Default.CloudSync, null)
+                    Spacer(Modifier.size(8.dp))
+                    Text(stringResource(R.string.chords_sync_now))
+                }
+            }
+            chordMsg?.let {
+                Spacer(Modifier.height(8.dp))
+                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
             }
         }
     }

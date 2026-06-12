@@ -1,0 +1,35 @@
+feat: sistema de entrenamiento, orden de carpetas, sync de acordes y mejoras del worker
+Entrenamiento de guitarra (Fase 1):
+- Sistema gamificado de ejercicios con XP, niveles (50*n*(n+1)), racha
+  diaria y 10 logros; progreso en Room (training_profile, area_progress,
+  exercise_results, achievements) con filas semilla en migración Y onCreate.
+- Curriculum estático en Kotlin (~57 ejercicios, ids estables) y 5 tipos:
+  ChordQuiz (FretboardInput+ChordRecognizer), ChordChange (metrónomo +
+  conteo autoevaluado), ScaleNotes (YIN tempo libre + NoteMatcher),
+  TheoryQuiz (autogenerado de MusicTheory) y RhythmTap (TapScorer).
+- Test de nivel obligatorio (saltable como principiante; recalibrar solo
+  sube). Pantallas en ui/training/ (dashboard con gate, AreaPath con
+  candados, runner Intro→Running→Result, Stats); tile primero del Home.
+- Tests JVM en app/src/test/.../training/.
+Ordenación de partituras en carpetas:
+- SongSort (manual/título/artista/creación/modificación) + SongSortPrefs
+  global y menú SongSortMenu en Playlist y "Sin lista"; con orden≠manual
+  se oculta el asa de arrastre.
+- songs.created_at nuevo (migración v11, init = updated_at).
+Sincronización automática de acordes personalizados:
+- Convergencia multi-dispositivo vía blob único chords/custom-chords.json,
+  fuera del flujo de partituras. ChordMerge (puro, testeado): último-en-
+  modificar-gana por uuid con propagación de borrados (tombstones).
+- ChordSyncManager (Mutex single-flight) pull→merge→apply→push, disparado
+  por cambios locales (debounce 1.5s), arranque y reconexión de red
+  (ACCESS_NETWORK_STATE). custom_chords gana uuid/deleted_at/dirty (v12);
+  borrado lógico; R2Client.getOrNull; SyncPrefs.chordsEtag/chordsLastSync.
+- Tarjeta "Acordes personalizados" en la pantalla de sincronización.
+Worker R2:
+- Borrado masivo (POST /delete + selección por rango), backup/restore ZIP
+  en el navegador, orden por artista, numeración estable y listado
+  artista+título, capo con botones 0-12, botón Storage y detección de
+  acordes en el editor.
+- Prefijo chords/ permitido en PUT/DELETE (isAllowedKey); /list sigue
+  filtrando songs/, así el blob de acordes no aparece en el panel.
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>

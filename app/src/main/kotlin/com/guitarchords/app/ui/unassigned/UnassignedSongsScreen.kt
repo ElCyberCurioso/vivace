@@ -57,6 +57,7 @@ import com.guitarchords.app.ui.components.BulkDeleteDialog
 import com.guitarchords.app.ui.components.BulkMoveDialog
 import com.guitarchords.app.ui.components.EmptyState
 import com.guitarchords.app.ui.components.SelectionTopBar
+import com.guitarchords.app.ui.components.SongSortMenu
 import com.guitarchords.app.ui.components.rememberSongSelection
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -69,6 +70,7 @@ fun UnassignedSongsScreen(
     vm: UnassignedSongsViewModel = viewModel()
 ) {
     val songs by vm.songs.collectAsStateWithLifecycle()
+    val sort by vm.sort.collectAsStateWithLifecycle()
     val playlists by vm.playlists.collectAsStateWithLifecycle()
     var deleting by remember { mutableStateOf<Song?>(null) }
     var moving by remember { mutableStateOf<Song?>(null) }
@@ -94,6 +96,9 @@ fun UnassignedSongsScreen(
                     title = { Text(stringResource(R.string.unassigned_songs)) },
                     navigationIcon = {
                         IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
+                    },
+                    actions = {
+                        SongSortMenu(current = sort, onPick = { vm.setSort(it) })
                     }
                 )
             }

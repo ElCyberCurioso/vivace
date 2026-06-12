@@ -28,7 +28,16 @@
  */
 
 const SONG_PREFIX = "songs/";
+// Los acordes personalizados se guardan en un blob bajo este prefijo, fuera del
+// flujo de partituras (no aparecen en /list, que filtra por songs/).
+const CHORDS_PREFIX = "chords/";
 const TITLE_RE = /^#([A-Za-z]+):[ \t]?(.*)$/;
+
+/** Claves que el Worker acepta escribir/borrar: partituras o acordes. */
+function isAllowedKey(key) {
+  return typeof key === "string" &&
+    (key.startsWith(SONG_PREFIX) || key.startsWith(CHORDS_PREFIX));
+}
 
 export default {
   async fetch(request, env) {
@@ -155,7 +164,7 @@ async function getObject(env, url, cors) {
 
 async function putObject(env, url, request, cors) {
   const key = url.searchParams.get("key");
-  if (!key || !key.startsWith(SONG_PREFIX)) {
+  if (!isAllowedKey(key)) {
     return new Response("invalid key", { status: 400, headers: cors });
   }
   const body = await request.text();
@@ -188,7 +197,7 @@ async function putObject(env, url, request, cors) {
 
 async function deleteObject(env, url, cors) {
   const key = url.searchParams.get("key");
-  if (!key || !key.startsWith(SONG_PREFIX)) {
+  if (!isAllowedKey(key)) {
     return new Response("invalid key", { status: 400, headers: cors });
   }
   await env.BUCKET.delete(key);
@@ -203,7 +212,7 @@ async function deleteObjects(env, request, cors) {
     return new Response("invalid JSON", { status: 400, headers: cors });
   }
   if (!Array.isArray(keys) || keys.length === 0 ||
-      !keys.every(k => typeof k === "string" && k.startsWith(SONG_PREFIX))) {
+      !keys.every(isAllowedKey)) {
     return new Response("invalid keys", { status: 400, headers: cors });
   }
   // R2 admits hasta 1000 claves por llamada; se trocea por si acaso.

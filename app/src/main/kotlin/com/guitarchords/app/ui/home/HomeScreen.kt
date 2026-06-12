@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Piano
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Timer
@@ -51,6 +52,7 @@ private data class HomeAction(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
+    onOpenTraining: () -> Unit,
     onOpenPlaylists: () -> Unit,
     onOpenFavorites: () -> Unit,
     onOpenTuner: () -> Unit,
@@ -60,6 +62,7 @@ fun HomeScreen(
     onOpenSettings: () -> Unit
 ) {
     val actions = listOf(
+        HomeAction(stringResource(R.string.home_training), Icons.Default.School, onOpenTraining),
         HomeAction(stringResource(R.string.home_playlists), Icons.Default.LibraryMusic, onOpenPlaylists),
         HomeAction(stringResource(R.string.home_favorites), Icons.Default.Star, onOpenFavorites),
         HomeAction(stringResource(R.string.home_tuner), Icons.Default.GraphicEq, onOpenTuner),

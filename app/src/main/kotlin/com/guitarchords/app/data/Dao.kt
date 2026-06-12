@@ -125,20 +125,49 @@ interface SongDao {
 
 @Dao
 interface CustomChordDao {
-    @Query("SELECT * FROM custom_chords ORDER BY chord_key ASC, position ASC, id ASC")
+    /** Solo acordes vivos (sin tombstones): alimenta la caché de diagramas. */
+    @Query("SELECT * FROM custom_chords WHERE deleted_at = 0 ORDER BY chord_key ASC, position ASC, id ASC")
     suspend fun all(): List<CustomChord>
 
-    @Query("SELECT COALESCE(MAX(position), -1) + 1 FROM custom_chords WHERE chord_key = :key")
+    /** Todo, incluidos tombstones: para construir el blob de sincronización. */
+    @Query("SELECT * FROM custom_chords ORDER BY chord_key ASC, position ASC, id ASC")
+    suspend fun allForSync(): List<CustomChord>
+
+    @Query("SELECT * FROM custom_chords WHERE uuid = :uuid LIMIT 1")
+    suspend fun getByUuid(uuid: String): CustomChord?
+
+    @Query("SELECT COALESCE(MAX(position), -1) + 1 FROM custom_chords WHERE chord_key = :key AND deleted_at = 0")
     suspend fun nextPosition(key: String): Int
 
     @Insert
     suspend fun insert(chord: CustomChord): Long
 
-    @Update
-    suspend fun update(chord: CustomChord)
+    /** Edición local de la digitación: marca dirty para subir el cambio. */
+    @Query("UPDATE custom_chords SET frets = :frets, dirty = 1, updated_at = :ts WHERE id = :id")
+    suspend fun updateFrets(id: Long, frets: String, ts: Long)
 
-    @Query("DELETE FROM custom_chords WHERE id = :id")
-    suspend fun deleteById(id: Long)
+    /** Upsert por uuid al aplicar la fusión del servidor (no marca dirty). */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertIgnore(chord: CustomChord): Long
+
+    @Query(
+        "UPDATE custom_chords SET chord_key = :key, frets = :frets, position = :position, " +
+            "deleted_at = :deletedAt, updated_at = :updatedAt, dirty = 0 WHERE uuid = :uuid"
+    )
+    suspend fun applyRemote(
+        uuid: String, key: String, frets: String, position: Int,
+        deletedAt: Long, updatedAt: Long
+    )
+
+    /** Borrado lógico: deja un tombstone que se propaga al sincronizar. */
+    @Query("UPDATE custom_chords SET deleted_at = :ts, dirty = 1, updated_at = :ts WHERE id = :id")
+    suspend fun softDelete(id: Long, ts: Long)
+
+    @Query("UPDATE custom_chords SET dirty = 0 WHERE dirty = 1")
+    suspend fun clearDirtyAll()
+
+    @Query("SELECT COUNT(*) FROM custom_chords WHERE dirty = 1")
+    fun countDirty(): Flow<Int>
 }
 
 @Dao

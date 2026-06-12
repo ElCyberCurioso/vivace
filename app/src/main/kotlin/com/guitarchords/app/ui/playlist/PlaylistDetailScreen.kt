@@ -69,10 +69,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.guitarchords.app.R
 import com.guitarchords.app.data.Playlist
 import com.guitarchords.app.data.Song
+import com.guitarchords.app.data.SongSort
 import com.guitarchords.app.ui.components.BulkDeleteDialog
 import com.guitarchords.app.ui.components.BulkMoveDialog
 import com.guitarchords.app.ui.components.EmptyState
 import com.guitarchords.app.ui.components.SelectionTopBar
+import com.guitarchords.app.ui.components.SongSortMenu
 import com.guitarchords.app.ui.components.rememberSongSelection
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
@@ -90,6 +92,7 @@ fun PlaylistDetailScreen(
     LaunchedEffect(playlistId) { vm.load(playlistId) }
     val playlist by vm.playlist.collectAsState()
     val songs by vm.songs.collectAsStateWithLifecycle()
+    val sort by vm.sort.collectAsStateWithLifecycle()
     val otherPlaylists by vm.otherPlaylists.collectAsStateWithLifecycle()
     val ctx = LocalContext.current
     val haptics = LocalHapticFeedback.current
@@ -119,6 +122,7 @@ fun PlaylistDetailScreen(
                         IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
                     },
                     actions = {
+                        SongSortMenu(current = sort, onPick = { vm.setSort(it) })
                         IconButton(onClick = {
                             vm.exportZipShare { intent -> ctx.startActivity(intent) }
                         }) { Icon(Icons.Default.Share, stringResource(R.string.share)) }
@@ -140,6 +144,9 @@ fun PlaylistDetailScreen(
                 modifier = Modifier.padding(pv)
             )
         } else {
+            // El arrastre solo tiene sentido con el orden manual; con cualquier
+            // otro criterio la lista la ordena el ViewModel y se oculta el asa.
+            val manualSort = sort == SongSort.MANUAL
             // Orden local editable por arrastre; se persiste al soltar.
             var localOrder by remember { mutableStateOf(songs) }
             LaunchedEffect(songs) { localOrder = songs }
@@ -172,14 +179,15 @@ fun PlaylistDetailScreen(
                             onEdit = { onEditSong(s.id) },
                             onDelete = { deleting = s },
                             onMove = { moving = s },
-                            dragHandle = Modifier.draggableHandle(
+                            showDragHandle = manualSort,
+                            dragHandle = if (manualSort) Modifier.draggableHandle(
                                 onDragStarted = {
                                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                                 },
                                 onDragStopped = {
                                     vm.persistOrder(localOrder.map { it.id })
                                 }
-                            )
+                            ) else Modifier
                         )
                     }
                 }
@@ -302,6 +310,7 @@ private fun SongRow(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onMove: () -> Unit,
+    showDragHandle: Boolean = true,
     dragHandle: Modifier = Modifier
 ) {
     var menuOpen by remember { mutableStateOf(false) }
@@ -394,12 +403,14 @@ private fun SongRow(
                             )
                         }
                     }
-                    Icon(
-                        Icons.Default.DragHandle,
-                        contentDescription = stringResource(R.string.drag_reorder),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = dragHandle.padding(start = 4.dp)
-                    )
+                    if (showDragHandle) {
+                        Icon(
+                            Icons.Default.DragHandle,
+                            contentDescription = stringResource(R.string.drag_reorder),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = dragHandle.padding(start = 4.dp)
+                        )
+                    }
                 }
             }
         }

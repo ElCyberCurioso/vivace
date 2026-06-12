@@ -23,8 +23,14 @@ import com.guitarchords.app.ui.song.SongEditorScreen
 import com.guitarchords.app.ui.song.SongViewScreen
 import com.guitarchords.app.ui.song.VersionEditorScreen
 import com.guitarchords.app.ui.sync.SyncScreen
+import com.guitarchords.app.ui.training.AreaPathScreen
+import com.guitarchords.app.ui.training.ExerciseRunnerScreen
+import com.guitarchords.app.ui.training.PlacementScreen
+import com.guitarchords.app.ui.training.StatsScreen
+import com.guitarchords.app.ui.training.TrainingDashboardScreen
 import com.guitarchords.app.ui.tuner.TunerScreen
 import com.guitarchords.app.ui.unassigned.UnassignedSongsScreen
+import com.guitarchords.app.training.TrainingArea
 
 object Route {
     const val Home = "home"
@@ -43,6 +49,14 @@ object Route {
     const val Favorites = "songs/favorites"
     const val Unassigned = "songs/unassigned"
     const val Sync = "sync"
+    const val Training = "training"
+    const val TrainingPlacement = "training/placement"
+    const val TrainingAreaPath = "training/area/{area}"
+    const val TrainingExercise = "training/exercise/{id}"
+    const val TrainingStats = "training/stats"
+
+    fun trainingArea(area: TrainingArea) = "training/area/${area.name}"
+    fun trainingExercise(id: String) = "training/exercise/$id"
 
     fun playlistDetail(id: Long) = "playlist/$id"
     fun songView(id: Long) = "song/view/$id"
@@ -73,6 +87,7 @@ fun NavGraph(nav: NavHostController) {
     ) {
         composable(Route.Home) {
             HomeScreen(
+                onOpenTraining = { nav.navigate(Route.Training) },
                 onOpenPlaylists = { nav.navigate(Route.Playlists) },
                 onOpenFavorites = { nav.navigate(Route.Favorites) },
                 onOpenTuner = { nav.navigate(Route.Tuner) },
@@ -131,6 +146,49 @@ fun NavGraph(nav: NavHostController) {
         }
         composable(Route.Sync) {
             SyncScreen(onBack = { nav.popBackStack() })
+        }
+        composable(Route.Training) {
+            TrainingDashboardScreen(
+                onOpenExercise = { nav.navigate(Route.trainingExercise(it)) },
+                onOpenArea = { nav.navigate(Route.trainingArea(it)) },
+                onOpenPlacement = { nav.navigate(Route.TrainingPlacement) },
+                onOpenStats = { nav.navigate(Route.TrainingStats) },
+                onBack = { nav.popBackStack() }
+            )
+        }
+        composable(
+            Route.TrainingAreaPath,
+            arguments = listOf(navArgument("area") { type = NavType.StringType })
+        ) { entry ->
+            val name = entry.arguments?.getString("area") ?: return@composable
+            val area = TrainingArea.entries.firstOrNull { it.name == name } ?: return@composable
+            AreaPathScreen(
+                area = area,
+                onOpenExercise = { nav.navigate(Route.trainingExercise(it)) },
+                onBack = { nav.popBackStack() }
+            )
+        }
+        composable(Route.TrainingPlacement) {
+            PlacementScreen(
+                onDone = { nav.popBackStack() },
+                onBack = { nav.popBackStack() }
+            )
+        }
+        composable(Route.TrainingStats) {
+            StatsScreen(
+                onRecalibrate = { nav.navigate(Route.TrainingPlacement) },
+                onBack = { nav.popBackStack() }
+            )
+        }
+        composable(
+            Route.TrainingExercise,
+            arguments = listOf(navArgument("id") { type = NavType.StringType })
+        ) { entry ->
+            val id = entry.arguments?.getString("id") ?: return@composable
+            ExerciseRunnerScreen(
+                exerciseId = id,
+                onBack = { nav.popBackStack() }
+            )
         }
         composable(
             Route.PlaylistDetail,

@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.guitarchords.app.GuitarChordsApp
 import com.guitarchords.app.R
+import com.guitarchords.app.data.AppDatabase
 import com.guitarchords.app.sync.PendingUpload
 import com.guitarchords.app.sync.R2Client
 import com.guitarchords.app.sync.SyncConflict
@@ -29,6 +30,8 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = (app as GuitarChordsApp).repo
     private val prefs = SyncPrefs(app)
     private val manager = SyncManager(repo)
+    private val chordSync = (app as GuitarChordsApp).chordSync
+    private val customChordDao = AppDatabase.get(app).customChordDao()
 
     val initialUrl: String get() = prefs.baseUrl
     val initialToken: String get() = prefs.token
@@ -48,6 +51,43 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
 
     val pendingUploads = repo.pendingUploadCount()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+
+    // ---- Acordes personalizados (sincronización automática; aquí, manual) ----
+    private val _chordSyncing = MutableStateFlow(false)
+    val chordSyncing = _chordSyncing.asStateFlow()
+
+    private val _chordsLastSync = MutableStateFlow(prefs.chordsLastSync)
+    val chordsLastSync = _chordsLastSync.asStateFlow()
+
+    private val _chordMsg = MutableStateFlow<String?>(null)
+    val chordMsg = _chordMsg.asStateFlow()
+
+    val pendingChords = customChordDao.countDirty()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+
+    /** Sincroniza ahora los acordes (reutiliza la URL y token del formulario). */
+    fun syncChords(url: String, token: String) {
+        if (url.isBlank() || token.isBlank()) {
+            _chordMsg.value = getApplication<Application>().getString(R.string.sync_missing_fields)
+            return
+        }
+        prefs.baseUrl = url.trim()
+        prefs.token = token.trim()
+        _chordSyncing.value = true
+        _chordMsg.value = null
+        viewModelScope.launch {
+            try {
+                chordSync.sync()
+                _chordsLastSync.value = prefs.chordsLastSync
+                _chordMsg.value = getApplication<Application>().getString(R.string.chords_sync_done)
+            } catch (e: Exception) {
+                _chordMsg.value = e.message
+                    ?: getApplication<Application>().getString(R.string.sync_error_generic)
+            } finally {
+                _chordSyncing.value = false
+            }
+        }
+    }
 
     fun sync(url: String, token: String) {
         if (url.isBlank() || token.isBlank()) {

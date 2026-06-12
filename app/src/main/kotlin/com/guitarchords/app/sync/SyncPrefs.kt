@@ -55,9 +55,20 @@ class SyncPrefs(context: Context) {
         get() = sp.getLong(KEY_LAST, 0L)
         set(value) { sp.edit().putLong(KEY_LAST, value).apply() }
 
+    /** ETag del último blob de acordes sincronizado (concurrencia optimista). */
+    var chordsEtag: String
+        get() = sp.getString(KEY_CHORDS_ETAG, "").orEmpty()
+        set(value) { sp.edit().putString(KEY_CHORDS_ETAG, value).apply() }
+
+    var chordsLastSync: Long
+        get() = sp.getLong(KEY_CHORDS_LAST, 0L)
+        set(value) { sp.edit().putLong(KEY_CHORDS_LAST, value).apply() }
+
     private companion object {
         const val KEY_URL = "base_url"
         const val KEY_TOKEN = "token"
         const val KEY_LAST = "last_sync"
+        const val KEY_CHORDS_ETAG = "chords_etag"
+        const val KEY_CHORDS_LAST = "chords_last_sync"
     }
 }

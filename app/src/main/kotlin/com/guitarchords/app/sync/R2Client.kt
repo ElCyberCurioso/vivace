@@ -42,6 +42,25 @@ class R2Client(baseUrl: String, private val token: String) {
         }
     }
 
+    /** Como [get] pero devuelve null si el objeto no existe (HTTP 404). */
+    suspend fun getOrNull(key: String): RemoteContent? = withContext(Dispatchers.IO) {
+        val conn = open("/object?key=" + enc(key), "GET")
+        try {
+            val code = conn.responseCode
+            if (code == 404) return@withContext null
+            if (code !in 200..299) {
+                val err = conn.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                throw IOException("HTTP $code ${conn.responseMessage.orEmpty()} ${err.take(200)}".trim())
+            }
+            val text = conn.inputStream.bufferedReader().use { it.readText() }
+            val etag = conn.getHeaderField("ETag").orEmpty()
+            val uploaded = conn.getHeaderField("X-Uploaded")?.toLongOrNull() ?: 0L
+            RemoteContent(key, text, etag, uploaded)
+        } finally {
+            conn.disconnect()
+        }
+    }
+
     suspend fun put(key: String, body: String): RemoteObject = withContext(Dispatchers.IO) {
         val conn = open("/object?key=" + enc(key), "PUT")
         conn.doOutput = true

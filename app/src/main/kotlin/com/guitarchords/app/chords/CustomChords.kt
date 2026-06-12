@@ -8,6 +8,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 /**
  * Caché en memoria de las digitaciones definidas por el usuario. Se carga al
@@ -43,7 +44,9 @@ object CustomChords {
                 CustomChord(
                     chordKey = key,
                     frets = encodeFrets(frets),
-                    position = d.nextPosition(key)
+                    position = d.nextPosition(key),
+                    uuid = UUID.randomUUID().toString(),
+                    dirty = true
                 )
             )
             reloadBlocking()
@@ -53,14 +56,7 @@ object CustomChords {
     fun update(id: Long, key: String, frets: List<Int>) {
         val d = dao ?: return
         scope.launch {
-            d.update(
-                CustomChord(
-                    id = id,
-                    chordKey = key,
-                    frets = encodeFrets(frets),
-                    updatedAt = System.currentTimeMillis()
-                )
-            )
+            d.updateFrets(id, encodeFrets(frets), System.currentTimeMillis())
             reloadBlocking()
         }
     }
@@ -68,10 +64,13 @@ object CustomChords {
     fun delete(id: Long) {
         val d = dao ?: return
         scope.launch {
-            d.deleteById(id)
+            d.softDelete(id, System.currentTimeMillis())
             reloadBlocking()
         }
     }
+
+    /** Recarga la caché desde la DB (tras aplicar cambios remotos al sincronizar). */
+    fun refresh() = reload()
 
     private fun reload() = scope.launch { reloadBlocking() }
 
