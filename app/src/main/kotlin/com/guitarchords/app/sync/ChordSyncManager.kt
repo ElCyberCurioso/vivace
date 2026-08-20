@@ -46,16 +46,16 @@ class ChordSyncManager(
     /** Pull → merge → aplica en local → push si procede. Mejor esfuerzo. */
     suspend fun sync(): Outcome = mutex.withLock {
         val base = prefs.baseUrl.trim()
-        val token = prefs.token.trim()
+        val token = prefs.authToken.trim()
+        // Sin sesión no hay nada que sincronizar: los acordes van por cuenta.
         if (base.isBlank() || token.isBlank()) return@withLock Outcome(0, false)
 
-        val client = R2Client(base, token)
+        val client = VivaceClient(base, token)
 
-        // 1) Descargar el blob remoto (null = aún no existe).
-        val remoteContent = client.getOrNull(CHORDS_KEY)
-        val remote: List<ChordRecord> = remoteContent
-            ?.let { runCatching { json.decodeFromString<ChordBundle>(it.text).chords }.getOrDefault(emptyList()) }
-            ?: emptyList()
+        // 1) Descargar el blob de la cuenta (vacío la primera vez).
+        val remote: List<ChordRecord> = runCatching {
+            json.decodeFromString<ChordBundle>(client.getChords()).chords
+        }.getOrDefault(emptyList())
 
         // 2) Estado local (incluye tombstones).
         val local = dao.allForSync().map { it.toRecord() }
@@ -70,11 +70,8 @@ class ChordSyncManager(
         var pushed = false
         if (result.needsPush) {
             val bundle = ChordBundle(updatedAt = System.currentTimeMillis(), chords = result.merged)
-            val res = client.put(CHORDS_KEY, json.encodeToString(ChordBundle.serializer(), bundle))
-            prefs.chordsEtag = res.etag
+            client.putChords(json.encodeToString(ChordBundle.serializer(), bundle))
             pushed = true
-        } else {
-            remoteContent?.let { prefs.chordsEtag = it.etag }
         }
 
         // Tras un sync correcto no quedan cambios locales sin subir.

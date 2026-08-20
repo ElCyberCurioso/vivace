@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.AlertDialog
@@ -67,11 +68,14 @@ fun VersionEditorScreen(
 ) {
     LaunchedEffect(versionId) { vm.load(versionId) }
     val version by vm.version.collectAsStateWithLifecycle()
+    // El candado de la canción padre también protege sus versiones.
+    val parentLocked by vm.parentLocked.collectAsStateWithLifecycle()
 
     var contentField by remember { mutableStateOf(TextFieldValue("")) }
     var initialized by remember { mutableStateOf(false) }
     var chordPicker by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
+    var lockAck by remember { mutableStateOf(false) }
 
     LaunchedEffect(version?.id) {
         val v = version
@@ -115,6 +119,18 @@ fun VersionEditorScreen(
                 .padding(12.dp)
                 .verticalScroll(rememberScrollState())
         ) {
+            if (parentLocked) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Lock, null, tint = MaterialTheme.colorScheme.error)
+                    Spacer(Modifier.size(6.dp))
+                    Text(
+                        stringResource(R.string.locked_song_banner),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+            }
             OutlinedTextField(
                 value = v.name,
                 onValueChange = vm::updateName,
@@ -228,6 +244,25 @@ fun VersionEditorScreen(
             },
             dismissButton = {
                 TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.cancel)) }
+            }
+        )
+    }
+
+    // Mismo aviso que en el editor de la partitura: si la canción está
+    // bloqueada hay que confirmar antes de tocar cualquiera de sus versiones.
+    if (parentLocked && !lockAck) {
+        AlertDialog(
+            onDismissRequest = { onDone() },
+            icon = { Icon(Icons.Default.Lock, null) },
+            title = { Text(stringResource(R.string.locked_dialog_title)) },
+            text = { Text(stringResource(R.string.locked_dialog_msg)) },
+            confirmButton = {
+                TextButton(onClick = { lockAck = true }) {
+                    Text(stringResource(R.string.locked_dialog_edit))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { onDone() }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }

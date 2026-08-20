@@ -8,8 +8,17 @@ compatibility_date = "2024-09-23"
 binding = "BUCKET"
 bucket_name = "guitarchords"
 
-# SYNC_TOKEN is NOT stored here. Set it as a secret:
-#   wrangler secret put SYNC_TOKEN
+# Base de datos de Vivace (usuarios, permisos y metadatos de partituras).
+# Crear una vez con:  npx wrangler d1 create vivace
+# y pegar aquí el database_id que imprime el comando.
+[[d1_databases]]
+binding = "DB"
+database_name = "vivace"
+database_id = "1830ca34-43f6-429a-812d-5156287e90f1"
+
+# Secretos (NO se guardan aquí):
+#   wrangler secret put SYNC_TOKEN    token heredado de la app actual
+#   wrangler secret put AUTH_SECRET   clave para firmar las sesiones (JWT)
 
 # Enlace del botón "Storage" del admin: el bucket en el dashboard de Cloudflare.
 [vars]

@@ -1,9 +1,11 @@
 <resources>
-    <style name="Theme.GuitarChords" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.GuitarChords" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:colorBackground">@color/vv_bg</item>
+    </style>
 
     <!-- Splash (Android 12+ nativo, retrocompatible vía core-splashscreen). -->
     <style name="Theme.GuitarChords.Splash" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">#FFFBF8</item>
+        <item name="windowSplashScreenBackground">@color/vv_bg</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
         <item name="windowSplashScreenIconBackgroundColor">@color/ic_launcher_background</item>
         <item name="postSplashScreenTheme">@style/Theme.GuitarChords</item>

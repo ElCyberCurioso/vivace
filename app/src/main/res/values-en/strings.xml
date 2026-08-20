@@ -40,7 +40,7 @@
         <item quantity="other">%d songs</item>
     </plurals>
     <string name="delete_playlist_title">Delete list</string>
-    <string name="delete_playlist_msg">Delete “%1$s” and all its songs?</string>
+    <string name="delete_playlist_msg">Delete the list “%1$s”? Its songs are kept and moved to “No list”.</string>
     <string name="share_playlist">Share list</string>
 
     <!-- Playlist detail / song rows -->
@@ -82,9 +82,29 @@
     <string name="no_lists_yet">There are no lists. Create one first.</string>
     <string name="bulk_delete_title">Delete songs</string>
     <plurals name="bulk_delete_msg">
-        <item quantity="one">Delete %d song? This cannot be undone.</item>
-        <item quantity="other">Delete %d songs? This cannot be undone.</item>
+        <item quantity="one">Move %d song to the trash? You can restore it for 90 days.</item>
+        <item quantity="other">Move %d songs to the trash? You can restore them for 90 days.</item>
     </plurals>
+
+    <!-- Undoable notices -->
+    <plurals name="snackbar_trashed">
+        <item quantity="one">%d song moved to the trash</item>
+        <item quantity="other">%d songs moved to the trash</item>
+    </plurals>
+    <string name="snackbar_removed_from_folder">“%1$s” removed from the folder</string>
+    <string name="undo">Undo</string>
+    <string name="listen_chord">Play chord</string>
+    <string name="listen_strings_hint">Tap a string in the diagram to hear it on its own</string>
+    <string name="previous_song">Previous song</string>
+    <string name="next_song">Next song</string>
+    <string name="practice_changes_title">Practice changes</string>
+    <string name="practice_pair_of">Change %1$d of %2$d</string>
+    <string name="practice_next_pair">Next</string>
+    <string name="practice_hint">Alternate both chords on the beat. Raise the tempo once it sounds clean.</string>
+    <string name="practice_no_chords_title">No chords to practice</string>
+    <string name="practice_no_chords_subtitle">This song needs at least two different chords in braces.</string>
+    <string name="song_not_found_title">Song unavailable</string>
+    <string name="song_not_found_subtitle">It may have been permanently deleted from the trash.</string>
 
     <!-- Song viewer -->
     <string name="capo_fret">Capo on fret %1$d</string>
@@ -116,11 +136,33 @@
     <string name="capo_label">Capo:</string>
     <string name="no_capo">No capo</string>
     <string name="fret_n">Fret %1$d</string>
+    <string name="count_down">Subtract one</string>
+    <string name="count_up">Add one</string>
     <string name="capo_down">Capo down</string>
     <string name="capo_up">Capo up</string>
     <string name="lyrics_and_chords">Lyrics and chords</string>
     <string name="syntax_hint">Use {Name} for chords — e.g.: {Am} Home. Tablature between {tab}…{/tab}</string>
     <string name="write_here">Write here…</string>
+    <string name="locked_song_banner">Locked song</string>
+    <string name="locked_dialog_title">Locked song</string>
+    <string name="locked_dialog_msg">This song is locked to prevent accidental edits. Edit it anyway?</string>
+    <string name="locked_dialog_edit">Edit anyway</string>
+    <string name="badge_synced">Synced with server</string>
+    <string name="badge_local_only">Local only</string>
+    <string name="move_to_unassigned">Remove from folder</string>
+    <string name="home_trash">Trash</string>
+    <string name="trash_title">Trash</string>
+    <string name="trash_empty">Empty trash</string>
+    <string name="trash_empty_title">Trash is empty</string>
+    <string name="trash_empty_subtitle">Songs you delete stay here for 90 days before being removed.</string>
+    <string name="trash_retention_note">Songs are permanently removed after 90 days.</string>
+    <string name="trash_days_left">Removed in %1$d days</string>
+    <string name="trash_restore">Restore</string>
+    <string name="delete_forever">Delete permanently</string>
+    <string name="trash_delete_title">Delete permanently?</string>
+    <string name="trash_delete_msg">“%1$s” will be deleted forever. This cannot be undone.</string>
+    <string name="trash_empty_title_confirm">Empty the trash?</string>
+    <string name="trash_empty_msg">%1$d song(s) will be deleted forever. This cannot be undone.</string>
     <string name="choose_playlist">Choose list</string>
     <string name="untitled">Untitled</string>
     <string name="source_url_label">Original song URL</string>
@@ -180,11 +222,41 @@
 
     <!-- Settings / Sync -->
     <string name="settings_title">Settings</string>
+    <string name="theme_title">Theme</string>
+    <string name="theme_system">System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="update_title">Check for updates</string>
+    <string name="update_subtitle">Check for a new version and install it.</string>
+    <string name="update_intro">Check whether a new version of the app is available.</string>
+    <string name="update_check">Check for updates</string>
+    <string name="update_checking">Checking…</string>
+    <string name="update_current_version">Installed version: %1$s</string>
+    <string name="update_up_to_date">You have the latest version.</string>
+    <string name="update_available">Version %1$s available</string>
+    <string name="update_download_install">Download and install</string>
+    <string name="update_downloading">Downloading… %1$d%%</string>
+    <string name="update_installing">Opening the installer…</string>
+    <string name="update_needs_permission">To install, allow installs from this app.</string>
+    <string name="update_open_settings">Open permission settings</string>
+    <string name="update_install_now">Install now</string>
+    <string name="update_error">Error: %1$s</string>
     <string name="sync_r2_title">R2 Sync</string>
     <string name="sync_r2_subtitle">Connect to your Cloudflare R2 bucket to download and upload songs.</string>
     <string name="sync_intro">Connects to the Cloudflare R2 bucket through the Worker. Only new or modified content is downloaded and uploaded.</string>
     <string name="sync_worker_url">Worker URL</string>
     <string name="sync_token">Access token</string>
+    <string name="account_email">Email</string>
+    <string name="account_password">Password</string>
+    <string name="account_name">Name</string>
+    <string name="account_sign_in">Sign in</string>
+    <string name="account_create">Create account</string>
+    <string name="account_need_one">No account yet? Create one</string>
+    <string name="account_have_one">I already have an account</string>
+    <string name="account_sign_out">Sign out</string>
+    <string name="account_signed_in_as">Signed in as %1$s</string>
+    <string name="sync_login_required">Sign in to sync</string>
+    <string name="sync_session_expired">Your session expired, sign in again</string>
     <string name="sync_now">Sync now</string>
     <string name="syncing">Syncing…</string>
     <string name="last_sync">Last sync: %1$s</string>
@@ -197,8 +269,6 @@
     <string name="sync_conflict_error">Error resolving conflicts</string>
     <string name="conflicts_title">%1$d conflict(s)</string>
     <string name="conflicts_msg">These songs were modified both on the device and on the server. Decide for each one which version to keep; unresolved ones stay on hold until the next sync:</string>
-    <string name="keep_local">Keep local</string>
-    <string name="use_server">Use server</string>
     <string name="local_vs_server">local %1$s · server %2$s</string>
     <string name="conflict_local_short">Local</string>
     <string name="conflict_server_short">Server</string>
@@ -304,6 +374,39 @@
     <string name="tr_title_theory_sus_alt">Theory: suspended and altered</string>
     <string name="tr_title_theory_formulas3">Theory: advanced formulas</string>
     <string name="tr_title_theory_master">Theory: general exam</string>
+
+    <!-- Training: ear -->
+    <string name="tr_desc_ear">Listen and pick the answer. You can replay the sound as often as you like.</string>
+    <string name="tr_title_ear_direction">Ear: up or down?</string>
+    <string name="tr_title_ear_major_minor">Ear: major or minor</string>
+    <string name="tr_title_ear_octave_fifth">Ear: fifth and octave</string>
+    <string name="tr_title_ear_thirds">Ear: thirds</string>
+    <string name="tr_title_ear_fourth_fifth">Ear: fourth and fifth</string>
+    <string name="tr_title_ear_seconds">Ear: seconds and thirds</string>
+    <string name="tr_title_ear_all_simple">Ear: common intervals</string>
+    <string name="tr_title_ear_tritone">Ear: the tritone</string>
+    <string name="tr_title_ear_sixths">Ear: sixths and sevenths</string>
+    <string name="tr_ear_q_interval">Which interval did you hear?</string>
+    <string name="tr_ear_q_quality">Is the chord major or minor?</string>
+    <string name="tr_ear_q_direction">Does the second note go up or down?</string>
+    <string name="tr_ear_major">Major</string>
+    <string name="tr_ear_minor">Minor</string>
+    <string name="tr_ear_up">Up</string>
+    <string name="tr_ear_down">Down</string>
+    <string name="tr_ear_replay">Play again</string>
+    <string name="tr_ear_playing">Playing…</string>
+    <string name="tr_int_m2">Minor 2nd</string>
+    <string name="tr_int_M2">Major 2nd</string>
+    <string name="tr_int_m3">Minor 3rd</string>
+    <string name="tr_int_M3">Major 3rd</string>
+    <string name="tr_int_P4">Perfect 4th</string>
+    <string name="tr_int_TT">Tritone</string>
+    <string name="tr_int_P5">Perfect 5th</string>
+    <string name="tr_int_m6">Minor 6th</string>
+    <string name="tr_int_M6">Major 6th</string>
+    <string name="tr_int_m7">Minor 7th</string>
+    <string name="tr_int_M7">Major 7th</string>
+    <string name="tr_int_P8">Octave</string>
 
     <!-- Training: runner and results -->
     <string name="tr_question_progress">Question %1$d of %2$d</string>

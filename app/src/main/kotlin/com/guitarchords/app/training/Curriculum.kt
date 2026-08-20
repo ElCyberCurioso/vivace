@@ -78,6 +78,16 @@ object Curriculum {
         TargetNote(5, 0, 64), TargetNote(5, 3, 67)    // E4  G4
     )
 
+    private fun ear(
+        id: String, level: Int, titleRes: Int, mode: EarMode,
+        choices: List<Int>, questionCount: Int = 8
+    ) = EarTrainingSpec(
+        id = id, area = TrainingArea.EAR, level = level,
+        xpBase = Gamification.xpBaseForLevel(level),
+        titleRes = titleRes, descRes = R.string.tr_desc_ear,
+        mode = mode, choices = choices, questionCount = questionCount
+    )
+
     val all: List<ExerciseSpec> = buildList {
         // ---------------- ACORDES (4 + 4 + 3) ----------------
         add(chordQuiz("chords_l1_first_minors", 1, listOf("Em", "Am", "Dm")))
@@ -296,6 +306,28 @@ object Curriculum {
                 questionCount = 12
             )
         )
+
+        // ---- Oído ----
+        add(ear("ear_l1_direction", 1, R.string.tr_title_ear_direction, EarMode.DIRECTION,
+            choices = listOf(2, 4, 5, 7, 12)))
+        add(ear("ear_l1_major_minor", 1, R.string.tr_title_ear_major_minor, EarMode.CHORD_QUALITY,
+            choices = listOf(EarQuestionGen.MAJOR, EarQuestionGen.MINOR)))
+        add(ear("ear_l1_octave_fifth", 1, R.string.tr_title_ear_octave_fifth, EarMode.INTERVAL,
+            choices = listOf(7, 12)))
+
+        add(ear("ear_l2_thirds", 2, R.string.tr_title_ear_thirds, EarMode.INTERVAL,
+            choices = listOf(3, 4, 7)))
+        add(ear("ear_l2_fourth_fifth", 2, R.string.tr_title_ear_fourth_fifth, EarMode.INTERVAL,
+            choices = listOf(5, 7, 12)))
+        add(ear("ear_l2_seconds", 2, R.string.tr_title_ear_seconds, EarMode.INTERVAL,
+            choices = listOf(1, 2, 3, 4)))
+
+        add(ear("ear_l3_all_simple", 3, R.string.tr_title_ear_all_simple, EarMode.INTERVAL,
+            choices = listOf(1, 2, 3, 4, 5, 7, 9, 12), questionCount = 10))
+        add(ear("ear_l3_tritone", 3, R.string.tr_title_ear_tritone, EarMode.INTERVAL,
+            choices = listOf(5, 6, 7), questionCount = 10))
+        add(ear("ear_l3_sixths_sevenths", 3, R.string.tr_title_ear_sixths, EarMode.INTERVAL,
+            choices = listOf(8, 9, 10, 11, 12), questionCount = 10))
     }
 
     init {

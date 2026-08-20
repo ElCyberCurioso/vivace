@@ -55,6 +55,27 @@ class SyncPrefs(context: Context) {
         get() = sp.getLong(KEY_LAST, 0L)
         set(value) { sp.edit().putLong(KEY_LAST, value).apply() }
 
+    // ---- sesión de usuario (sustituye al token compartido) ----
+    /** JWT devuelto por /auth/login; vacío = sin sesión. */
+    var authToken: String
+        get() = sp.getString(KEY_AUTH, "").orEmpty()
+        set(value) { sp.edit().putString(KEY_AUTH, value).apply() }
+
+    var userEmail: String
+        get() = sp.getString(KEY_EMAIL, "").orEmpty()
+        set(value) { sp.edit().putString(KEY_EMAIL, value).apply() }
+
+    var userName: String
+        get() = sp.getString(KEY_NAME, "").orEmpty()
+        set(value) { sp.edit().putString(KEY_NAME, value).apply() }
+
+    val isLoggedIn: Boolean get() = authToken.isNotBlank() && baseUrl.isNotBlank()
+
+    /** Cierra la sesión (no borra las partituras del dispositivo). */
+    fun clearSession() {
+        sp.edit().remove(KEY_AUTH).remove(KEY_EMAIL).remove(KEY_NAME).apply()
+    }
+
     /** ETag del último blob de acordes sincronizado (concurrencia optimista). */
     var chordsEtag: String
         get() = sp.getString(KEY_CHORDS_ETAG, "").orEmpty()
@@ -70,5 +91,8 @@ class SyncPrefs(context: Context) {
         const val KEY_LAST = "last_sync"
         const val KEY_CHORDS_ETAG = "chords_etag"
         const val KEY_CHORDS_LAST = "chords_last_sync"
+        const val KEY_AUTH = "auth_token"
+        const val KEY_EMAIL = "user_email"
+        const val KEY_NAME = "user_name"
     }
 }

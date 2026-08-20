@@ -4,10 +4,10 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.guitarchords.app.GuitarChordsApp
-import com.guitarchords.app.data.AppDatabase
 import com.guitarchords.app.data.Playlist
 import com.guitarchords.app.data.Repository
 import com.guitarchords.app.data.Song
+import com.guitarchords.app.sync.SongTextFormat
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,7 +16,6 @@ import kotlinx.coroutines.launch
 
 class SongEditorViewModel(app: Application) : AndroidViewModel(app) {
     private val repo: Repository = (app as GuitarChordsApp).repo
-    private val songDao = AppDatabase.get(app).songDao()
 
     private val _song = MutableStateFlow(Song(playlistId = null, title = ""))
     val song = _song.asStateFlow()
@@ -36,7 +35,7 @@ class SongEditorViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
         viewModelScope.launch {
-            songDao.getById(songId)?.let { _song.value = it }
+            repo.songOnce(songId)?.let { _song.value = it }
         }
     }
 
@@ -51,7 +50,7 @@ class SongEditorViewModel(app: Application) : AndroidViewModel(app) {
     fun save(onDone: (Long) -> Unit) = viewModelScope.launch {
         val current = _song.value.copy(
             updatedAt = System.currentTimeMillis(),
-            title = _song.value.title.ifBlank { "Sin título" }
+            title = _song.value.title.ifBlank { SongTextFormat.UNTITLED }
         )
         val id = repo.upsertSong(current)
         onDone(id)

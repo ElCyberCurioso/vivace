@@ -34,10 +34,10 @@ interface PlaylistDao {
 
 @Dao
 interface SongDao {
-    @Query("SELECT * FROM songs WHERE playlist_id = :playlistId ORDER BY position ASC, id ASC")
+    @Query("SELECT * FROM songs WHERE playlist_id = :playlistId AND deleted_at = 0 ORDER BY position ASC, id ASC")
     fun observeByPlaylist(playlistId: Long): Flow<List<Song>>
 
-    @Query("SELECT * FROM songs WHERE playlist_id = :playlistId ORDER BY position ASC, id ASC")
+    @Query("SELECT * FROM songs WHERE playlist_id = :playlistId AND deleted_at = 0 ORDER BY position ASC, id ASC")
     suspend fun getByPlaylist(playlistId: Long): List<Song>
 
     @Query("SELECT * FROM songs WHERE id = :id")
@@ -61,16 +61,28 @@ interface SongDao {
     @Query("DELETE FROM songs WHERE id = :id")
     suspend fun deleteById(id: Long)
 
-    @Query("SELECT * FROM songs WHERE favorite = 1 ORDER BY title COLLATE NOCASE ASC")
+    // ---- Operaciones en lote (una sola sentencia = atómicas) ----
+    @Query("UPDATE songs SET favorite = :fav WHERE id IN (:ids)")
+    suspend fun setFavoriteFor(ids: Collection<Long>, fav: Boolean)
+
+    @Query("UPDATE songs SET deleted_at = :ts WHERE id IN (:ids)")
+    suspend fun setDeletedAtFor(ids: Collection<Long>, ts: Long)
+
+    @Query("DELETE FROM songs WHERE id IN (:ids)")
+    suspend fun deleteByIds(ids: Collection<Long>)
+
+    @Query("SELECT * FROM songs WHERE favorite = 1 AND deleted_at = 0 ORDER BY title COLLATE NOCASE ASC")
     fun observeFavorites(): Flow<List<Song>>
 
     @Query(
         """
         SELECT * FROM songs
-        WHERE title LIKE '%' || :q || '%' COLLATE NOCASE
+        WHERE deleted_at = 0 AND (
+              title LIKE '%' || :q || '%' COLLATE NOCASE
            OR artist LIKE '%' || :q || '%' COLLATE NOCASE
            OR genre LIKE '%' || :q || '%' COLLATE NOCASE
            OR content LIKE '%' || :q || '%' COLLATE NOCASE
+        )
         ORDER BY title COLLATE NOCASE ASC
         """
     )
@@ -78,6 +90,10 @@ interface SongDao {
 
     @Query("UPDATE songs SET playlist_id = :newPlaylistId, position = :position WHERE id = :id")
     suspend fun moveSong(id: Long, newPlaylistId: Long?, position: Int)
+
+    /** Saca todas las partituras de una lista a "Sin lista" sin borrarlas. */
+    @Query("UPDATE songs SET playlist_id = NULL WHERE playlist_id = :playlistId")
+    suspend fun unassignAllFromPlaylist(playlistId: Long)
 
     @Query("UPDATE songs SET position = :position WHERE id = :id")
     suspend fun setPosition(id: Long, position: Int)
@@ -88,19 +104,55 @@ interface SongDao {
     @Query("SELECT COALESCE(MAX(position), -1) + 1 FROM songs WHERE playlist_id IS NULL")
     suspend fun nextPositionUnassigned(): Int
 
-    @Query("SELECT * FROM songs WHERE playlist_id IS NULL ORDER BY position ASC, id ASC")
+    @Query("SELECT * FROM songs WHERE playlist_id IS NULL AND deleted_at = 0 ORDER BY position ASC, id ASC")
     fun observeUnassigned(): Flow<List<Song>>
 
-    @Query("SELECT COUNT(*) FROM songs WHERE playlist_id IS NULL")
+    @Query("SELECT COUNT(*) FROM songs WHERE playlist_id IS NULL AND deleted_at = 0")
     fun countUnassigned(): Flow<Int>
 
+    /**
+     * Deliberadamente NO filtra `deleted_at`: una canción en la papelera debe
+     * seguir "ocupando" su clave remota para que el sync no la reimporte como
+     * nueva. Quien decide qué hacer con ella es [com.guitarchords.app.sync.SyncPolicy].
+     */
     @Query("SELECT * FROM songs WHERE remote_key = :key LIMIT 1")
     suspend fun getByRemoteKey(key: String): Song?
 
-    @Query("SELECT * FROM songs WHERE dirty = 1")
+    /** Canciones activas enlazadas al servidor (para detectar huérfanas). */
+    @Query("SELECT * FROM songs WHERE remote_key IS NOT NULL AND deleted_at = 0")
+    suspend fun songsWithRemoteKey(): List<Song>
+
+    // ---- sincronización con cuenta de usuario ----
+    @Query("SELECT * FROM songs WHERE remote_id = :remoteId LIMIT 1")
+    suspend fun getByRemoteId(remoteId: String): Song?
+
+    @Query("SELECT * FROM songs WHERE remote_id IS NOT NULL AND deleted_at = 0")
+    suspend fun songsWithRemoteId(): List<Song>
+
+    /** Ya estaban subidas con el token compartido pero aún sin id de cuenta. */
+    @Query("SELECT * FROM songs WHERE remote_id IS NULL AND remote_key IS NOT NULL AND deleted_at = 0")
+    suspend fun songsPendingRelink(): List<Song>
+
+    @Query(
+        "UPDATE songs SET remote_id = :remoteId, remote_updated_at = :updated, " +
+            "dirty = :dirty WHERE id = :id"
+    )
+    suspend fun markAccountSynced(id: Long, remoteId: String, updated: Long, dirty: Boolean)
+
+    @Query("UPDATE songs SET remote_id = NULL, remote_updated_at = 0 WHERE id = :id")
+    suspend fun clearAccountLink(id: Long)
+
+    @Query("UPDATE songs SET visibility = :visibility WHERE id = :id")
+    suspend fun setVisibility(id: Long, visibility: String)
+
+    /** El objeto ya no existe en el bucket: la canción pasa a ser solo local. */
+    @Query("UPDATE songs SET remote_key = NULL, remote_etag = NULL, remote_updated_at = 0 WHERE id = :id")
+    suspend fun clearRemoteLink(id: Long)
+
+    @Query("SELECT * FROM songs WHERE dirty = 1 AND deleted_at = 0")
     suspend fun dirtySongs(): List<Song>
 
-    @Query("SELECT COUNT(*) FROM songs WHERE dirty = 1")
+    @Query("SELECT COUNT(*) FROM songs WHERE dirty = 1 AND deleted_at = 0")
     fun countDirty(): Flow<Int>
 
     @Query(
@@ -121,6 +173,25 @@ interface SongDao {
 
     @Query("UPDATE songs SET source_url = :url WHERE id = :id")
     suspend fun setSourceUrl(id: Long, url: String)
+
+    /** El candado lo manda el Worker; se aplica sin tocar content/dirty. */
+    @Query("UPDATE songs SET locked = :locked WHERE id = :id")
+    suspend fun setLocked(id: Long, locked: Boolean)
+
+    // ---- Papelera de reciclaje ----
+    @Query("SELECT * FROM songs WHERE deleted_at > 0 ORDER BY deleted_at DESC")
+    fun observeTrash(): Flow<List<Song>>
+
+    @Query("SELECT COUNT(*) FROM songs WHERE deleted_at > 0")
+    fun countTrash(): Flow<Int>
+
+    /** Mueve a la papelera (ts>0) o restaura (ts=0). */
+    @Query("UPDATE songs SET deleted_at = :ts WHERE id = :id")
+    suspend fun setDeletedAt(id: Long, ts: Long)
+
+    /** Purga definitiva de lo que lleva en la papelera más del límite. */
+    @Query("DELETE FROM songs WHERE deleted_at > 0 AND deleted_at < :cutoff")
+    suspend fun purgeTrashOlderThan(cutoff: Long)
 }
 
 @Dao

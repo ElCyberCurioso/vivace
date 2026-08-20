@@ -9,14 +9,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -42,6 +45,7 @@ import com.guitarchords.app.ui.components.BaseFretControls
 import com.guitarchords.app.ui.components.ChordModal
 import com.guitarchords.app.ui.components.FretboardInput
 import com.guitarchords.app.ui.components.StringStateRow
+import com.guitarchords.app.ui.components.rememberChordPlayer
 
 private const val STRINGS = 6
 
@@ -53,6 +57,7 @@ fun ChordFinderScreen(onBack: () -> Unit) {
     var modalChord by remember { mutableStateOf<String?>(null) }
 
     val matches = remember(frets.toList()) { ChordRecognizer.identify(frets.toList()) }
+    val player = rememberChordPlayer()
 
     Scaffold(
         topBar = {
@@ -84,7 +89,10 @@ fun ChordFinderScreen(onBack: () -> Unit) {
                 frets = frets.toList(),
                 baseFret = baseFret,
                 onTapFret = { stringIdx, fret ->
-                    frets[stringIdx] = if (frets[stringIdx] == fret) 0 else fret
+                    val newFret = if (frets[stringIdx] == fret) 0 else fret
+                    frets[stringIdx] = newFret
+                    // Suena la cuerda al marcarla: se oye lo que se está montando.
+                    player.pluck(stringIdx, frets.toList())
                 },
                 // En tablets el 90 % del ancho dispara la altura (ratio 6:7) y el
                 // diagrama no cabe en pantalla: se limita el ancho máximo.
@@ -95,6 +103,12 @@ fun ChordFinderScreen(onBack: () -> Unit) {
             )
             Spacer(Modifier.height(8.dp))
             BaseFretControls(baseFret) { baseFret = it }
+            Spacer(Modifier.height(8.dp))
+            FilledTonalButton(onClick = { player.strum(frets.toList()) }) {
+                Icon(Icons.AutoMirrored.Filled.VolumeUp, null)
+                Spacer(Modifier.size(8.dp))
+                Text(stringResource(R.string.listen_chord))
+            }
             Spacer(Modifier.height(12.dp))
             Text(
                 stringResource(R.string.matching_chords),

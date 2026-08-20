@@ -28,31 +28,39 @@ class SyncManager(private val repo: Repository) {
         // ---- PULL ----
         for (ro in remote) {
             val local = repo.songByRemoteKey(ro.key)
-            when {
-                local == null -> {
+            when (SyncPolicy.decidePull(local, ro.etag)) {
+                PullAction.IMPORT -> {
                     val content = client.get(ro.key)
                     repo.importRemoteSong(ro, content.text)
                     downloaded++
                 }
-                local.remoteEtag != ro.etag -> {
-                    if (local.dirty) {
-                        conflicts += SyncConflict(
-                            songId = local.id,
-                            title = local.title,
-                            remoteKey = ro.key,
-                            localUpdatedAt = local.updatedAt,
-                            remoteUpdatedAt = ro.uploaded
-                        )
-                        fillTitleFromRemote(local, ro)   // title still flows during a content conflict
-                    } else {
-                        val content = client.get(ro.key)
-                        repo.updateFromRemote(local, ro, content.text)
-                        downloaded++
-                    }
+                PullAction.DOWNLOAD -> {
+                    val content = client.get(ro.key)
+                    repo.updateFromRemote(local!!, ro, content.text)
+                    downloaded++
                 }
-                else -> fillTitleFromRemote(local, ro)   // ETag matches: backfill a missing title
+                PullAction.CONFLICT -> {
+                    conflicts += SyncConflict(
+                        songId = local!!.id,
+                        title = local.title,
+                        remoteKey = ro.key,
+                        localUpdatedAt = local.updatedAt,
+                        remoteUpdatedAt = ro.uploaded
+                    )
+                    fillTitleFromRemote(local, ro)   // title still flows during a content conflict
+                }
+                PullAction.METADATA_ONLY -> fillTitleFromRemote(local!!, ro)
+                // En la papelera: no se descarga ni se pide resolver nada.
+                PullAction.SKIP_TRASHED -> Unit
             }
         }
+
+        // ---- HUÉRFANAS ----
+        // Lo que ya no está en el bucket deja de considerarse sincronizado
+        // (el SyncBadge pasará a "solo local"). No se borra nada del dispositivo.
+        val remoteKeys = remote.mapTo(HashSet()) { it.key }
+        SyncPolicy.orphanIds(repo.songsWithRemoteKey(), remoteKeys)
+            .forEach { repo.clearRemoteLink(it) }
 
         // ---- PUSH PLAN ----
         // Dirty songs are only reported; the upload happens in [push] once the
@@ -89,7 +97,7 @@ class SyncManager(private val repo: Repository) {
      */
     private suspend fun fillTitleFromRemote(local: Song, ro: RemoteObject) {
         val remoteTitle = ro.title.trim()
-        val needsTitle = local.title.isBlank() || local.title == "Sin título"
+        val needsTitle = local.title.isBlank() || local.title == SongTextFormat.UNTITLED
         if (remoteTitle.isNotEmpty() && needsTitle && local.title != remoteTitle) {
             repo.setRemoteTitle(local.id, remoteTitle)
         }
@@ -107,6 +115,13 @@ class SyncManager(private val repo: Repository) {
         val remoteUrl = ro.url.trim()
         if (remoteUrl.isNotEmpty() && local.sourceUrl.isBlank()) {
             repo.setRemoteSourceUrl(local.id, remoteUrl)
+        }
+
+        // El candado es autoritativo del Worker: se aplica aunque el ETag
+        // coincida (p. ej. metadata que cambió sin tocar el cuerpo).
+        val remoteLocked = ro.locked.trim().equals("true", ignoreCase = true)
+        if (remoteLocked != local.locked) {
+            repo.setRemoteLocked(local.id, remoteLocked)
         }
     }
 

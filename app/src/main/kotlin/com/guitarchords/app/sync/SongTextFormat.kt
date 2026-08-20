@@ -23,12 +23,20 @@ object SongTextFormat {
 
     private val HEADER = Regex("^#([A-Za-z]+):[ \\t]?(.*)$")
 
+    /**
+     * Título por defecto de una canción sin nombre. Es un valor PERSISTIDO (va
+     * a la base de datos y al fichero .txt del bucket), así que no se localiza:
+     * la sincronización lo compara para saber si el título aún no se ha puesto.
+     */
+    const val UNTITLED = "Sin título"
+
     data class Parsed(
         val title: String,
         val artist: String,
         val genre: String,
         val capo: Int,
         val favorite: Boolean,
+        val locked: Boolean,
         val playlist: String?,
         val sourceUrl: String,
         val content: String
@@ -40,6 +48,7 @@ object SongTextFormat {
         if (song.genre.isNotBlank()) append("#genre: ").append(song.genre).append('\n')
         if (song.capo > 0) append("#capo: ").append(song.capo).append('\n')
         if (song.favorite) append("#favorite: true\n")
+        if (song.locked) append("#locked: true\n")
         if (song.sourceUrl.isNotBlank()) append("#url: ").append(song.sourceUrl).append('\n')
         if (!playlistName.isNullOrBlank()) append("#playlist: ").append(playlistName).append('\n')
         append("---\n")
@@ -53,6 +62,7 @@ object SongTextFormat {
         var genre = ""
         var capo = 0
         var favorite = false
+        var locked = false
         var playlist: String? = null
         var sourceUrl = ""
         var i = 0
@@ -72,6 +82,7 @@ object SongTextFormat {
                 "genre" -> genre = value
                 "capo" -> capo = value.toIntOrNull()?.coerceIn(0, 12) ?: 0
                 "favorite" -> favorite = value.equals("true", ignoreCase = true)
+                "locked" -> locked = value.equals("true", ignoreCase = true)
                 "playlist" -> playlist = value.ifBlank { null }
                 "url" -> sourceUrl = value
             }
@@ -79,11 +90,12 @@ object SongTextFormat {
         }
         val content = lines.drop(i).joinToString("\n")
         return Parsed(
-            title = title.ifBlank { "Sin título" },
+            title = title.ifBlank { UNTITLED },
             artist = artist,
             genre = genre,
             capo = capo,
             favorite = favorite,
+            locked = locked,
             playlist = playlist,
             sourceUrl = sourceUrl,
             content = content

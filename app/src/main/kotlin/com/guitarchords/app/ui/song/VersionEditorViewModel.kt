@@ -16,12 +16,20 @@ class VersionEditorViewModel(app: Application) : AndroidViewModel(app) {
     private val _version = MutableStateFlow<SongVersion?>(null)
     val version = _version.asStateFlow()
 
+    /** El candado vive en la canción padre y también protege sus versiones. */
+    private val _parentLocked = MutableStateFlow(false)
+    val parentLocked = _parentLocked.asStateFlow()
+
     private var loaded = false
 
     fun load(versionId: Long) {
         if (loaded) return
         loaded = true
-        viewModelScope.launch { _version.value = repo.versionOnce(versionId) }
+        viewModelScope.launch {
+            val v = repo.versionOnce(versionId)
+            _version.value = v
+            if (v != null) _parentLocked.value = repo.songOnce(v.songId)?.locked == true
+        }
     }
 
     fun updateName(v: String) { _version.value = _version.value?.copy(name = v) }

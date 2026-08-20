@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Vivace · tokens de marca, modo oscuro ("Nocturno", el modo por defecto). -->
+<resources>
+    <color name="vv_bg">#0F1113</color>
+    <color name="vv_surface">#17191C</color>
+    <color name="vv_surface_alt">#1E2124</color>
+    <color name="vv_border">#2B2D31</color>
+    <color name="vv_border_strong">#3A3D42</color>
+    <color name="vv_text">#F2EFE9</color>
+    <color name="vv_text_muted">#A7ABB2</color>
+    <color name="vv_text_subtle">#8B8F96</color>
+    <color name="vv_accent">#E8B04B</color>
+    <color name="vv_accent_strong">#C2762B</color>
+    <color name="vv_on_accent">#0F1113</color>
+    <color name="vv_beat">#7FB2A0</color>
+    <color name="vv_danger">#E0654B</color>
+</resources>

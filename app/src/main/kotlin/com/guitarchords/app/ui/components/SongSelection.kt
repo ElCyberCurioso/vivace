@@ -134,6 +134,44 @@ fun BulkMoveDialog(
     )
 }
 
+/**
+ * Mover UNA canción a otra lista. Mismo selector que [BulkMoveDialog]; con
+ * [includeUnassigned] se ofrece además la carpeta "Sin lista".
+ */
+@Composable
+fun MoveSongDialog(
+    songTitle: String,
+    targets: List<Playlist>,
+    includeUnassigned: Boolean,
+    onDismiss: () -> Unit,
+    onPick: (Long?) -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.move_song_title, songTitle)) },
+        text = {
+            if (targets.isEmpty() && !includeUnassigned) {
+                Text(stringResource(R.string.no_lists_yet))
+            } else {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    if (includeUnassigned) {
+                        item {
+                            PickRow(icon = Icons.Default.MusicNote, label = stringResource(R.string.no_playlist)) { onPick(null) }
+                        }
+                    }
+                    items(targets, key = { it.id }) { p ->
+                        PickRow(icon = Icons.Default.LibraryMusic, label = p.name) { onPick(p.id) }
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.close)) } }
+    )
+}
+
 @Composable
 private fun PickRow(
     icon: androidx.compose.ui.graphics.vector.ImageVector,

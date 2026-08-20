@@ -14,7 +14,7 @@ import com.guitarchords.app.training.TrainingArea
         TrainingProfile::class, AreaProgress::class, ExerciseResult::class,
         AchievementUnlock::class
     ],
-    version = 12,
+    version = 16,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -212,6 +212,50 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Bloqueo de partitura: el candado lo fija el Worker y baja con el
+                // cuerpo (#locked). Las canciones existentes empiezan desbloqueadas.
+                db.execSQL("ALTER TABLE songs ADD COLUMN locked INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        private val MIGRATION_13_14 = object : Migration(13, 14) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Papelera de reciclaje: borrado lógico de partituras.
+                db.execSQL("ALTER TABLE songs ADD COLUMN deleted_at INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        private val MIGRATION_14_15 = object : Migration(14, 15) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Antes de imponer la unicidad: si algún fichero del bucket quedó
+                // enlazado a dos canciones, se conserva la más antigua y las demás
+                // pasan a ser solo locales (el índice fallaría con duplicados).
+                db.execSQL(
+                    """
+                    UPDATE songs SET remote_key = NULL, remote_etag = NULL, remote_updated_at = 0
+                    WHERE remote_key IS NOT NULL AND id NOT IN (
+                        SELECT MIN(id) FROM songs WHERE remote_key IS NOT NULL GROUP BY remote_key
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS index_songs_remote_key ON songs(remote_key)"
+                )
+            }
+        }
+
+        private val MIGRATION_15_16 = object : Migration(15, 16) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Sincronización con cuenta de usuario: id de la partitura en la
+                // API y visibilidad. remote_key se conserva para reconocer, en
+                // el primer sync con sesión, lo que ya estaba subido.
+                db.execSQL("ALTER TABLE songs ADD COLUMN remote_id TEXT")
+                db.execSQL("ALTER TABLE songs ADD COLUMN visibility TEXT NOT NULL DEFAULT 'private'")
+            }
+        }
+
         /**
          * Filas semilla del entrenamiento (perfil único + una fila por área),
          * para que el código nunca encuentre un perfil inexistente. Se invoca
@@ -247,7 +291,8 @@ abstract class AppDatabase : RoomDatabase() {
                         MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4,
                         MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7,
                         MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10,
-                        MIGRATION_10_11, MIGRATION_11_12
+                        MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13,
+                        MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16
                     )
                     .addCallback(object : Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) {

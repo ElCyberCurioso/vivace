@@ -25,6 +25,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Remove
@@ -86,6 +87,9 @@ fun SongEditorScreen(
     }
     var pickerOpen by remember { mutableStateOf(false) }
     var playlistPickerOpen by remember { mutableStateOf(false) }
+    // El candado solo se gestiona desde el Worker; aquí solo se respeta:
+    // editar una partitura bloqueada exige confirmar primero.
+    var lockAck by remember { mutableStateOf(false) }
     val playlists by vm.playlists.collectAsStateWithLifecycle()
 
     Scaffold(
@@ -112,6 +116,18 @@ fun SongEditorScreen(
                 .padding(12.dp)
                 .verticalScroll(rememberScrollState())
         ) {
+            if (song.locked) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Lock, null, tint = MaterialTheme.colorScheme.error)
+                    Spacer(Modifier.size(6.dp))
+                    Text(
+                        stringResource(R.string.locked_song_banner),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+            }
             OutlinedTextField(
                 value = song.title,
                 onValueChange = vm::updateTitle,
@@ -226,6 +242,25 @@ fun SongEditorScreen(
                 placeholder = { Text(stringResource(R.string.write_here)) }
             )
         }
+    }
+
+    // Aviso de bloqueo: aparece al abrir una partitura bloqueada. Cancelar
+    // vuelve atrás sin editar; confirmar permite la edición (sigue bloqueada).
+    if (song.locked && !lockAck) {
+        AlertDialog(
+            onDismissRequest = { onDone() },
+            icon = { Icon(Icons.Default.Lock, null) },
+            title = { Text(stringResource(R.string.locked_dialog_title)) },
+            text = { Text(stringResource(R.string.locked_dialog_msg)) },
+            confirmButton = {
+                TextButton(onClick = { lockAck = true }) {
+                    Text(stringResource(R.string.locked_dialog_edit))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { onDone() }) { Text(stringResource(R.string.cancel)) }
+            }
+        )
     }
 
     if (playlistPickerOpen) {

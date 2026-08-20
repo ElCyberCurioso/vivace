@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -36,6 +37,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -54,8 +56,12 @@ fun SyncScreen(
     vm: SyncViewModel = viewModel()
 ) {
     var url by remember { mutableStateOf(vm.initialUrl) }
-    var token by remember { mutableStateOf(vm.initialToken) }
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf("") }
+    var registering by remember { mutableStateOf(false) }
 
+    val account by vm.account.collectAsStateWithLifecycle()
     val state by vm.state.collectAsStateWithLifecycle()
     val conflicts by vm.conflicts.collectAsStateWithLifecycle()
     val pendingPush by vm.pendingPush.collectAsStateWithLifecycle()
@@ -95,26 +101,88 @@ fun SyncScreen(
                 value = url,
                 onValueChange = { url = it },
                 label = { Text(stringResource(R.string.sync_worker_url)) },
-                placeholder = { Text("https://guitarchords-sync.tu-cuenta.workers.dev") },
+                placeholder = { Text("https://vivace.tu-cuenta.workers.dev") },
                 singleLine = true,
-                enabled = !running,
+                enabled = !running && account.isBlank(),
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(8.dp))
-            OutlinedTextField(
-                value = token,
-                onValueChange = { token = it },
-                label = { Text(stringResource(R.string.sync_token)) },
-                singleLine = true,
-                enabled = !running,
-                visualTransformation = PasswordVisualTransformation(),
-                modifier = Modifier.fillMaxWidth()
-            )
+
+            if (account.isBlank()) {
+                // Sin sesión: acceso con email y contraseña (o alta de cuenta).
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = { email = it },
+                    label = { Text(stringResource(R.string.account_email)) },
+                    singleLine = true,
+                    enabled = !running,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(8.dp))
+                if (registering) {
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        label = { Text(stringResource(R.string.account_name)) },
+                        singleLine = true,
+                        enabled = !running,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(8.dp))
+                }
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text(stringResource(R.string.account_password)) },
+                    singleLine = true,
+                    enabled = !running,
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(12.dp))
+                Button(
+                    onClick = { vm.signIn(url, email, password, name, registering) },
+                    enabled = !running,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        stringResource(
+                            if (registering) R.string.account_create else R.string.account_sign_in
+                        )
+                    )
+                }
+                TextButton(
+                    onClick = { registering = !registering },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        stringResource(
+                            if (registering) R.string.account_have_one else R.string.account_need_one
+                        )
+                    )
+                }
+            } else {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        stringResource(R.string.account_signed_in_as, account),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f)
+                    )
+                    TextButton(onClick = { vm.signOut() }, enabled = !running) {
+                        Text(stringResource(R.string.account_sign_out))
+                    }
+                }
+            }
             Spacer(Modifier.height(16.dp))
 
             Button(
-                onClick = { vm.sync(url, token) },
-                enabled = !running,
+                onClick = { vm.sync() },
+                enabled = !running && account.isNotBlank(),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 if (running) {
@@ -208,7 +276,7 @@ fun SyncScreen(
             }
             Spacer(Modifier.height(12.dp))
             Button(
-                onClick = { vm.syncChords(url, token) },
+                onClick = { vm.syncChords() },
                 enabled = !chordSyncing,
                 modifier = Modifier.fillMaxWidth()
             ) {

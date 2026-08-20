@@ -44,6 +44,9 @@ class UnassignedSongsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun deleteSelected(ids: Set<Long>) = viewModelScope.launch { repo.deleteSongs(ids) }
+
+    /** Deshacer el envío a la papelera (Snackbar "Deshacer"). */
+    fun undoTrash(ids: Collection<Long>) = viewModelScope.launch { repo.restoreFromTrash(ids) }
     fun moveSelected(ids: Set<Long>, target: Long?) = viewModelScope.launch { repo.moveSongs(ids, target) }
     fun favoriteSelected(ids: Set<Long>, fav: Boolean) = viewModelScope.launch { repo.setFavoriteFor(ids, fav) }
 }

@@ -152,7 +152,7 @@ fun ChordChangeExercise(
                 Spacer(Modifier.height(12.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = { if (count > 0) count-- }) {
-                        Icon(Icons.Default.Remove, null)
+                        Icon(Icons.Default.Remove, stringResource(R.string.count_down))
                     }
                     Text(
                         "$count",
@@ -160,7 +160,7 @@ fun ChordChangeExercise(
                         modifier = Modifier.padding(horizontal = 24.dp)
                     )
                     IconButton(onClick = { count++ }) {
-                        Icon(Icons.Default.Add, null)
+                        Icon(Icons.Default.Add, stringResource(R.string.count_up))
                     }
                 }
                 Spacer(Modifier.height(16.dp))

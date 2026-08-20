@@ -69,7 +69,7 @@ class TrainingDashboardViewModel(app: Application) : AndroidViewModel(app) {
     }
 }
 
-/** ¿Tiene el área ejercicios en Fase 1? (EAR aún no). */
+/** ¿Tiene el área ejercicios en el curriculum actual? */
 fun TrainingArea.hasContent(): Boolean = Curriculum.byArea(this).isNotEmpty()
 
 /** Spec accesible para la card de recomendado. */

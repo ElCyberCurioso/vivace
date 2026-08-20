@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
@@ -18,6 +19,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -59,6 +61,7 @@ fun ChordModal(
         ChordLibrary.parseName(chordName)?.let { (root, qual) -> root + qual }
     }
     var index by remember(chordName) { mutableIntStateOf(0) }
+    val player = rememberChordPlayer()
 
     // null = cerrado; (customId?, fretsIniciales?) = editor abierto.
     var editing by remember { mutableStateOf<Pair<Long?, List<Int>?>?>(null) }
@@ -125,7 +128,11 @@ fun ChordModal(
                     ) { Icon(Icons.Default.ChevronLeft, stringResource(R.string.previous)) }
 
                     Box(modifier = Modifier.padding(horizontal = 24.dp)) {
-                        ChordDiagram(shape = shape)
+                        // Tocar una cuerda del diagrama la hace sonar suelta.
+                        ChordDiagram(
+                            shape = shape,
+                            onStringTap = { s -> player.pluck(s, shape.frets) }
+                        )
                     }
 
                     IconButton(
@@ -133,6 +140,17 @@ fun ChordModal(
                         enabled = safe < total - 1
                     ) { Icon(Icons.Default.ChevronRight, stringResource(R.string.next)) }
                 }
+                Spacer(Modifier.height(8.dp))
+                FilledTonalButton(onClick = { player.strum(shape.frets) }) {
+                    Icon(Icons.AutoMirrored.Filled.VolumeUp, null)
+                    Spacer(Modifier.size(8.dp))
+                    Text(stringResource(R.string.listen_chord))
+                }
+                Text(
+                    stringResource(R.string.listen_strings_hint),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 Spacer(Modifier.height(8.dp))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,

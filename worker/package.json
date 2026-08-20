@@ -2,10 +2,13 @@
   "name": "guitarchords-sync-worker",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "Cloudflare Worker fronting an R2 bucket for GuitarChords song sync",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "check": "node --check src/index.js && node --check src/admin-html.js && node check-admin.mjs",
+    "test": "node test-detect.mjs && node --test test/"
   },
   "devDependencies": {
     "wrangler": "^3.78.0"

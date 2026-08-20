@@ -1,24 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Vivace · marca 4a (clavijero, trazo fino) — foreground del icono adaptativo.
+  108x108 con la marca dentro de la zona segura de 72dp. Sirve además de icono
+  del splash y de capa monocroma (el sistema la usa como máscara).
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    <!-- Beam joining the two stems -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M47,30 h34 v10 h-34 z"/>
-    <!-- Stems -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M47,33 h3 v39 h-3 z"/>
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M78,33 h3 v39 h-3 z"/>
-    <!-- Note heads (ellipses) -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M27,72 a11,8 0 1,0 22,0 a11,8 0 1,0 -22,0 z"/>
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M59,72 a11,8 0 1,0 22,0 a11,8 0 1,0 -22,0 z"/>
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+
+    <!-- pala del clavijero -->
+    <path android:pathData="M45,27 h18 v45 h-18 z"
+        android:fillColor="#00000000"
+        android:strokeColor="#E8B04B"
+        android:strokeWidth="2.7" />
+
+    <!-- clavijas -->
+    <path android:pathData="M36,39 m-3.3,0 a3.3,3.3 0 1,0 6.6,0 a3.3,3.3 0 1,0 -6.6,0" android:fillColor="#F2EFE9" />
+    <path android:pathData="M36,51 m-3.3,0 a3.3,3.3 0 1,0 6.6,0 a3.3,3.3 0 1,0 -6.6,0" android:fillColor="#F2EFE9" />
+    <path android:pathData="M36,63 m-3.3,0 a3.3,3.3 0 1,0 6.6,0 a3.3,3.3 0 1,0 -6.6,0" android:fillColor="#F2EFE9" />
+    <path android:pathData="M72,39 m-3.3,0 a3.3,3.3 0 1,0 6.6,0 a3.3,3.3 0 1,0 -6.6,0" android:fillColor="#F2EFE9" />
+    <path android:pathData="M72,51 m-3.3,0 a3.3,3.3 0 1,0 6.6,0 a3.3,3.3 0 1,0 -6.6,0" android:fillColor="#F2EFE9" />
+    <path android:pathData="M72,63 m-3.3,0 a3.3,3.3 0 1,0 6.6,0 a3.3,3.3 0 1,0 -6.6,0" android:fillColor="#F2EFE9" />
+
+    <!-- cejuela -->
+    <path android:pathData="M45,75 h18 v4.5 h-18 z" android:fillColor="#E8B04B" />
 </vector>

@@ -1,12 +1,9 @@
 package com.guitarchords.app.ui.search
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,15 +16,14 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -35,9 +31,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -47,7 +41,11 @@ import com.guitarchords.app.ui.components.BulkDeleteDialog
 import com.guitarchords.app.ui.components.BulkMoveDialog
 import com.guitarchords.app.ui.components.EmptyState
 import com.guitarchords.app.ui.components.SelectionTopBar
+import com.guitarchords.app.ui.components.SongListItem
+import com.guitarchords.app.ui.components.SongSortMenu
 import com.guitarchords.app.ui.components.rememberSongSelection
+import com.guitarchords.app.ui.components.rememberTrashedMessage
+import com.guitarchords.app.ui.components.rememberUndoSnackbar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,14 +56,21 @@ fun SongSearchScreen(
 ) {
     val query by vm.query.collectAsStateWithLifecycle()
     val hits by vm.results.collectAsStateWithLifecycle()
+    val sort by vm.sort.collectAsStateWithLifecycle()
     val playlists by vm.playlists.collectAsStateWithLifecycle()
     val selection = rememberSongSelection()
     var bulkMoving by remember { mutableStateOf(false) }
     var bulkDeleting by remember { mutableStateOf(false) }
 
+    val snackbarHost = remember { SnackbarHostState() }
+    val showUndo = rememberUndoSnackbar(snackbarHost)
+    val trashedMessage = rememberTrashedMessage()
+    val undoLabel = stringResource(R.string.undo)
+
     BackHandler(enabled = selection.active) { selection.clear() }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHost) },
         topBar = {
             if (selection.active) {
                 SelectionTopBar(
@@ -81,7 +86,8 @@ fun SongSearchScreen(
                     title = { Text(stringResource(R.string.search_songs)) },
                     navigationIcon = {
                         IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
-                    }
+                    },
+                    actions = { SongSortMenu(current = sort, onPick = { vm.setSort(it) }) }
                 )
             }
         }
@@ -155,9 +161,11 @@ fun SongSearchScreen(
         BulkDeleteDialog(
             count = selection.count,
             onConfirm = {
+                val ids = selection.selected.toList()
                 vm.deleteSelected(selection.selected)
                 bulkDeleting = false
                 selection.clear()
+                showUndo(trashedMessage(ids.size), undoLabel) { vm.undoTrash(ids) }
             },
             onDismiss = { bulkDeleting = false }
         )
@@ -173,56 +181,20 @@ private fun HitRow(
     onToggle: () -> Unit,
     onLongPress: () -> Unit
 ) {
-    Card(
-        colors = if (selected)
-            CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
-        else CardDefaults.cardColors(),
-        modifier = Modifier
-            .fillMaxWidth()
-            .pointerInput(selectionActive) {
-                detectTapGestures(
-                    onTap = { if (selectionActive) onToggle() else onClick() },
-                    onLongPress = { onLongPress() }
-                )
-            }
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (selectionActive) {
-                Checkbox(checked = selected, onCheckedChange = { onToggle() })
+    SongListItem(
+        song = hit.song,
+        selectionActive = selectionActive,
+        selected = selected,
+        onClick = onClick,
+        onToggle = onToggle,
+        onLongPress = onLongPress,
+        playlistName = hit.playlistName,
+        leading = {
+            // Aquí la estrella es solo un indicador (no se puede alternar).
+            if (hit.song.favorite) {
+                Icon(Icons.Default.Star, null, tint = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.padding(horizontal = 4.dp))
-            } else if (hit.song.favorite) {
-                Icon(
-                    Icons.Default.Star,
-                    null,
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Spacer(Modifier.padding(horizontal = 4.dp))
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(hit.song.title, style = MaterialTheme.typography.titleMedium)
-                val sub = buildString {
-                    if (hit.song.artist.isNotBlank()) append(hit.song.artist)
-                    if (hit.song.genre.isNotBlank()) {
-                        if (isNotEmpty()) append(" · ")
-                        append(hit.song.genre)
-                    }
-                }
-                if (sub.isNotEmpty()) {
-                    Text(sub, style = MaterialTheme.typography.bodySmall)
-                }
-                if (hit.playlistName.isNotBlank()) {
-                    Text(
-                        stringResource(R.string.in_playlist, hit.playlistName),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
             }
         }
-    }
+    )
 }

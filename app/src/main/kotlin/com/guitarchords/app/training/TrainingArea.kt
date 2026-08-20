@@ -4,8 +4,8 @@ package com.guitarchords.app.training
  * Áreas del plan de entrenamiento. El nombre del enum es la clave persistida
  * en `area_progress.area` y `exercise_results.area` — no renombrar.
  *
- * EAR existe desde el día 1 (evita migrar datos después) pero no tiene
- * ejercicios en Fase 1: la UI la muestra como "Próximamente".
+ * La UI muestra un área como "Próximamente" mientras el curriculum no tenga
+ * ejercicios suyos (ver `TrainingArea.hasContent()`), sin tocar la DB.
  */
 enum class TrainingArea {
     CHORDS,      // acordes: digitación y vocabulario
@@ -14,5 +14,5 @@ enum class TrainingArea {
     SCALES,      // escalas y licks
     TECHNIQUE,   // púa alterna, ligados…
     THEORY,      // teoría musical
-    EAR          // oído (Fase 2)
+    EAR          // oído (reconocimiento auditivo)
 }

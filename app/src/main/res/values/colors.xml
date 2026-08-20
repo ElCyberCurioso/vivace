@@ -1,3 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Vivace · tokens de marca, modo claro. Mismos nombres que las variables CSS
+  `vv-*` de la web (worker/src/web-html.js), para que un cambio de paleta
+  se pueda seguir de un sitio a otro. Los colores de la interfaz Compose
+  viven en ui/theme/Theme.kt; estos son para recursos XML (splash, icono).
+-->
 <resources>
-    <color name="ic_launcher_background">#3F2C5F</color>
+    <color name="vv_bg">#F6F4EF</color>
+    <color name="vv_surface">#FFFFFF</color>
+    <color name="vv_surface_alt">#EFEDE7</color>
+    <color name="vv_border">#E2DED5</color>
+    <color name="vv_border_strong">#D5D0C5</color>
+    <color name="vv_text">#16181A</color>
+    <color name="vv_text_muted">#4A4D52</color>
+    <color name="vv_text_subtle">#6B7076</color>
+    <color name="vv_accent">#B8791F</color>
+    <color name="vv_accent_strong">#8F5A12</color>
+    <color name="vv_on_accent">#FFFFFF</color>
+    <color name="vv_beat">#2F6B5B</color>
+    <color name="vv_danger">#B33F26</color>
+
+    <!-- El icono adaptativo no sigue el modo del sistema: siempre Nocturno. -->
+    <color name="ic_launcher_background">#0F1113</color>
 </resources>

@@ -1,10 +1,12 @@
 package com.guitarchords.app.data
 
+import androidx.room.withTransaction
 import com.guitarchords.app.sync.RemoteObject
 import com.guitarchords.app.sync.SongTextFormat
 import kotlinx.coroutines.flow.Flow
 
 class Repository(
+    private val db: AppDatabase,
     private val playlistDao: PlaylistDao,
     private val songDao: SongDao,
     private val songVersionDao: SongVersionDao
@@ -33,7 +35,15 @@ class Repository(
     suspend fun renamePlaylist(p: Playlist, newName: String) =
         playlistDao.update(p.copy(name = newName))
 
-    suspend fun deletePlaylist(id: Long) = playlistDao.deleteById(id)
+    /**
+     * Borra la lista pero NO sus partituras: estas pasan a la carpeta por
+     * defecto "Sin lista" (playlist_id = NULL). Las canciones solo se borran
+     * definitivamente desde la papelera.
+     */
+    suspend fun deletePlaylist(id: Long) {
+        songDao.unassignAllFromPlaylist(id)
+        playlistDao.deleteById(id)
+    }
 
     suspend fun upsertSong(song: Song): Long {
         // Local edits flag the song dirty so the next sync uploads it.
@@ -42,23 +52,41 @@ class Repository(
                else { songDao.update(s); s.id }
     }
 
-    suspend fun deleteSong(id: Long) = songDao.deleteById(id)
+    /** Borrado "normal": va a la papelera, no se elimina de la base de datos. */
+    suspend fun deleteSong(id: Long) = songDao.setDeletedAt(id, System.currentTimeMillis())
 
     suspend fun toggleFavorite(song: Song) =
         songDao.setFavorite(song.id, !song.favorite)
 
+    // ---- Papelera de reciclaje ----
+    fun trash(): Flow<List<Song>> = songDao.observeTrash()
+    fun trashCount(): Flow<Int> = songDao.countTrash()
+    suspend fun restoreFromTrash(id: Long) = songDao.setDeletedAt(id, 0)
+    /** Deshacer un envío a la papelera (una o varias de golpe). */
+    suspend fun restoreFromTrash(ids: Collection<Long>) = songDao.setDeletedAtFor(ids, 0)
+    /** Borrado definitivo (desde la papelera, con confirmación en la UI). */
+    suspend fun deleteForever(id: Long) = songDao.deleteById(id)
+    suspend fun deleteForever(ids: Collection<Long>) = songDao.deleteByIds(ids)
+    /** Purga las partituras que llevan en la papelera más de [maxAgeMillis]. */
+    suspend fun purgeExpiredTrash(maxAgeMillis: Long) =
+        songDao.purgeTrashOlderThan(System.currentTimeMillis() - maxAgeMillis)
+
     // ---- Bulk operations (multi-select) ----
-    suspend fun deleteSongs(ids: Collection<Long>) = ids.forEach { songDao.deleteById(it) }
+    // Una sola sentencia SQL por operación (o una transacción cuando hay que
+    // escribir valores distintos por fila): si algo falla no queda a medias.
+    suspend fun deleteSongs(ids: Collection<Long>) =
+        songDao.setDeletedAtFor(ids, System.currentTimeMillis())
 
     suspend fun moveSongs(ids: Collection<Long>, targetPlaylistId: Long?) =
-        ids.forEach { moveSong(it, targetPlaylistId) }
+        db.withTransaction { ids.forEach { moveSong(it, targetPlaylistId) } }
 
     /** Persiste un orden manual: la posición pasa a ser el índice en [orderedIds]. */
-    suspend fun reorderSongs(orderedIds: List<Long>) =
+    suspend fun reorderSongs(orderedIds: List<Long>) = db.withTransaction {
         orderedIds.forEachIndexed { index, id -> songDao.setPosition(id, index) }
+    }
 
     suspend fun setFavoriteFor(ids: Collection<Long>, fav: Boolean) =
-        ids.forEach { songDao.setFavorite(it, fav) }
+        songDao.setFavoriteFor(ids, fav)
 
     suspend fun importPlaylist(exp: PlaylistExport): Long {
         val pid = playlistDao.insert(Playlist(name = exp.name))
@@ -131,6 +159,83 @@ class Repository(
     suspend fun songByRemoteKey(key: String): Song? = songDao.getByRemoteKey(key)
     suspend fun dirtySongs(): List<Song> = songDao.dirtySongs()
 
+    /** Soporte para detectar canciones cuyo objeto remoto ya no existe. */
+    suspend fun songsWithRemoteKey(): List<Song> = songDao.songsWithRemoteKey()
+    suspend fun clearRemoteLink(id: Long) = songDao.clearRemoteLink(id)
+
+    // ---- sincronización con cuenta de usuario (API de Vivace) ----
+    suspend fun songByRemoteId(remoteId: String): Song? = songDao.getByRemoteId(remoteId)
+    suspend fun songsWithRemoteId(): List<Song> = songDao.songsWithRemoteId()
+    suspend fun songsPendingRelink(): List<Song> = songDao.songsPendingRelink()
+    /** La partitura ya no está en la cuenta: pasa a ser solo local. */
+    suspend fun clearAccountLink(id: Long) = songDao.clearAccountLink(id)
+
+    suspend fun markAccountSynced(
+        id: Long, remoteId: String, updatedAt: Long, keepDirty: Boolean = false
+    ) = songDao.markAccountSynced(id, remoteId, updatedAt, keepDirty)
+
+    /** Alta local de una partitura que llega de la cuenta. */
+    suspend fun importAccountSong(detail: com.guitarchords.app.sync.SongDetail) {
+        val parsed = SongTextFormat.decode(detail.content)
+        val pid = parsed.playlist?.let { findOrCreatePlaylist(it) }
+        val pos = if (pid != null) songDao.nextPosition(pid) else songDao.nextPositionUnassigned()
+        songDao.insert(
+            Song(
+                playlistId = pid,
+                title = detail.song.title.ifBlank { parsed.title },
+                artist = detail.song.artist.ifBlank { parsed.artist },
+                genre = parsed.genre,
+                content = parsed.content,
+                favorite = parsed.favorite,
+                locked = detail.song.locked || parsed.locked,
+                capo = if (detail.song.capo > 0) detail.song.capo else parsed.capo,
+                sourceUrl = detail.song.sourceUrl.ifBlank { parsed.sourceUrl },
+                remoteId = detail.song.id,
+                remoteKey = detail.song.r2Key,
+                remoteUpdatedAt = detail.song.updatedAt,
+                visibility = detail.song.visibility,
+                dirty = false,
+                position = pos
+            )
+        )
+    }
+
+    /** Sobrescribe la copia local con la del servidor. */
+    suspend fun updateFromAccount(local: Song, detail: com.guitarchords.app.sync.SongDetail) {
+        val parsed = SongTextFormat.decode(detail.content)
+        val pid = parsed.playlist?.let { findOrCreatePlaylist(it) } ?: local.playlistId
+        songDao.update(
+            local.copy(
+                playlistId = pid,
+                title = detail.song.title.ifBlank { parsed.title },
+                artist = detail.song.artist.ifBlank { parsed.artist },
+                genre = parsed.genre,
+                content = parsed.content,
+                favorite = parsed.favorite,
+                locked = detail.song.locked || parsed.locked,
+                capo = if (detail.song.capo > 0) detail.song.capo else parsed.capo,
+                sourceUrl = detail.song.sourceUrl.ifBlank { parsed.sourceUrl },
+                remoteId = detail.song.id,
+                remoteUpdatedAt = detail.song.updatedAt,
+                visibility = detail.song.visibility,
+                dirty = false,
+                updatedAt = System.currentTimeMillis()
+            )
+        )
+    }
+
+    /** Aplica candado y visibilidad cuando el contenido no cambió. */
+    suspend fun applyRemoteFlags(local: Song, remote: com.guitarchords.app.sync.RemoteSong) {
+        if (remote.locked != local.locked) songDao.setLocked(local.id, remote.locked)
+        if (remote.visibility != local.visibility) songDao.setVisibility(local.id, remote.visibility)
+    }
+
+    /** Cambia quién puede ver la partitura (se subirá en el próximo push). */
+    suspend fun setVisibility(id: Long, visibility: String) {
+        songDao.setVisibility(id, visibility)
+        songOnce(id)?.let { songDao.update(it.copy(dirty = true, updatedAt = System.currentTimeMillis())) }
+    }
+
     suspend fun markSynced(id: Long, key: String, etag: String, updated: Long) =
         songDao.markSynced(id, key, etag, updated)
 
@@ -139,6 +244,7 @@ class Repository(
     suspend fun setRemoteArtist(id: Long, artist: String) = songDao.setArtist(id, artist)
     suspend fun setRemoteCapo(id: Long, capo: Int) = songDao.setCapo(id, capo)
     suspend fun setRemoteSourceUrl(id: Long, url: String) = songDao.setSourceUrl(id, url)
+    suspend fun setRemoteLocked(id: Long, locked: Boolean) = songDao.setLocked(id, locked)
 
     private suspend fun findOrCreatePlaylist(name: String): Long =
         playlistDao.getByName(name)?.id ?: playlistDao.insert(Playlist(name = name))
@@ -163,6 +269,7 @@ class Repository(
                 genre = parsed.genre,
                 content = parsed.content,
                 favorite = parsed.favorite,
+                locked = parsed.locked,
                 capo = parsed.capo,
                 sourceUrl = parsed.sourceUrl,
                 remoteKey = ro.key,
@@ -186,6 +293,7 @@ class Repository(
                 genre = parsed.genre,
                 content = parsed.content,
                 favorite = parsed.favorite,
+                locked = parsed.locked,
                 capo = parsed.capo,
                 sourceUrl = parsed.sourceUrl,
                 remoteKey = ro.key,

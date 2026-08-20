@@ -33,6 +33,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.guitarchords.app.R
 import com.guitarchords.app.training.ChordChangeSpec
 import com.guitarchords.app.training.ChordQuizSpec
+import com.guitarchords.app.training.EarTrainingSpec
 import com.guitarchords.app.training.ExerciseSpec
 import com.guitarchords.app.training.RhythmTapSpec
 import com.guitarchords.app.training.ScaleNotesSpec
@@ -40,6 +41,7 @@ import com.guitarchords.app.training.TheoryQuizSpec
 import com.guitarchords.app.ui.training.components.LevelBadge
 import com.guitarchords.app.ui.training.exercises.ChordChangeExercise
 import com.guitarchords.app.ui.training.exercises.ChordQuizExercise
+import com.guitarchords.app.ui.training.exercises.EarTrainingExercise
 import com.guitarchords.app.ui.training.exercises.RhythmTapExercise
 import com.guitarchords.app.ui.training.exercises.ScaleNotesExercise
 import com.guitarchords.app.ui.training.exercises.TheoryQuizExercise
@@ -169,6 +171,10 @@ private fun ExerciseContent(spec: ExerciseSpec, vm: ExerciseRunnerViewModel) {
         is ScaleNotesSpec -> ScaleNotesExercise(
             spec = spec,
             onFinish = { score, passed, mic -> vm.finish(score, passed, micValidated = mic) }
+        )
+        is EarTrainingSpec -> EarTrainingExercise(
+            spec = spec,
+            onFinish = { score, passed -> vm.finish(score, passed) }
         )
     }
 }

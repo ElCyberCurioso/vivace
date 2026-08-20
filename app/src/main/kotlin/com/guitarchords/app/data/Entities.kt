@@ -22,7 +22,9 @@ data class Playlist(
         childColumns = ["playlist_id"],
         onDelete = ForeignKey.SET_NULL
     )],
-    indices = [Index("playlist_id")]
+    // remote_key único: una clave del bucket no puede apuntar a dos canciones
+    // (en SQLite los NULL no colisionan, así que las locales no se ven afectadas).
+    indices = [Index("playlist_id"), Index(value = ["remote_key"], unique = true)]
 )
 data class Song(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -35,13 +37,24 @@ data class Song(
     val capo: Int = 0,
     /** URL de la web donde está la canción original (botón "Link" en el visor). */
     @ColumnInfo(name = "source_url") val sourceUrl: String = "",
+    /** Clave del objeto en R2 (flujo antiguo con token compartido). */
     @ColumnInfo(name = "remote_key") val remoteKey: String? = null,
+    /** Id de la partitura en la API de Vivace (sincronización con cuenta). */
+    @ColumnInfo(name = "remote_id") val remoteId: String? = null,
+    /** 'private' o 'public': quién puede verla en la web. */
+    val visibility: String = "private",
     @ColumnInfo(name = "remote_etag") val remoteEtag: String? = null,
     @ColumnInfo(name = "remote_updated_at") val remoteUpdatedAt: Long = 0,
     val dirty: Boolean = false,
+    /** Bloqueo anti-edición accidental. Solo se fija/quita desde el Worker;
+     * en el dispositivo viaja vía la cabecera #locked y se respeta (confirmar
+     * antes de editar), nunca se cambia localmente. */
+    val locked: Boolean = false,
     @ColumnInfo(name = "position") val position: Int = 0,
     @ColumnInfo(name = "created_at") val createdAt: Long = System.currentTimeMillis(),
-    @ColumnInfo(name = "updated_at") val updatedAt: Long = System.currentTimeMillis()
+    @ColumnInfo(name = "updated_at") val updatedAt: Long = System.currentTimeMillis(),
+    /** Papelera: 0 = activa; >0 = momento del borrado (se purga a los 90 días). */
+    @ColumnInfo(name = "deleted_at") val deletedAt: Long = 0
 )
 
 /**

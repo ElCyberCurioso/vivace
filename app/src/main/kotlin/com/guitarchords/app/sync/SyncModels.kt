@@ -13,7 +13,9 @@ data class RemoteObject(
     val title: String = "",
     val artist: String = "",
     val capo: String = "",
-    val url: String = ""
+    val url: String = "",
+    /** "true" si la partitura está bloqueada en el Worker. */
+    val locked: String = ""
 )
 
 /** Body + metadata of a single downloaded R2 object. */

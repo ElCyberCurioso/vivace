@@ -7,6 +7,7 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.guitarchords.app.GuitarChordsApp
+import com.guitarchords.app.R
 import com.guitarchords.app.data.Playlist
 import com.guitarchords.app.data.Repository
 import com.guitarchords.app.data.Song
@@ -69,6 +70,9 @@ class PlaylistDetailViewModel(app: Application) : AndroidViewModel(app) {
     fun persistOrder(orderedIds: List<Long>) = viewModelScope.launch { repo.reorderSongs(orderedIds) }
 
     fun deleteSelected(ids: Set<Long>) = viewModelScope.launch { repo.deleteSongs(ids) }
+
+    /** Deshacer el envío a la papelera (Snackbar "Deshacer"). */
+    fun undoTrash(ids: Collection<Long>) = viewModelScope.launch { repo.restoreFromTrash(ids) }
     fun moveSelected(ids: Set<Long>, target: Long?) = viewModelScope.launch { repo.moveSongs(ids, target) }
     fun favoriteSelected(ids: Set<Long>, fav: Boolean) = viewModelScope.launch { repo.setFavoriteFor(ids, fav) }
 
@@ -83,6 +87,6 @@ class PlaylistDetailViewModel(app: Application) : AndroidViewModel(app) {
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             putExtra(Intent.EXTRA_SUBJECT, exp.name)
         }
-        onReady(Intent.createChooser(send, "Compartir lista"))
+        onReady(Intent.createChooser(send, ctx.getString(R.string.share_playlist)))
     }
 }

@@ -20,6 +20,7 @@ import com.guitarchords.app.ui.playlists.PlaylistsScreen
 import com.guitarchords.app.ui.search.SongSearchScreen
 import com.guitarchords.app.ui.settings.SettingsScreen
 import com.guitarchords.app.ui.song.SongEditorScreen
+import com.guitarchords.app.ui.song.SongPracticeScreen
 import com.guitarchords.app.ui.song.SongViewScreen
 import com.guitarchords.app.ui.song.VersionEditorScreen
 import com.guitarchords.app.ui.sync.SyncScreen
@@ -28,7 +29,9 @@ import com.guitarchords.app.ui.training.ExerciseRunnerScreen
 import com.guitarchords.app.ui.training.PlacementScreen
 import com.guitarchords.app.ui.training.StatsScreen
 import com.guitarchords.app.ui.training.TrainingDashboardScreen
+import com.guitarchords.app.ui.trash.TrashScreen
 import com.guitarchords.app.ui.tuner.TunerScreen
+import com.guitarchords.app.ui.update.UpdateScreen
 import com.guitarchords.app.ui.unassigned.UnassignedSongsScreen
 import com.guitarchords.app.training.TrainingArea
 
@@ -37,7 +40,9 @@ object Route {
     const val Settings = "settings"
     const val Playlists = "playlists"
     const val PlaylistDetail = "playlist/{id}"
-    const val SongView = "song/view/{id}"
+    // `pl` = carpeta desde la que se abre, para encadenar canciones (concierto).
+    const val SongView = "song/view/{id}?pl={pl}"
+    const val SongPractice = "song/practice/{id}"
     const val SongEdit = "song/edit/{id}"
     const val SongNew = "song/new/{playlistId}"
     const val VersionEdit = "version/edit/{id}"
@@ -48,7 +53,9 @@ object Route {
     const val SongSearch = "songs/search"
     const val Favorites = "songs/favorites"
     const val Unassigned = "songs/unassigned"
+    const val Trash = "songs/trash"
     const val Sync = "sync"
+    const val Update = "update"
     const val Training = "training"
     const val TrainingPlacement = "training/placement"
     const val TrainingAreaPath = "training/area/{area}"
@@ -59,7 +66,8 @@ object Route {
     fun trainingExercise(id: String) = "training/exercise/$id"
 
     fun playlistDetail(id: Long) = "playlist/$id"
-    fun songView(id: Long) = "song/view/$id"
+    fun songView(id: Long, playlistId: Long = 0L) = "song/view/$id?pl=$playlistId"
+    fun songPractice(id: Long) = "song/practice/$id"
     fun songEdit(id: Long) = "song/edit/$id"
     fun songNew(playlistId: Long) = "song/new/$playlistId"
     fun versionEdit(id: Long) = "version/edit/$id"
@@ -94,14 +102,20 @@ fun NavGraph(nav: NavHostController) {
                 onOpenMetronome = { nav.navigate(Route.Metronome) },
                 onOpenFinder = { nav.navigate(Route.ChordFinder) },
                 onOpenDictionary = { nav.navigate(Route.ChordDictionary) },
+                onOpenTrash = { nav.navigate(Route.Trash) },
+                onOpenUpdate = { nav.navigate(Route.Update) },
                 onOpenSettings = { nav.navigate(Route.Settings) }
             )
         }
         composable(Route.Settings) {
             SettingsScreen(
                 onOpenSync = { nav.navigate(Route.Sync) },
+                onOpenUpdate = { nav.navigate(Route.Update) },
                 onBack = { nav.popBackStack() }
             )
+        }
+        composable(Route.Update) {
+            UpdateScreen(onBack = { nav.popBackStack() })
         }
         composable(Route.Playlists) {
             PlaylistsScreen(
@@ -143,6 +157,9 @@ fun NavGraph(nav: NavHostController) {
                 onAddSong = { nav.navigate(Route.songNew(0L)) },
                 onBack = { nav.popBackStack() }
             )
+        }
+        composable(Route.Trash) {
+            TrashScreen(onBack = { nav.popBackStack() })
         }
         composable(Route.Sync) {
             SyncScreen(onBack = { nav.popBackStack() })
@@ -197,7 +214,8 @@ fun NavGraph(nav: NavHostController) {
             val id = entry.arguments?.getLong("id") ?: return@composable
             PlaylistDetailScreen(
                 playlistId = id,
-                onSongClick = { nav.navigate(Route.songView(it)) },
+                // Se pasa la carpeta para poder encadenar canciones en el visor.
+                onSongClick = { nav.navigate(Route.songView(it, id)) },
                 onAddSong = { nav.navigate(Route.songNew(id)) },
                 onEditSong = { nav.navigate(Route.songEdit(it)) },
                 onBack = { nav.popBackStack() }
@@ -205,15 +223,28 @@ fun NavGraph(nav: NavHostController) {
         }
         composable(
             Route.SongView,
-            arguments = listOf(navArgument("id") { type = NavType.LongType })
+            arguments = listOf(
+                navArgument("id") { type = NavType.LongType },
+                navArgument("pl") { type = NavType.LongType; defaultValue = 0L }
+            )
         ) { entry ->
             val id = entry.arguments?.getLong("id") ?: return@composable
+            val pl = entry.arguments?.getLong("pl") ?: 0L
             SongViewScreen(
                 songId = id,
                 onEdit = { nav.navigate(Route.songEdit(id)) },
                 onEditVersion = { nav.navigate(Route.versionEdit(it)) },
-                onBack = { nav.popBackStack() }
+                onPractice = { nav.navigate(Route.songPractice(id)) },
+                onBack = { nav.popBackStack() },
+                playlistId = pl
             )
+        }
+        composable(
+            Route.SongPractice,
+            arguments = listOf(navArgument("id") { type = NavType.LongType })
+        ) { entry ->
+            val id = entry.arguments?.getLong("id") ?: return@composable
+            SongPracticeScreen(songId = id, onBack = { nav.popBackStack() })
         }
         composable(
             Route.VersionEdit,

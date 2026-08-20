@@ -51,6 +51,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.guitarchords.app.R
 import com.guitarchords.app.tuner.TunerEngine
+import com.guitarchords.app.ui.theme.VivaceMono
 import com.guitarchords.app.ui.theme.extendedColors
 import kotlin.math.abs
 import kotlin.math.ln
@@ -172,7 +173,7 @@ private fun TunerContent(freq: Float, level: Float) {
         )
         Text(
             if (active) "%.1f Hz".format(freq) else stringResource(R.string.play_a_string),
-            style = MaterialTheme.typography.titleMedium
+            style = MaterialTheme.typography.titleMedium.copy(fontFamily = VivaceMono)
         )
 
         Needle(
@@ -185,7 +186,7 @@ private fun TunerContent(freq: Float, level: Float) {
 
         Text(
             if (active) "${if (cents >= 0) "+" else ""}${cents.roundToInt()} cents" else " ",
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.titleMedium.copy(fontFamily = VivaceMono),
             color = when {
                 !active -> MaterialTheme.colorScheme.onSurfaceVariant
                 inTune -> MaterialTheme.extendedColors.success

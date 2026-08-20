@@ -29,3 +29,17 @@ fun List<Song>.applySort(sort: SongSort): List<Song> = when (sort) {
     SongSort.CREATED -> sortedByDescending { it.createdAt }
     SongSort.UPDATED -> sortedByDescending { it.updatedAt }
 }
+
+/**
+ * Filtra por una consulta de texto (título/artista/género), sin distinguir
+ * mayúsculas. Una consulta vacía devuelve la lista intacta.
+ */
+fun List<Song>.filterByQuery(query: String): List<Song> {
+    val q = query.trim()
+    if (q.isEmpty()) return this
+    return filter {
+        it.title.contains(q, ignoreCase = true) ||
+            it.artist.contains(q, ignoreCase = true) ||
+            it.genre.contains(q, ignoreCase = true)
+    }
+}

@@ -10,6 +10,9 @@ import com.guitarchords.app.data.Repository
 import com.guitarchords.app.sync.ChordSyncManager
 import com.guitarchords.app.sync.SyncPrefs
 import com.guitarchords.app.training.TrainingRepository
+import com.guitarchords.app.ui.theme.ThemeController
+import com.guitarchords.app.update.UpdateController
+import com.guitarchords.app.update.UpdateManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -25,13 +28,24 @@ class GuitarChordsApp : Application() {
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+    private val NINETY_DAYS_MILLIS = 90L * 24 * 60 * 60 * 1000
+
     override fun onCreate() {
         super.onCreate()
         val db = AppDatabase.get(this)
-        repo = Repository(db.playlistDao(), db.songDao(), db.songVersionDao())
+        repo = Repository(db, db.playlistDao(), db.songDao(), db.songVersionDao())
         trainingRepo = TrainingRepository(db.trainingDao())
         ChordDb.init(this)
         CustomChords.init(db.customChordDao())
+        ThemeController.init(this)
+
+        // Papelera: purga las partituras que llevan más de 90 días borradas.
+        appScope.launch { runCatching { repo.purgeExpiredTrash(NINETY_DAYS_MILLIS) } }
+
+        // Borra cualquier APK de actualización que quedara descargado y
+        // comprueba en segundo plano si hay una versión nueva (1 vez al día).
+        UpdateManager.cleanup(this)
+        appScope.launch { UpdateController.checkSilently(this@GuitarChordsApp) }
 
         // Sincronización automática de acordes personalizados: intento inicial,
         // cambios locales (debounce sobre revision) y reconexión de red.

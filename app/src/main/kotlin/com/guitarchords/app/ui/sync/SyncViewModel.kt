@@ -6,7 +6,10 @@ import androidx.lifecycle.viewModelScope
 import com.guitarchords.app.GuitarChordsApp
 import com.guitarchords.app.R
 import com.guitarchords.app.data.AppDatabase
+import com.guitarchords.app.sync.AccountSyncManager
 import com.guitarchords.app.sync.PendingUpload
+import com.guitarchords.app.sync.UnauthorizedException
+import com.guitarchords.app.sync.VivaceClient
 import com.guitarchords.app.sync.R2Client
 import com.guitarchords.app.sync.SyncConflict
 import com.guitarchords.app.sync.SyncManager
@@ -29,12 +32,15 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
 
     private val repo = (app as GuitarChordsApp).repo
     private val prefs = SyncPrefs(app)
-    private val manager = SyncManager(repo)
+    private val manager = AccountSyncManager(repo)
     private val chordSync = (app as GuitarChordsApp).chordSync
     private val customChordDao = AppDatabase.get(app).customChordDao()
 
     val initialUrl: String get() = prefs.baseUrl
-    val initialToken: String get() = prefs.token
+
+    /** Sesión activa (email) o cadena vacía si no se ha iniciado. */
+    private val _account = MutableStateFlow(prefs.userEmail)
+    val account = _account.asStateFlow()
 
     private val _state = MutableStateFlow<SyncUiState>(SyncUiState.Idle)
     val state = _state.asStateFlow()
@@ -66,13 +72,11 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
     /** Sincroniza ahora los acordes (reutiliza la URL y token del formulario). */
-    fun syncChords(url: String, token: String) {
-        if (url.isBlank() || token.isBlank()) {
-            _chordMsg.value = getApplication<Application>().getString(R.string.sync_missing_fields)
+    fun syncChords() {
+        if (!prefs.isLoggedIn) {
+            _chordMsg.value = getApplication<Application>().getString(R.string.sync_login_required)
             return
         }
-        prefs.baseUrl = url.trim()
-        prefs.token = token.trim()
         _chordSyncing.value = true
         _chordMsg.value = null
         viewModelScope.launch {
@@ -89,25 +93,68 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun sync(url: String, token: String) {
-        if (url.isBlank() || token.isBlank()) {
+    /** Cliente con la sesión guardada. */
+    private fun client() = VivaceClient(prefs.baseUrl, prefs.authToken)
+
+    /** Inicia sesión (o crea la cuenta) y deja lista la sincronización. */
+    fun signIn(url: String, email: String, password: String, name: String, register: Boolean) {
+        if (url.isBlank() || email.isBlank() || password.isBlank()) {
             _state.value = SyncUiState.Error(
                 getApplication<Application>().getString(R.string.sync_missing_fields)
             )
             return
         }
         prefs.baseUrl = url.trim()
-        prefs.token = token.trim()
         _state.value = SyncUiState.Running
         viewModelScope.launch {
             try {
-                val client = R2Client(prefs.baseUrl, prefs.token)
-                val result = manager.sync(client)
+                val anon = VivaceClient(prefs.baseUrl)
+                val auth = if (register) anon.register(email.trim(), password, name.trim())
+                           else anon.login(email.trim(), password)
+                prefs.authToken = auth.token
+                prefs.userEmail = auth.user.email
+                prefs.userName = auth.user.name
+                _account.value = auth.user.email
+                _state.value = SyncUiState.Idle
+                sync()
+            } catch (e: Exception) {
+                _state.value = SyncUiState.Error(
+                    e.message ?: getApplication<Application>().getString(R.string.sync_error_generic)
+                )
+            }
+        }
+    }
+
+    /** Cierra la sesión; las partituras siguen en el dispositivo. */
+    fun signOut() {
+        prefs.clearSession()
+        _account.value = ""
+        _conflicts.value = emptyList()
+        _pendingPush.value = emptyList()
+        _state.value = SyncUiState.Idle
+    }
+
+    fun sync() {
+        if (!prefs.isLoggedIn) {
+            _state.value = SyncUiState.Error(
+                getApplication<Application>().getString(R.string.sync_login_required)
+            )
+            return
+        }
+        _state.value = SyncUiState.Running
+        viewModelScope.launch {
+            try {
+                val result = manager.sync(client())
                 _conflicts.value = result.conflicts
                 _pendingPush.value = result.pendingUploads
                 prefs.lastSync = System.currentTimeMillis()
                 _lastSync.value = prefs.lastSync
                 _state.value = SyncUiState.Success(result)
+            } catch (e: UnauthorizedException) {
+                signOut()
+                _state.value = SyncUiState.Error(
+                    getApplication<Application>().getString(R.string.sync_session_expired)
+                )
             } catch (e: Exception) {
                 _state.value = SyncUiState.Error(
                     e.message ?: getApplication<Application>().getString(R.string.sync_error_generic)
@@ -124,8 +171,7 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
         _state.value = SyncUiState.Running
         viewModelScope.launch {
             try {
-                val client = R2Client(prefs.baseUrl, prefs.token)
-                val uploaded = manager.push(client, ids)
+                val uploaded = manager.push(client(), ids)
                 _pendingPush.value = emptyList()
                 prefs.lastSync = System.currentTimeMillis()
                 _lastSync.value = prefs.lastSync
@@ -151,8 +197,7 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
     fun resolveOne(conflict: SyncConflict, keepLocal: Boolean) {
         viewModelScope.launch {
             try {
-                val client = R2Client(prefs.baseUrl, prefs.token)
-                manager.resolveConflict(client, conflict, keepLocal)
+                manager.resolveConflict(client(), conflict, keepLocal)
                 _conflicts.value = _conflicts.value - conflict
                 if (_conflicts.value.isEmpty()) {
                     prefs.lastSync = System.currentTimeMillis()

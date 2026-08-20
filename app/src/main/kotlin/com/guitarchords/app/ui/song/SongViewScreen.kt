@@ -14,21 +14,28 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.NavigateBefore
+import androidx.compose.material.icons.automirrored.filled.NavigateNext
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -37,12 +44,15 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -54,6 +64,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,7 +75,9 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -80,9 +93,11 @@ import com.guitarchords.app.chords.ChordTransposer
 import com.guitarchords.app.chords.ContentBlock
 import com.guitarchords.app.chords.RenderedLine
 import com.guitarchords.app.data.SongVersion
+import com.guitarchords.app.metronome.MetronomeEngine
 import com.guitarchords.app.print.PrintAdapter
 import com.guitarchords.app.sync.SongTextFormat
 import com.guitarchords.app.ui.components.ChordModal
+import com.guitarchords.app.ui.components.EmptyState
 import com.guitarchords.app.ui.playlists.TextDialog
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -94,12 +109,21 @@ fun SongViewScreen(
     songId: Long,
     onEdit: () -> Unit,
     onEditVersion: (Long) -> Unit,
+    onPractice: () -> Unit,
     onBack: () -> Unit,
+    playlistId: Long = 0L,
     vm: SongViewModel = viewModel()
 ) {
     LaunchedEffect(songId) { vm.load(songId) }
+    LaunchedEffect(playlistId) { vm.loadSiblings(playlistId) }
     val song by vm.song.collectAsStateWithLifecycle()
+    val notFound by vm.notFound.collectAsStateWithLifecycle()
     val versions by vm.versions.collectAsStateWithLifecycle()
+    // Modo concierto: encadenar las canciones de la carpeta sin volver al listado.
+    val siblings by vm.siblings.collectAsStateWithLifecycle()
+    val songIndex = siblings.indexOf(song?.id ?: -1L)
+    val hasPrev = songIndex > 0
+    val hasNext = songIndex >= 0 && songIndex < siblings.lastIndex
 
     var fontSize by remember { mutableIntStateOf(18) }
     var scrolling by remember { mutableStateOf(false) }
@@ -115,6 +139,18 @@ fun SongViewScreen(
     val view = LocalView.current
     val haptics = LocalHapticFeedback.current
     val shareTitle = stringResource(R.string.share_song)
+
+    // Metrónomo accesible desde el visor (lo más útil al tocar la canción).
+    // El motor vive mientras se ve la canción; el panel se abre en una hoja.
+    val metroEngine = remember { MetronomeEngine() }
+    val metroScope = rememberCoroutineScope()
+    var showMetronome by remember { mutableStateOf(false) }
+    var metroBpm by remember { mutableIntStateOf(100) }
+    var metroBeats by remember { mutableIntStateOf(4) }
+    val metroRunning by metroEngine.running.collectAsStateWithLifecycle()
+    val metroBeat by metroEngine.beat.collectAsStateWithLifecycle()
+    val metroSheet = rememberModalBottomSheetState()
+    DisposableEffect(Unit) { onDispose { metroEngine.release() } }
 
     // Modo escenario: con el auto-scroll activo la pantalla no se apaga.
     DisposableEffect(scrolling) {
@@ -135,6 +171,15 @@ fun SongViewScreen(
         if (selectedVersionId != null && versions.none { it.id == selectedVersionId }) {
             selectedVersionId = null
         }
+    }
+
+    // Al saltar a otra canción del concierto: volver arriba, parar el
+    // auto-scroll y quitar la versión seleccionada (era de la canción anterior).
+    // El tamaño de letra, la velocidad y el tono se conservan a propósito.
+    LaunchedEffect(song?.id) {
+        selectedVersionId = null
+        scrolling = false
+        scrollState.scrollTo(0)
     }
 
     LaunchedEffect(scrolling, speed) {
@@ -169,6 +214,28 @@ fun SongViewScreen(
                     IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
                 },
                 actions = {
+                    IconButton(onClick = onPractice) {
+                        Icon(
+                            Icons.Default.FitnessCenter,
+                            contentDescription = stringResource(R.string.practice_changes_title)
+                        )
+                    }
+                    IconButton(onClick = { showMetronome = true }) {
+                        Icon(
+                            Icons.Default.Timer,
+                            contentDescription = stringResource(R.string.metronome_title),
+                            tint = if (metroRunning) MaterialTheme.colorScheme.primary
+                                   else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    if (song?.locked == true) {
+                        Icon(
+                            Icons.Default.Lock,
+                            contentDescription = stringResource(R.string.locked_song_banner),
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        )
+                    }
                     if (activeUrl.isNotBlank()) {
                         TextButton(onClick = {
                             val raw = activeUrl.trim()
@@ -234,7 +301,11 @@ fun SongViewScreen(
                     semitones = it.coerceIn(-11, 11)
                 },
                 useFlats = useFlats,
-                onUseFlats = { useFlats = it }
+                onUseFlats = { useFlats = it },
+                hasPrev = hasPrev,
+                hasNext = hasNext,
+                onPrev = { vm.step(-1) },
+                onNext = { vm.step(1) }
             )
         }
     ) { pv ->
@@ -312,7 +383,19 @@ fun SongViewScreen(
                 Spacer(Modifier.height(80.dp))
             }
         } ?: Box(Modifier.fillMaxSize().padding(pv), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
+            // Sin canción: puede estar cargando o no existir (id inválido o
+            // borrada definitivamente desde la papelera).
+            if (notFound) {
+                EmptyState(
+                    icon = Icons.Default.SearchOff,
+                    title = stringResource(R.string.song_not_found_title),
+                    subtitle = stringResource(R.string.song_not_found_subtitle),
+                    actionLabel = stringResource(R.string.back),
+                    onAction = onBack
+                )
+            } else {
+                CircularProgressIndicator()
+            }
         }
     }
 
@@ -333,6 +416,93 @@ fun SongViewScreen(
                 }
             }
         )
+    }
+
+    if (showMetronome) {
+        ModalBottomSheet(
+            onDismissRequest = { showMetronome = false },
+            sheetState = metroSheet
+        ) {
+            MetronomePanel(
+                bpm = metroBpm,
+                onBpm = { metroBpm = it; metroEngine.bpm = it },
+                beatsPerBar = metroBeats,
+                onBeats = { metroBeats = it; metroEngine.beatsPerBar = it },
+                running = metroRunning,
+                beat = metroBeat,
+                onToggle = {
+                    if (metroRunning) {
+                        metroEngine.stop()
+                    } else {
+                        metroEngine.bpm = metroBpm
+                        metroEngine.beatsPerBar = metroBeats
+                        metroEngine.start(metroScope)
+                    }
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun MetronomePanel(
+    bpm: Int,
+    onBpm: (Int) -> Unit,
+    beatsPerBar: Int,
+    onBeats: (Int) -> Unit,
+    running: Boolean,
+    beat: Int,
+    onToggle: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 24.dp, end = 24.dp, bottom = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(stringResource(R.string.metronome_title), style = MaterialTheme.typography.titleMedium)
+        Text(
+            stringResource(R.string.bpm, bpm),
+            style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold)
+        )
+        Slider(
+            value = bpm.toFloat(),
+            onValueChange = { onBpm(it.toInt()) },
+            valueRange = 30f..240f,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            for (i in 1..beatsPerBar) {
+                val active = running && beat == i
+                val c = when {
+                    active && i == 1 -> MaterialTheme.colorScheme.primary
+                    active -> MaterialTheme.colorScheme.tertiary
+                    else -> MaterialTheme.colorScheme.surfaceVariant
+                }
+                Box(
+                    modifier = Modifier
+                        .size(if (i == 1) 22.dp else 18.dp)
+                        .background(c, CircleShape)
+                )
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(2, 3, 4, 6).forEach { n ->
+                FilterChip(
+                    selected = beatsPerBar == n,
+                    onClick = { onBeats(n) },
+                    label = { Text("$n") }
+                )
+            }
+        }
+        FloatingActionButton(onClick = onToggle) {
+            Icon(
+                if (running) Icons.Default.Pause else Icons.Default.PlayArrow,
+                if (running) stringResource(R.string.stop) else stringResource(R.string.start),
+                modifier = Modifier.size(32.dp)
+            )
+        }
     }
 }
 
@@ -393,14 +563,9 @@ private fun SongLine(
         fontSize = fontSize.sp
     )
     if (line.chords.isNotEmpty()) {
-        val chordAnnotated = buildChordLine(line, chordColor)
-        ClickableText(
-            text = chordAnnotated,
-            style = baseStyle.copy(fontWeight = FontWeight.Bold, color = chordColor),
-            onClick = { offset ->
-                chordAnnotated.getStringAnnotations("chord", offset, offset)
-                    .firstOrNull()?.let { onChordClick(it.item) }
-            }
+        Text(
+            text = buildChordLine(line, chordColor, onChordClick),
+            style = baseStyle.copy(fontWeight = FontWeight.Bold, color = chordColor)
         )
     }
     if (line.lyric.isNotBlank()) {
@@ -437,16 +602,29 @@ private fun TabBlock(rows: List<String>, fontSize: Int) {
     }
 }
 
-private fun buildChordLine(line: RenderedLine, color: Color): AnnotatedString = buildAnnotatedString {
+/**
+ * Línea de acordes: cada acorde es un enlace pulsable que abre su diagrama,
+ * manteniendo la columna exacta sobre la letra.
+ */
+private fun buildChordLine(
+    line: RenderedLine,
+    color: Color,
+    onChordClick: (String) -> Unit
+): AnnotatedString = buildAnnotatedString {
     var col = 0
     for (ct in line.chords) {
         val pad = (ct.position - col).coerceAtLeast(if (col == 0) 0 else 1)
         append(" ".repeat(pad))
-        val start = length
-        withStyle(SpanStyle(color = color, fontWeight = FontWeight.Bold)) {
-            append(ct.chord)
+        withLink(
+            LinkAnnotation.Clickable(
+                tag = ct.chord,
+                linkInteractionListener = { onChordClick(ct.chord) }
+            )
+        ) {
+            withStyle(SpanStyle(color = color, fontWeight = FontWeight.Bold)) {
+                append(ct.chord)
+            }
         }
-        addStringAnnotation("chord", ct.chord, start, start + ct.chord.length)
         col = ct.position + ct.chord.length
     }
 }
@@ -473,7 +651,11 @@ private fun BottomControls(
     semitones: Int,
     onSemitones: (Int) -> Unit,
     useFlats: Boolean,
-    onUseFlats: (Boolean) -> Unit
+    onUseFlats: (Boolean) -> Unit,
+    hasPrev: Boolean = false,
+    hasNext: Boolean = false,
+    onPrev: () -> Unit = {},
+    onNext: () -> Unit = {}
 ) {
     Surface(tonalElevation = 2.dp) {
         Column(
@@ -485,11 +667,28 @@ private fun BottomControls(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
+                // Modo concierto: saltar entre las canciones de la carpeta.
+                if (hasPrev || hasNext) {
+                    IconButton(onClick = onPrev, enabled = hasPrev) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.NavigateBefore,
+                            stringResource(R.string.previous_song)
+                        )
+                    }
+                }
                 IconButton(onClick = onToggleScroll) {
                     Icon(
                         if (scrolling) Icons.Default.Pause else Icons.Default.PlayArrow,
                         if (scrolling) stringResource(R.string.pause) else stringResource(R.string.play)
                     )
+                }
+                if (hasPrev || hasNext) {
+                    IconButton(onClick = onNext, enabled = hasNext) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.NavigateNext,
+                            stringResource(R.string.next_song)
+                        )
+                    }
                 }
                 if (!expanded) {
                     Text("${speed.toInt()} px/s", style = MaterialTheme.typography.bodySmall)

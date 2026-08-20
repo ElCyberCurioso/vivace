@@ -1,6 +1,7 @@
 package com.guitarchords.app.chords
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,13 +20,20 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.roundToInt
 
 private val NOTE_NAMES = arrayOf("C","C#","D","D#","E","F","F#","G","G#","A","A#","B")
 // Open-string note index (low E .. high E)
 private val OPEN_NOTES = intArrayOf(4, 9, 2, 7, 11, 4)
 
+/**
+ * Diagrama de acorde. Con [onStringTap] cada cuerda se vuelve pulsable
+ * (índice 0 = Mi grave), para poder escucharlas una a una; sin él el diagrama
+ * es puramente informativo, como en los ejercicios de entrenamiento.
+ */
 @Composable
 fun ChordDiagram(
     shape: ChordShape,
@@ -33,7 +41,8 @@ fun ChordDiagram(
     modifier: Modifier = Modifier,
     color: Color = LocalContentColor.current,
     showNotes: Boolean = true,
-    showFingers: Boolean = false
+    showFingers: Boolean = false,
+    onStringTap: ((stringIdx: Int) -> Unit)? = null
 ) {
     Column(
         modifier = modifier.wrapContentSize(),
@@ -47,7 +56,24 @@ fun ChordDiagram(
             )
             Spacer(Modifier.height(4.dp))
         }
-        Canvas(modifier = Modifier.size(width = 120.dp, height = 140.dp)) {
+        Canvas(
+            modifier = Modifier
+                .size(width = 120.dp, height = 140.dp)
+                .then(
+                    if (onStringTap == null) Modifier
+                    else Modifier.pointerInput(shape) {
+                        detectTapGestures { offset ->
+                            // Reparto horizontal en 6 columnas: la más a la
+                            // izquierda es la 6.ª cuerda (Mi grave).
+                            val sideMargin = size.width * 0.12f
+                            val colStep = (size.width - 2 * sideMargin) / 5f
+                            val idx = ((offset.x - sideMargin) / colStep)
+                                .roundToInt().coerceIn(0, 5)
+                            onStringTap(idx)
+                        }
+                    }
+                )
+        ) {
             drawDiagram(shape, color, showNotes, showFingers)
         }
     }

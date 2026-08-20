@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.guitarchords.app.R
 import com.guitarchords.app.metronome.MetronomeEngine
+import com.guitarchords.app.ui.theme.VivaceMono
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,7 +78,11 @@ fun MetronomeScreen(onBack: () -> Unit) {
         ) {
             Text(
                 stringResource(R.string.bpm, bpm),
-                style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.Bold)
+                // Cifras en la monoespaciada de la marca: el ancho no baila al cambiar de BPM.
+                style = MaterialTheme.typography.displayMedium.copy(
+                    fontFamily = VivaceMono,
+                    fontWeight = FontWeight.SemiBold
+                )
             )
 
             Slider(

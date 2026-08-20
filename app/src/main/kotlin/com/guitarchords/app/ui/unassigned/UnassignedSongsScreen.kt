@@ -1,18 +1,12 @@
 package com.guitarchords.app.ui.unassigned
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -21,20 +15,19 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.automirrored.filled.DriveFileMove
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -45,20 +38,24 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.guitarchords.app.R
-import com.guitarchords.app.data.Playlist
 import com.guitarchords.app.data.Song
+import com.guitarchords.app.data.filterByQuery
 import com.guitarchords.app.ui.components.BulkDeleteDialog
 import com.guitarchords.app.ui.components.BulkMoveDialog
 import com.guitarchords.app.ui.components.EmptyState
 import com.guitarchords.app.ui.components.SelectionTopBar
+import com.guitarchords.app.ui.components.MoveSongDialog
+import com.guitarchords.app.ui.components.SongListItem
+import com.guitarchords.app.ui.components.SongSearchField
 import com.guitarchords.app.ui.components.SongSortMenu
 import com.guitarchords.app.ui.components.rememberSongSelection
+import com.guitarchords.app.ui.components.rememberTrashedMessage
+import com.guitarchords.app.ui.components.rememberUndoSnackbar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,16 +74,27 @@ fun UnassignedSongsScreen(
     val selection = rememberSongSelection()
     var bulkMoving by remember { mutableStateOf(false) }
     var bulkDeleting by remember { mutableStateOf(false) }
+    var searchOpen by remember { mutableStateOf(false) }
+    var query by remember { mutableStateOf("") }
+
+    val visibleSongs = remember(songs, query) { songs.filterByQuery(query) }
+
+    val snackbarHost = remember { SnackbarHostState() }
+    val showUndo = rememberUndoSnackbar(snackbarHost)
+    val trashedMessage = rememberTrashedMessage()
+    val undoLabel = stringResource(R.string.undo)
 
     BackHandler(enabled = selection.active) { selection.clear() }
+    BackHandler(enabled = !selection.active && searchOpen) { searchOpen = false; query = "" }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHost) },
         topBar = {
             if (selection.active) {
                 SelectionTopBar(
                     count = selection.count,
                     onClose = { selection.clear() },
-                    onSelectAll = { selection.setAll(songs.map { it.id }) },
+                    onSelectAll = { selection.setAll(visibleSongs.map { it.id }) },
                     onFavorite = { vm.favoriteSelected(selection.selected, true); selection.clear() },
                     onMove = { bulkMoving = true },
                     onDelete = { bulkDeleting = true }
@@ -98,6 +106,10 @@ fun UnassignedSongsScreen(
                         IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
                     },
                     actions = {
+                        IconButton(onClick = {
+                            searchOpen = !searchOpen
+                            if (!searchOpen) query = ""
+                        }) { Icon(Icons.Default.Search, stringResource(R.string.search_songs)) }
                         SongSortMenu(current = sort, onPick = { vm.setSort(it) })
                     }
                 )
@@ -109,32 +121,48 @@ fun UnassignedSongsScreen(
             }
         }
     ) { pv ->
-        if (songs.isEmpty()) {
-            EmptyState(
-                icon = Icons.Default.MusicNote,
-                title = stringResource(R.string.empty_unassigned_title),
-                subtitle = stringResource(R.string.empty_unassigned_subtitle),
-                modifier = Modifier.padding(pv)
-            )
-        } else {
-            LazyColumn(
-                contentPadding = PaddingValues(12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxSize().padding(pv)
-            ) {
-                items(songs, key = { it.id }) { s ->
-                    SongRow(
-                        song = s,
-                        selectionActive = selection.active,
-                        selected = selection.isSelected(s.id),
-                        onClick = { onSongClick(s.id) },
-                        onToggle = { selection.toggle(s.id) },
-                        onLongPress = { selection.start(s.id) },
-                        onFav = { vm.toggleFavorite(s) },
-                        onEdit = { onEditSong(s.id) },
-                        onDelete = { deleting = s },
-                        onMove = { moving = s }
+        Column(modifier = Modifier.fillMaxSize().padding(pv)) {
+            if (searchOpen) {
+                SongSearchField(
+                    query = query,
+                    onQuery = { query = it },
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                )
+            }
+            if (songs.isEmpty()) {
+                EmptyState(
+                    icon = Icons.Default.MusicNote,
+                    title = stringResource(R.string.empty_unassigned_title),
+                    subtitle = stringResource(R.string.empty_unassigned_subtitle),
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else if (visibleSongs.isEmpty()) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        stringResource(R.string.no_results),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+            } else {
+                LazyColumn(
+                    contentPadding = PaddingValues(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(visibleSongs, key = { it.id }) { s ->
+                        SongRow(
+                            song = s,
+                            selectionActive = selection.active,
+                            selected = selection.isSelected(s.id),
+                            onClick = { onSongClick(s.id) },
+                            onToggle = { selection.toggle(s.id) },
+                            onLongPress = { selection.start(s.id) },
+                            onFav = { vm.toggleFavorite(s) },
+                            onEdit = { onEditSong(s.id) },
+                            onDelete = { deleting = s },
+                            onMove = { moving = s }
+                        )
+                    }
                 }
             }
         }
@@ -149,6 +177,7 @@ fun UnassignedSongsScreen(
                 TextButton(onClick = {
                     vm.deleteSong(s.id)
                     deleting = null
+                    showUndo(trashedMessage(1), undoLabel) { vm.undoTrash(listOf(s.id)) }
                 }) { Text(stringResource(R.string.delete)) }
             },
             dismissButton = {
@@ -158,12 +187,13 @@ fun UnassignedSongsScreen(
     }
 
     moving?.let { s ->
-        AssignPlaylistDialog(
+        MoveSongDialog(
             songTitle = s.title,
             targets = playlists,
+            includeUnassigned = false,   // ya está en "Sin lista"
             onDismiss = { moving = null },
             onPick = { target ->
-                vm.moveSong(s.id, target.id)
+                if (target != null) vm.moveSong(s.id, target)
                 moving = null
             }
         )
@@ -186,51 +216,15 @@ fun UnassignedSongsScreen(
         BulkDeleteDialog(
             count = selection.count,
             onConfirm = {
+                val ids = selection.selected.toList()
                 vm.deleteSelected(selection.selected)
                 bulkDeleting = false
                 selection.clear()
+                showUndo(trashedMessage(ids.size), undoLabel) { vm.undoTrash(ids) }
             },
             onDismiss = { bulkDeleting = false }
         )
     }
-}
-
-@Composable
-private fun AssignPlaylistDialog(
-    songTitle: String,
-    targets: List<Playlist>,
-    onDismiss: () -> Unit,
-    onPick: (Playlist) -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.move_song_title, songTitle)) },
-        text = {
-            if (targets.isEmpty()) {
-                Text(stringResource(R.string.no_lists_yet))
-            } else {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    items(targets, key = { it.id }) { p ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onPick(p) }
-                                .padding(vertical = 10.dp, horizontal = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Default.LibraryMusic, null)
-                            Spacer(Modifier.size(12.dp))
-                            Text(p.name, style = MaterialTheme.typography.bodyLarge)
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.close)) } }
-    )
 }
 
 @Composable
@@ -246,50 +240,25 @@ private fun SongRow(
     onDelete: () -> Unit,
     onMove: () -> Unit
 ) {
-    Card(
-        colors = if (selected)
-            CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
-        else CardDefaults.cardColors(),
-        modifier = Modifier
-            .fillMaxWidth()
-            .pointerInput(selectionActive) {
-                detectTapGestures(
-                    onTap = { if (selectionActive) onToggle() else onClick() },
-                    onLongPress = { onLongPress() }
-                )
+    SongListItem(
+        song = song,
+        selectionActive = selectionActive,
+        selected = selected,
+        onClick = onClick,
+        onToggle = onToggle,
+        onLongPress = onLongPress,
+        leading = {
+            IconButton(onClick = onFav) {
+                if (song.favorite)
+                    Icon(Icons.Default.Star, stringResource(R.string.remove_favorite), tint = MaterialTheme.colorScheme.primary)
+                else
+                    Icon(Icons.Outlined.StarOutline, stringResource(R.string.favorite))
             }
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().padding(12.dp)
-        ) {
-            if (selectionActive) {
-                Checkbox(checked = selected, onCheckedChange = { onToggle() })
-            } else {
-                IconButton(onClick = onFav) {
-                    if (song.favorite)
-                        Icon(Icons.Default.Star, stringResource(R.string.remove_favorite), tint = MaterialTheme.colorScheme.primary)
-                    else
-                        Icon(Icons.Outlined.StarOutline, stringResource(R.string.favorite))
-                }
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(song.title, style = MaterialTheme.typography.titleMedium)
-                val sub = buildString {
-                    if (song.artist.isNotBlank()) append(song.artist)
-                    if (song.genre.isNotBlank()) {
-                        if (isNotEmpty()) append(" · ")
-                        append(song.genre)
-                    }
-                }
-                if (sub.isNotEmpty())
-                    Text(sub, style = MaterialTheme.typography.bodySmall)
-            }
-            if (!selectionActive) {
-                IconButton(onClick = onMove) { Icon(Icons.AutoMirrored.Filled.DriveFileMove, stringResource(R.string.assign_to_playlist)) }
-                IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, stringResource(R.string.edit)) }
-                IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, stringResource(R.string.delete)) }
-            }
+        },
+        trailing = {
+            IconButton(onClick = onMove) { Icon(Icons.AutoMirrored.Filled.DriveFileMove, stringResource(R.string.assign_to_playlist)) }
+            IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, stringResource(R.string.edit)) }
+            IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, stringResource(R.string.delete)) }
         }
-    }
+    )
 }

@@ -89,6 +89,32 @@ data class TheoryQuizSpec(
     val qualities: List<String> = emptyList()
 ) : ExerciseSpec
 
+/** Qué se pide reconocer de oído. */
+enum class EarMode {
+    /** Dos notas seguidas: ¿qué intervalo hay entre ellas? */
+    INTERVAL,
+    /** Un acorde sonando: ¿mayor o menor (u otra calidad)? */
+    CHORD_QUALITY,
+    /** Dos notas seguidas: ¿la segunda sube o baja? */
+    DIRECTION
+}
+
+/** Reconocimiento auditivo: la app toca y el usuario identifica. */
+data class EarTrainingSpec(
+    override val id: String,
+    override val area: TrainingArea,
+    override val level: Int,
+    override val xpBase: Int,
+    override val titleRes: Int,
+    override val titleArgs: List<String> = emptyList(),
+    override val descRes: Int,
+    val mode: EarMode,
+    /** Opciones entre las que se pregunta (semitonos, o calidades de acorde). */
+    val choices: List<Int>,
+    val questionCount: Int = 8,
+    val passPct: Int = 70
+) : ExerciseSpec
+
 /** Golpes sobre el patrón del compás contra metrónomo. */
 data class RhythmTapSpec(
     override val id: String,

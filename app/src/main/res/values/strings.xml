@@ -40,7 +40,7 @@
         <item quantity="other">%d canciones</item>
     </plurals>
     <string name="delete_playlist_title">Borrar lista</string>
-    <string name="delete_playlist_msg">¿Borrar «%1$s» y todas sus canciones?</string>
+    <string name="delete_playlist_msg">¿Borrar la lista «%1$s»? Sus partituras no se eliminan: pasan a «Sin lista».</string>
     <string name="share_playlist">Compartir lista</string>
 
     <!-- Detalle de lista / filas de canción -->
@@ -82,9 +82,29 @@
     <string name="no_lists_yet">No hay listas. Crea una lista primero.</string>
     <string name="bulk_delete_title">Borrar canciones</string>
     <plurals name="bulk_delete_msg">
-        <item quantity="one">¿Borrar %d canción? Esta acción no se puede deshacer.</item>
-        <item quantity="other">¿Borrar %d canciones? Esta acción no se puede deshacer.</item>
+        <item quantity="one">¿Mover %d canción a la papelera? Podrás restaurarla durante 90 días.</item>
+        <item quantity="other">¿Mover %d canciones a la papelera? Podrás restaurarlas durante 90 días.</item>
     </plurals>
+
+    <!-- Avisos con deshacer -->
+    <plurals name="snackbar_trashed">
+        <item quantity="one">%d partitura movida a la papelera</item>
+        <item quantity="other">%d partituras movidas a la papelera</item>
+    </plurals>
+    <string name="snackbar_removed_from_folder">«%1$s» sale de la carpeta</string>
+    <string name="undo">Deshacer</string>
+    <string name="listen_chord">Escuchar acorde</string>
+    <string name="listen_strings_hint">Toca una cuerda del diagrama para oírla suelta</string>
+    <string name="previous_song">Canción anterior</string>
+    <string name="next_song">Canción siguiente</string>
+    <string name="practice_changes_title">Practicar cambios</string>
+    <string name="practice_pair_of">Cambio %1$d de %2$d</string>
+    <string name="practice_next_pair">Siguiente</string>
+    <string name="practice_hint">Toca los dos acordes alternándolos al pulso. Sube el tempo cuando te salga limpio.</string>
+    <string name="practice_no_chords_title">Sin acordes que practicar</string>
+    <string name="practice_no_chords_subtitle">Esta partitura necesita al menos dos acordes distintos entre llaves.</string>
+    <string name="song_not_found_title">Partitura no disponible</string>
+    <string name="song_not_found_subtitle">Puede que se haya eliminado definitivamente desde la papelera.</string>
 
     <!-- Visor de canción -->
     <string name="capo_fret">Capo en traste %1$d</string>
@@ -116,11 +136,33 @@
     <string name="capo_label">Capo:</string>
     <string name="no_capo">Sin capo</string>
     <string name="fret_n">Traste %1$d</string>
+    <string name="count_down">Restar uno</string>
+    <string name="count_up">Sumar uno</string>
     <string name="capo_down">Bajar capo</string>
     <string name="capo_up">Subir capo</string>
     <string name="lyrics_and_chords">Letra y acordes</string>
     <string name="syntax_hint">Usa {Nombre} para acordes — ej: {Am} Casa. Tablatura entre {tab}…{/tab}</string>
     <string name="write_here">Escribe aquí…</string>
+    <string name="locked_song_banner">Partitura bloqueada</string>
+    <string name="locked_dialog_title">Partitura bloqueada</string>
+    <string name="locked_dialog_msg">Esta partitura está bloqueada para evitar ediciones accidentales. ¿Editarla de todos modos?</string>
+    <string name="locked_dialog_edit">Editar igualmente</string>
+    <string name="badge_synced">Sincronizada con el servidor</string>
+    <string name="badge_local_only">Solo en local</string>
+    <string name="move_to_unassigned">Sacar de la carpeta</string>
+    <string name="home_trash">Papelera</string>
+    <string name="trash_title">Papelera</string>
+    <string name="trash_empty">Vaciar papelera</string>
+    <string name="trash_empty_title">Papelera vacía</string>
+    <string name="trash_empty_subtitle">Las partituras que borres aparecerán aquí 90 días antes de eliminarse.</string>
+    <string name="trash_retention_note">Las partituras se eliminan automáticamente a los 90 días.</string>
+    <string name="trash_days_left">Se elimina en %1$d días</string>
+    <string name="trash_restore">Restaurar</string>
+    <string name="delete_forever">Eliminar definitivamente</string>
+    <string name="trash_delete_title">¿Eliminar definitivamente?</string>
+    <string name="trash_delete_msg">«%1$s» se eliminará para siempre. Esta acción no se puede deshacer.</string>
+    <string name="trash_empty_title_confirm">¿Vaciar la papelera?</string>
+    <string name="trash_empty_msg">Se eliminarán para siempre %1$d partitura(s). Esta acción no se puede deshacer.</string>
     <string name="choose_playlist">Elige lista</string>
     <string name="untitled">Sin título</string>
     <string name="source_url_label">URL de la canción original</string>
@@ -180,11 +222,41 @@
 
     <!-- Ajustes / Sync -->
     <string name="settings_title">Configuraciones</string>
+    <string name="theme_title">Tema</string>
+    <string name="theme_system">Sistema</string>
+    <string name="theme_light">Claro</string>
+    <string name="theme_dark">Oscuro</string>
+    <string name="update_title">Buscar actualizaciones</string>
+    <string name="update_subtitle">Comprueba si hay una versión nueva y la instala.</string>
+    <string name="update_intro">Comprueba si hay una versión nueva de la aplicación.</string>
+    <string name="update_check">Buscar actualizaciones</string>
+    <string name="update_checking">Comprobando…</string>
+    <string name="update_current_version">Versión instalada: %1$s</string>
+    <string name="update_up_to_date">Ya tienes la última versión.</string>
+    <string name="update_available">Versión %1$s disponible</string>
+    <string name="update_download_install">Descargar e instalar</string>
+    <string name="update_downloading">Descargando… %1$d%%</string>
+    <string name="update_installing">Abriendo el instalador…</string>
+    <string name="update_needs_permission">Para instalar, permite las instalaciones de esta aplicación.</string>
+    <string name="update_open_settings">Abrir ajustes de permiso</string>
+    <string name="update_install_now">Instalar ahora</string>
+    <string name="update_error">Error: %1$s</string>
     <string name="sync_r2_title">Sincronización R2</string>
     <string name="sync_r2_subtitle">Conecta con tu bucket de Cloudflare R2 para descargar y subir canciones.</string>
     <string name="sync_intro">Conecta con el contenedor R2 de Cloudflare a través del Worker. Solo se descarga y sube el contenido nuevo o modificado.</string>
     <string name="sync_worker_url">URL del Worker</string>
     <string name="sync_token">Token de acceso</string>
+    <string name="account_email">Email</string>
+    <string name="account_password">Contraseña</string>
+    <string name="account_name">Nombre</string>
+    <string name="account_sign_in">Entrar</string>
+    <string name="account_create">Crear cuenta</string>
+    <string name="account_need_one">¿No tienes cuenta? Crear una</string>
+    <string name="account_have_one">Ya tengo cuenta</string>
+    <string name="account_sign_out">Salir</string>
+    <string name="account_signed_in_as">Sesión iniciada como %1$s</string>
+    <string name="sync_login_required">Inicia sesión para sincronizar</string>
+    <string name="sync_session_expired">La sesión ha caducado, vuelve a entrar</string>
     <string name="sync_now">Sincronizar ahora</string>
     <string name="syncing">Sincronizando…</string>
     <string name="last_sync">Última sincronización: %1$s</string>
@@ -197,8 +269,6 @@
     <string name="sync_conflict_error">Error resolviendo conflictos</string>
     <string name="conflicts_title">%1$d conflicto(s)</string>
     <string name="conflicts_msg">Estas canciones se han modificado tanto en el dispositivo como en el servidor. Decide en cada una qué versión conservar; las no resueltas quedan en espera hasta el próximo sync:</string>
-    <string name="keep_local">Mantener local</string>
-    <string name="use_server">Usar servidor</string>
     <string name="local_vs_server">local %1$s · servidor %2$s</string>
     <string name="conflict_local_short">Local</string>
     <string name="conflict_server_short">Servidor</string>
@@ -304,6 +374,39 @@
     <string name="tr_title_theory_sus_alt">Teoría: suspendidos y alterados</string>
     <string name="tr_title_theory_formulas3">Teoría: fórmulas avanzadas</string>
     <string name="tr_title_theory_master">Teoría: examen general</string>
+
+    <!-- Entrenamiento: oído -->
+    <string name="tr_desc_ear">Escucha y elige la respuesta. Puedes repetir el sonido las veces que quieras.</string>
+    <string name="tr_title_ear_direction">Oído: ¿sube o baja?</string>
+    <string name="tr_title_ear_major_minor">Oído: mayor o menor</string>
+    <string name="tr_title_ear_octave_fifth">Oído: quinta y octava</string>
+    <string name="tr_title_ear_thirds">Oído: terceras</string>
+    <string name="tr_title_ear_fourth_fifth">Oído: cuarta y quinta</string>
+    <string name="tr_title_ear_seconds">Oído: segundas y terceras</string>
+    <string name="tr_title_ear_all_simple">Oído: intervalos comunes</string>
+    <string name="tr_title_ear_tritone">Oído: el tritono</string>
+    <string name="tr_title_ear_sixths">Oído: sextas y séptimas</string>
+    <string name="tr_ear_q_interval">¿Qué intervalo has escuchado?</string>
+    <string name="tr_ear_q_quality">¿El acorde es mayor o menor?</string>
+    <string name="tr_ear_q_direction">¿La segunda nota sube o baja?</string>
+    <string name="tr_ear_major">Mayor</string>
+    <string name="tr_ear_minor">Menor</string>
+    <string name="tr_ear_up">Sube</string>
+    <string name="tr_ear_down">Baja</string>
+    <string name="tr_ear_replay">Volver a escuchar</string>
+    <string name="tr_ear_playing">Sonando…</string>
+    <string name="tr_int_m2">2.ª menor</string>
+    <string name="tr_int_M2">2.ª mayor</string>
+    <string name="tr_int_m3">3.ª menor</string>
+    <string name="tr_int_M3">3.ª mayor</string>
+    <string name="tr_int_P4">4.ª justa</string>
+    <string name="tr_int_TT">Tritono</string>
+    <string name="tr_int_P5">5.ª justa</string>
+    <string name="tr_int_m6">6.ª menor</string>
+    <string name="tr_int_M6">6.ª mayor</string>
+    <string name="tr_int_m7">7.ª menor</string>
+    <string name="tr_int_M7">7.ª mayor</string>
+    <string name="tr_int_P8">Octava</string>
 
     <!-- Entrenamiento: runner y resultados -->
     <string name="tr_question_progress">Pregunta %1$d de %2$d</string>
