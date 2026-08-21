@@ -79,7 +79,7 @@ export const WEB_HTML = `<!doctype html>
   button.primary:hover { background:var(--vv-accent-strong); }
   button.ghost { border-color:transparent; background:transparent; }
   button:disabled { opacity:.45; cursor:default; background:transparent; }
-  input[type=text], input[type=email], input[type=password], textarea, select {
+  input[type=text], input[type=email], input[type=password], input[type=url], textarea, select {
     background:var(--vv-surface-alt); border:1px solid var(--vv-border);
     border-radius:var(--vv-radius-md); padding:10px 12px; width:100%; }
   input::placeholder, textarea::placeholder { color:var(--vv-text-subtle); }
@@ -97,12 +97,44 @@ export const WEB_HTML = `<!doctype html>
   .tabs button[aria-selected=true] { background:var(--vv-accent); color:var(--vv-on-accent);
                                      border-color:transparent; font-weight:600; }
   .grid { display:grid; gap:10px; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); align-items:start; }
+  /* Las tarjetas son <button>, y la regla de arriba les pone nowrap: sin esto
+     un titulo largo se sale de la tarjeta por la derecha. */
+  .card, .chordCard { white-space:normal; }
   .card { display:block; text-align:left; width:100%; border:1px solid var(--vv-border);
           border-radius:var(--vv-radius-lg); padding:14px 16px; background:var(--vv-surface);
           box-shadow:var(--vv-shadow-card); }
   .card:hover { border-color:var(--vv-accent); background:var(--vv-surface); }
   .card .a { font-size:13px; color:var(--vv-text-muted); overflow-wrap:anywhere; }
   .card .t { font-weight:600; overflow-wrap:anywhere; }
+  #vSource { border:1px solid var(--vv-border-strong); border-radius:var(--vv-radius-md);
+             padding:9px 15px; font-size:14px; font-weight:500; white-space:nowrap;
+             color:var(--vv-text); }
+  #vSource:hover { background:var(--vv-accent-soft); color:var(--vv-text); }
+  /* Tira de versiones bajo la cabecera del visor. */
+  .versions { display:flex; gap:6px; overflow-x:auto; padding:8px 14px;
+              background:var(--vv-surface); border-bottom:1px solid var(--vv-border); }
+  .versions button { flex:0 0 auto; padding:6px 12px; font-size:13px; }
+  .versions button[aria-pressed=true] { background:var(--vv-accent); color:var(--vv-on-accent);
+                                        border-color:transparent; font-weight:600; }
+  .versions .sep { flex:1 1 auto; min-width:8px; }
+  /* Fichas de la cola de revisión y del listado de usuarios. */
+  .fila { display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap;
+          border:1px solid var(--vv-border); border-radius:var(--vv-radius-lg);
+          background:var(--vv-surface); padding:14px 16px; margin-bottom:10px; }
+  .fila .cuerpo { flex:1 1 320px; min-width:0; }
+  .fila .t { font-weight:600; overflow-wrap:anywhere; }
+  .fila .meta { font-size:13px; color:var(--vv-text-muted); overflow-wrap:anywhere; }
+  .fila .nota { margin-top:6px; font-size:14px; overflow-wrap:anywhere; }
+  .estado { font-size:11px; border-radius:999px; padding:2px 9px; border:1px solid var(--vv-border-strong);
+            color:var(--vv-text-muted); font-family:var(--vv-font-mono); }
+  .estado[data-s=pending] { color:var(--vv-accent); border-color:var(--vv-accent); }
+  .estado[data-s=approved] { color:var(--vv-beat); border-color:var(--vv-beat); }
+  .estado[data-s=rejected], .estado[data-s=withdrawn] { color:var(--vv-danger); border-color:var(--vv-danger); }
+  .aviso { background:var(--vv-accent-soft); border:1px solid var(--vv-accent);
+           border-radius:var(--vv-radius-md); padding:10px 12px; margin-bottom:12px; font-size:14px; }
+  .filtros { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
+  .filtros input { flex:1 1 220px; }
+  .filtros select { flex:0 1 190px; width:auto; }
   .badge { display:inline-block; font-size:11px; border-radius:999px; padding:2px 9px;
            border:1px solid var(--vv-border-strong); color:var(--vv-text-muted); margin-top:6px;
            font-family:var(--vv-font-mono); }
@@ -119,15 +151,20 @@ export const WEB_HTML = `<!doctype html>
   .editHead { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
   #editSplit { display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items:start; }
   .pane { display:flex; flex-direction:column; gap:6px; min-width:0; }
-  .pane .hd { display:flex; align-items:baseline; gap:8px; font-size:11px; letter-spacing:.18em;
-              text-transform:uppercase; color:var(--vv-text-subtle); }
+  .pane .hd { display:flex; align-items:center; gap:8px; font-size:11px; letter-spacing:.18em;
+              text-transform:uppercase; color:var(--vv-text-subtle); min-height:38px; }
   .pane .hd small { letter-spacing:0; text-transform:none; font-size:12px; }
   #eContent { height:58vh; min-height:280px; resize:vertical;
               font-family:var(--vv-font-mono); font-size:14px; line-height:1.45; white-space:pre; }
   #ePreview { height:58vh; min-height:280px; overflow:auto;
               background:var(--vv-surface); border:1px solid var(--vv-border);
-              border-radius:var(--vv-radius-md); padding:12px 14px;
-              font-family:var(--vv-font-mono); font-size:14px; }
+              border-radius:var(--vv-radius-md); padding:10px 12px;
+              font-family:var(--vv-font-mono); font-size:14px; line-height:1.45; }
+  /* Misma altura de linea que el textarea: asi la linea N de la izquierda cae
+     a la altura de la linea N de la derecha y el scroll atado cuadra. En el
+     visor se mantiene 1.35, que ahi se lee mas apretado y no hay con que
+     comparar. */
+  #ePreview .ln, #ePreview .tab { line-height:1.45; }
   @media (max-width:900px) {
     #editSplit, .editHead { grid-template-columns:1fr; }
     #eContent, #ePreview { height:40vh; }
@@ -136,22 +173,130 @@ export const WEB_HTML = `<!doctype html>
   /* ---- visor ---- */
   #viewer { position:fixed; inset:0; background:var(--vv-bg); display:none; flex-direction:column; z-index:20; }
   #viewer.on { display:flex; }
-  #vHead { display:flex; gap:10px; align-items:center; padding:10px 14px;
+  /* Con el visor abierto la pagina de detras no debe poder desplazarse: si no,
+     salen dos barras verticales y una de ellas no hace nada. Va en los dos
+     elementos porque el desplazamiento del body se propaga a la raiz. */
+  html.conVisor, body.conVisor { overflow:hidden; }
+  /* Tres zonas: acciones, centro, acciones. Con 1fr a los lados el bloque del
+     medio queda centrado en la barra aunque los botones de cada lado no midan
+     lo mismo — que es lo que pasaría con un simple flex. */
+  #vHead { display:grid; grid-template-columns:1fr auto 1fr; gap:10px;
+           align-items:center; padding:10px 14px;
            border-bottom:1px solid var(--vv-border); background:var(--vv-surface); }
+  #vHead .lado { display:flex; align-items:center; gap:8px; min-width:0; }
+  #vHead .lado.der { justify-content:flex-end; }
+  /* El bloque de título tiene que poder encoger: sin min-width:0 no baja de su
+     contenido y el título largo se sale de la cabecera. */
+  /* Una sola línea: autor – título, y el capo a su derecha. */
+  #vHead .vMeta { min-width:0; display:flex; align-items:center; gap:12px; }
+  #vHead .titulo { min-width:0; display:flex; align-items:baseline; gap:6px; }
+  #vHead .titulo > * { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #vSep { color:var(--vv-text-subtle); flex:0 0 auto; }
+  /* El capo cambia cómo se toca la canción entera: va en ámbar macizo, que no
+     se pueda pasar por alto como pasaba con la píldora gris de antes. */
+  #vCapo { display:inline-flex; align-items:baseline; gap:6px; flex:0 0 auto;
+           background:var(--vv-accent); color:var(--vv-on-accent); border:0;
+           border-radius:999px; padding:3px 12px 4px; font-size:11px;
+           font-weight:600; letter-spacing:.16em; text-transform:uppercase; }
+  #vCapo .n { font-family:var(--vv-font-mono); font-size:15px; letter-spacing:0; }
   #vTitle { font-weight:600; }
-  #vArtist { font-size:13px; color:var(--vv-text-muted); }
-  #vBody { flex:1; overflow:auto; padding:16px 18px 120px;
+  #vArtist { color:var(--vv-text-muted); }
+  /* El vídeo, a la derecha de la partitura. Se queda fijo mientras la hoja se
+     desplaza: es para acompañarse, no para leerlo. */
+  #vTube { flex:0 0 340px; display:none; flex-direction:column; gap:8px; min-height:0; }
+  #vTube.on { display:flex; }
+  #vTube .marco { position:relative; width:100%; padding-top:56.25%;
+                  border:1px solid var(--vv-border); border-radius:var(--vv-radius-lg);
+                  overflow:hidden; background:#000; }
+  #vTube iframe { position:absolute; inset:0; width:100%; height:100%; border:0; }
+  @media (max-width:1200px) { #vTube { flex-basis:280px; } }
+  @media (max-width:900px) { #vTube { flex:0 0 auto; } }
+  #vBody { flex:0 1 auto; min-width:0; overflow:auto; padding:16px 18px 60px;
            font-family:var(--vv-font-mono); font-size:var(--fs,18px); }
+  /* La columna de lectura mide lo que mide la partitura. */
+  #vSheet { width:max-content; max-width:100%; }
+  @media (min-width:901px) {
+    /* Con los recuadros al lado, la hoja se apoya en ellos: centrarla dentro de
+       su columna volvería a abrir el hueco. Lo que va centrado en la ventana es
+       el conjunto. El mínimo evita que una canción corta deje los comentarios
+       en una tira de dos palabras. */
+    #vSheet { min-width:460px; }
+    #vSheet .sheet { margin-left:0; }
+  }
   .ln { white-space:pre; line-height:1.35; margin:0; }
   .tab { white-space:pre; line-height:1.35; color:var(--vv-text-muted); }
   .chord { color:var(--vv-accent); font-weight:600; }
-  #vCtrl { border-top:1px solid var(--vv-border); background:var(--vv-surface); padding:8px 14px;
-           display:flex; flex-direction:column; gap:8px; padding-bottom:max(8px,env(safe-area-inset-bottom)); }
+  #vBody .chord { cursor:pointer; border-radius:3px; }
+  /* Globo de digitaciones al pasar por encima. Fuera del flujo y sin capturar
+     el ratón: si lo capturase, entrar en él contaría como salir del acorde. */
+  #chordHover { position:fixed; z-index:45; display:none; gap:8px; padding:10px;
+                pointer-events:none; background:var(--vv-surface);
+                border:1px solid var(--vv-border-strong); border-radius:var(--vv-radius-md);
+                box-shadow:0 6px 24px rgba(0,0,0,.35); }
+  #chordHover.on { display:flex; }
+  #chordHover .nm { font-family:var(--vv-font-mono); font-weight:600; color:var(--vv-accent);
+                    align-self:center; padding-right:2px; }
+  /* Fila de botones para capo y traste base: un toque en vez de teclear. */
+  .pills { display:flex; flex-wrap:wrap; gap:4px; }
+  .pills button { padding:6px 10px; font-family:var(--vv-font-mono); font-size:13px;
+                  min-width:38px; }
+  .pills button[aria-pressed=true] { background:var(--vv-accent); color:var(--vv-on-accent);
+                                     border-color:transparent; font-weight:600; }
+  #vBody .chord:hover, #vBody .chord:focus-visible { background:var(--vv-accent-soft); }
+  /* Los mandos y las versiones son dos recuadros en una columna propia a la
+     izquierda de la partitura. Columna real, no algo flotando por encima: la
+     hoja ocupa lo que queda y no hay que reservarle hueco a mano. */
+  #vMain { flex:1; display:flex; min-height:0; gap:14px; padding:14px; justify-content:center; }
+  #vSide { flex:0 0 260px; display:flex; flex-direction:column; gap:14px;
+           min-height:0; overflow:auto; }
+  #vCtrl { background:var(--vv-surface); border:1px solid var(--vv-border);
+           border-radius:var(--vv-radius-lg);
+           padding:12px; display:flex; flex-direction:column; gap:10px; flex:0 0 auto; }
+  #vCtrl .row { gap:6px; }
+  #vCtrl button { padding:7px 10px; font-size:13px; }
+  #vVersionPanel { background:var(--vv-surface); border:1px solid var(--vv-border);
+                   border-radius:var(--vv-radius-lg);
+                   padding:12px; display:flex; flex-direction:column; gap:8px;
+                   flex:0 1 auto; min-height:0; overflow:auto; }
+  #vVersionPanel .hd { font-size:11px; letter-spacing:.18em; text-transform:uppercase;
+                       color:var(--vv-text-subtle); }
+  .vRow { display:flex; flex-direction:column; gap:4px; padding:8px; border-radius:var(--vv-radius-md);
+          border:1px solid transparent; cursor:pointer; background:transparent; text-align:left;
+          white-space:normal; }
+  .vRow:hover { background:var(--vv-accent-soft); }
+  .vRow[aria-pressed=true] { border-color:var(--vv-accent); background:var(--vv-accent-soft); }
+  .vRow .num { font-family:var(--vv-font-mono); font-size:12px; color:var(--vv-text-subtle); }
+  .vRow .nm { font-weight:600; overflow-wrap:anywhere; }
+  .vRow .val { display:flex; align-items:center; gap:6px; }
+  .stars { display:inline-flex; gap:1px; }
+  .stars button, .stars span { border:0; background:none; padding:0 1px; font-size:15px;
+                               line-height:1; color:var(--vv-border-strong); cursor:default; }
+  .stars button { cursor:pointer; }
+  .stars .on { color:var(--vv-accent); }
+  .nota { font-family:var(--vv-font-mono); font-size:12px; color:var(--vv-text-muted); }
+  /* Comentarios, al final de la partitura. */
+  #vComments { max-width:100%; margin:32px 0 0; border-top:1px solid var(--vv-border);
+               padding-top:16px; font-family:var(--vv-font-ui); font-size:15px; }
+  #vComments h4 { margin:0 0 12px; font-size:11px; letter-spacing:.18em; text-transform:uppercase;
+                  color:var(--vv-text-subtle); font-weight:600; }
+  .comentario { padding:10px 0; border-bottom:1px solid var(--vv-border); }
+  .comentario .quien { font-size:13px; color:var(--vv-text-muted); display:flex; gap:8px; align-items:baseline; }
+  .comentario .texto { white-space:pre-wrap; overflow-wrap:anywhere; margin-top:4px; }
+  .comentario .quitar { border:0; background:none; color:var(--vv-danger); font-size:12px;
+                        padding:0; cursor:pointer; }
+  #vCommentForm { display:flex; flex-direction:column; gap:8px; margin-top:12px; }
+  #vCommentForm textarea { min-height:80px; font-family:var(--vv-font-ui); }
+  /* En estrecho no caben dos columnas: los recuadros pasan encima de la hoja,
+     apilados, y se les limita la altura para que quede partitura a la vista. */
+  @media (max-width:900px) {
+    #vMain { flex-direction:column; gap:10px; padding:10px; }
+    #vSide { flex:0 0 auto; max-height:46vh; }
+  }
   #vCtrl .row label { font-size:12px; color:var(--vv-text-muted); white-space:nowrap; }
   #vCtrl input[type=range] { flex:1; min-width:80px; width:auto; padding:0; border:0;
                              background:transparent; accent-color:var(--vv-accent); }
   /* Cifras (BPM, tono, velocidad, capo) siempre en la mono de la marca. */
-  #vSpeedVal, #vBpmVal, #vTone, #vCapo {
+  #vSpeedVal, #vBpmVal, #vTone {
     font-family:var(--vv-font-mono); font-variant-numeric:tabular-nums; }
   .beat { width:12px; height:12px; border-radius:50%; background:var(--vv-border-strong); display:inline-block; }
   .beat.on { background:var(--vv-accent); box-shadow:var(--vv-glow); }
@@ -168,7 +313,9 @@ export const WEB_HTML = `<!doctype html>
   .modalBox { background:var(--vv-surface); border:1px solid var(--vv-border); width:100%;
               border-radius:var(--vv-radius-lg); padding:16px; max-width:780px; max-height:86vh;
               overflow:auto; display:flex; flex-direction:column; gap:12px; }
-  .modalBox h3 { margin:0; font-size:20px; font-family:var(--vv-font-mono); }
+  .modalBox h3 { margin:0; font-size:20px; font-family:var(--vv-font-mono);
+                 min-width:0; overflow-wrap:anywhere; }
+  .chordCard .nm { overflow-wrap:anywhere; text-align:center; }
   .chordGrid { display:grid; gap:10px; grid-template-columns:repeat(auto-fill,minmax(118px,1fr)); }
   .chordCard { display:flex; flex-direction:column; align-items:center; gap:4px; padding:10px;
                border:1px solid var(--vv-border); border-radius:var(--vv-radius-md);
@@ -180,6 +327,7 @@ export const WEB_HTML = `<!doctype html>
   .posRow input { width:54px; text-align:center; font-family:var(--vv-font-mono); padding:6px 4px; }
   .posRow .lbl { font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--vv-text-subtle); }
   .posRow .grp { display:flex; gap:4px; align-items:center; }
+  .posRow .pills button { padding:4px 8px; min-width:30px; font-size:12px; }
   .hidden { display:none !important; }
 </style>
 </head>
@@ -226,11 +374,23 @@ export const WEB_HTML = `<!doctype html>
     <div class="tabs">
       <button id="tabPublic" aria-selected="true">Catálogo</button>
       <button id="tabMine" aria-selected="false" class="hidden">Mis partituras</button>
+      <button id="tabProposals" aria-selected="false" class="hidden">Propuestas</button>
       <button id="tabChords" aria-selected="false" class="hidden" title="Diccionario global, visible para todo el mundo">Acordes</button>
+      <button id="tabUsers" aria-selected="false" class="hidden">Usuarios</button>
       <span class="grow"></span>
       <button id="newBtn" class="hidden">+ Nueva</button>
     </div>
-    <input type="text" id="search" placeholder="Buscar por título o artista…" style="margin-bottom:12px">
+    <div class="filtros">
+      <input type="text" id="search" placeholder="Buscar por título o artista…">
+      <select id="genreFilter" title="Categoría musical">
+        <option value="">Todas las categorías</option>
+      </select>
+      <select id="sortSel" title="Orden del listado">
+        <option value="title">Título (A–Z)</option>
+        <option value="recent">Más recientes primero</option>
+        <option value="old">Más antiguas primero</option>
+      </select>
+    </div>
     <div id="list" class="grid"></div>
     <div id="listEmpty" class="empty hidden"></div>
   </section>
@@ -241,17 +401,46 @@ export const WEB_HTML = `<!doctype html>
       <div class="editHead">
         <label>Título<input type="text" id="eTitle"></label>
         <label>Artista<input type="text" id="eArtist"></label>
-        <label>Capo<input type="text" id="eCapo" inputmode="numeric" placeholder="0"></label>
-        <label>Visibilidad
+        <label>Categoría <small>estilo musical</small>
+          <input type="text" id="eGenre" list="genreList" placeholder="Rock, bolero, folk…">
+          <datalist id="genreList"></datalist></label>
+        <label id="eLockedWrap" class="row" style="gap:8px;align-items:center">
+          <input type="checkbox" id="eLocked" style="width:auto">
+          <span>Bloqueada <small>pide confirmación antes de editarla</small></span>
+        </label>
+        <label id="eVisibilityWrap">Visibilidad
           <select id="eVisibility">
             <option value="private">Privada (solo yo)</option>
             <option value="public">Pública (cualquiera puede verla)</option>
           </select>
         </label>
       </div>
+      <div class="editHead" style="grid-template-columns:1fr" id="eVersionHead">
+        <label>Nombre de la versión <small>«Acústica», «En Do», «Tablatura»…</small>
+          <input type="text" id="eVersionName" placeholder="Acústica"></label>
+        <label id="eNoteWrap">Mensaje para quien la revise <small>opcional</small>
+          <input type="text" id="eNote" placeholder="Qué cambia y por qué"></label>
+      </div>
+      <div class="editHead" style="grid-template-columns:1fr">
+        <label>URL de la partitura original <small>opcional</small>
+          <input type="url" id="eSource" placeholder="https://…"></label>
+        <label>Vídeo de YouTube <small>opcional; se ve junto a la partitura</small>
+          <input type="text" id="eTube" placeholder="https://youtu.be/…"></label>
+        <div class="row">
+          <button id="eTubeSearch" title="Abre la búsqueda en otra pestaña">Buscar en YouTube</button>
+          <span id="eTubeMsg" class="nota"></span>
+        </div>
+        <div>
+          <div class="vv-kicker" style="margin-bottom:6px">Capo</div>
+          <div class="pills" id="eCapoPills"></div>
+        </div>
+      </div>
       <div id="editSplit">
         <div class="pane">
-          <div class="hd">Partitura <small>acordes entre llaves: {Am}</small></div>
+          <div class="hd">Partitura <small>acordes entre llaves: {Am}</small>
+            <span class="grow"></span>
+            <button id="eDetect" title="Marca las líneas que solo llevan acordes">♪ Detectar acordes</button>
+          </div>
           <textarea id="eContent" spellcheck="false"
                     placeholder="#title: Título&#10;#artist: Autor&#10;---&#10;{Am} Primera línea"></textarea>
         </div>
@@ -260,15 +449,47 @@ export const WEB_HTML = `<!doctype html>
           <div id="ePreview"></div>
         </div>
       </div>
+      <div id="editAviso" class="aviso hidden"></div>
       <div class="msg" id="editMsg"></div>
       <div class="row">
         <button class="primary" id="saveBtn">Guardar</button>
+        <button id="proposeBtn" class="hidden" title="Un editor la revisará antes de publicarla">Proponer publicación</button>
         <button id="cancelEdit">Cancelar</button>
         <span class="grow"></span>
         <button id="deleteBtn" class="hidden" style="color:var(--vv-danger)">Eliminar</button>
       </div>
     </div>
   </section>
+  <!-- propuestas: cola de revisión para editores, historial para el resto -->
+  <section id="proposalsView" class="hidden">
+    <div class="row" style="margin-bottom:12px">
+      <select id="propStatus" style="flex:0 1 220px;width:auto">
+        <option value="pending">Pendientes</option>
+        <option value="approved">Aprobadas</option>
+        <option value="rejected">Rechazadas</option>
+        <option value="all">Todas</option>
+      </select>
+      <label id="propMineWrap" class="row hidden" style="gap:6px">
+        <input type="checkbox" id="propMine" style="width:auto"> Solo las mías</label>
+      <span class="grow"></span>
+      <span id="propCount" class="vv-kicker"></span>
+    </div>
+    <div class="msg" id="propMsg"></div>
+    <div id="propList"></div>
+    <div id="propEmpty" class="empty hidden"></div>
+  </section>
+
+  <!-- usuarios y roles (solo administración) -->
+  <section id="usersView" class="hidden">
+    <div class="aviso">
+      El <b>editor</b> gestiona el catálogo: edita y despublica partituras públicas,
+      resuelve propuestas y mantiene el diccionario de acordes. El <b>usuario</b> crea
+      partituras suyas y propone publicarlas o aportar versiones.
+    </div>
+    <div class="msg" id="usersMsg"></div>
+    <div id="usersList"></div>
+  </section>
+
   <!-- diccionario global de acordes (solo administración) -->
   <section id="chordsView" class="hidden">
     <div class="row" style="margin-bottom:12px">
@@ -286,6 +507,21 @@ export const WEB_HTML = `<!doctype html>
     <div id="chordEmpty" class="empty hidden"></div>
   </section>
 </main>
+
+<div id="chordHover"></div>
+
+<!-- contenido de una propuesta, tal y como quedaría -->
+<div id="propModal" class="modal hidden">
+  <div class="modalBox">
+    <div class="row">
+      <h3 id="pmTitle"></h3>
+      <span class="grow"></span>
+      <button id="pmClose">Cerrar</button>
+    </div>
+    <div id="pmMeta" class="meta"></div>
+    <div id="pmBody" style="font-family:var(--vv-font-mono);font-size:15px;overflow:auto"></div>
+  </div>
+</div>
 
 <!-- diagramas del acorde que se está mirando (cualquiera) -->
 <div id="chordModal" class="modal hidden">
@@ -323,42 +559,64 @@ export const WEB_HTML = `<!doctype html>
 <!-- visor a pantalla completa -->
 <div id="viewer">
   <div id="vHead">
-    <button id="vClose" class="ghost">‹ Volver</button>
-    <div style="min-width:0">
-      <div id="vTitle"></div>
-      <div id="vArtist"></div>
+    <div class="lado">
+      <button id="vClose" class="ghost">‹ Volver</button>
     </div>
-    <span class="grow"></span>
-    <span id="vCapo" class="badge hidden"></span>
-    <button id="vEdit" class="hidden">Editar</button>
+    <div class="vMeta">
+      <div class="titulo">
+        <span id="vArtist"></span>
+        <span id="vSep" class="hidden">–</span>
+        <span id="vTitle"></span>
+      </div>
+      <span id="vCapo" class="hidden"></span>
+    </div>
+    <div class="lado der">
+      <a id="vSource" class="hidden" href="#" target="_blank" rel="noopener noreferrer"
+         title="Abrir la partitura original en otra pestaña">Original ↗</a>
+      <button id="vEdit" class="hidden">Editar</button>
+    </div>
   </div>
   <div id="vChordBar" class="chordBar hidden"></div>
-  <div id="vBody"></div>
-  <div id="vCtrl">
-    <div class="row">
-      <button id="vPlay" title="Desplazamiento automático">▶ Scroll</button>
-      <input type="range" id="vSpeed" min="5" max="300" value="40">
-      <label id="vSpeedVal">40 px/s</label>
-      <span class="grow"></span>
-      <button id="vChords" title="Diagramas de los acordes de esta partitura">♦ Acordes</button>
-      <button id="vMetro" title="Metrónomo">♩ Metrónomo</button>
-      <span id="vBeats" class="row" style="gap:4px"></span>
+  <div id="vMain">
+    <div id="vSide">
+      <div id="vCtrl">
+      <div class="row">
+        <button id="vPlay" title="Desplazamiento automático">▶ Scroll</button>
+        <input type="range" id="vSpeed" min="5" max="300" value="40" style="min-width:60px">
+        <label id="vSpeedVal">40 px/s</label>
+      </div>
+      <div class="row">
+        <label>Tono</label>
+        <button id="vDown">–</button>
+        <label id="vTone" style="min-width:2.5em;text-align:center">±0</label>
+        <button id="vUp">+</button>
+        <button id="vFlat">♭</button>
+      </div>
+      <div class="row">
+        <label>Letra</label>
+        <button id="vFontDown">A-</button>
+        <button id="vFontUp">A+</button>
+        <span class="grow"></span>
+        <button id="vChords" title="Diagramas de los acordes de esta partitura">♦ Acordes</button>
+      </div>
+      <div class="row">
+        <button id="vMetro" title="Metrónomo">♩ Metrónomo</button>
+        <span id="vBeats" class="row" style="gap:4px"></span>
+      </div>
+      <div class="row">
+        <label>BPM</label>
+        <input type="range" id="vBpm" min="40" max="200" value="100" style="min-width:70px">
+        <label id="vBpmVal">100</label>
+        </div>
+      </div>
+      <div id="vVersionPanel">
+        <div class="hd">Versiones</div>
+        <div id="vVersions"></div>
+        <div id="vVersionActions" class="row" style="gap:6px"></div>
+      </div>
     </div>
-    <div class="row">
-      <label>Tono</label>
-      <button id="vDown">–</button>
-      <label id="vTone" style="min-width:2.5em;text-align:center">±0</label>
-      <button id="vUp">+</button>
-      <button id="vFlat">♭</button>
-      <span class="grow"></span>
-      <label>Letra</label>
-      <button id="vFontDown">A-</button>
-      <button id="vFontUp">A+</button>
-      <span class="grow"></span>
-      <label>BPM</label>
-      <input type="range" id="vBpm" min="40" max="200" value="100" style="max-width:120px">
-      <label id="vBpmVal">100</label>
-    </div>
+    <div id="vBody"><div id="vSheet"></div><div id="vComments"></div></div>
+    <div id="vTube"><div class="marco"></div></div>
   </div>
 </div>
 
@@ -373,6 +631,18 @@ var editingId = null;        // null = alta nueva
 var semis = 0, flats = false, fontSize = 18;
 var scrolling = false, lastTs = 0, remainder = 0, raf = 0, wakeLock = null;
 var metro = new VMetronome();
+var ratings = {};              // medias por versión ("" = el Original)
+var myRatings = {};            // lo que ha votado quien está mirando
+var comments = [];
+var versions = [];             // versiones de la partitura abierta
+var currentVersion = null;     // null = el "Original"
+var editorMode = "song";       // song | version | proposal
+var editingVersionId = null;
+var proposalTarget = null;     // partitura sobre la que se propone
+var proposals = [];
+var genres = [];               // categorías con partituras publicadas
+var sortBy = "title";
+var genreBy = "";
 var chordDict = null;          // diccionario global, cacheado tras la primera carga
 var chordBarOn = false;
 var editingChord = null;       // nombre que se está editando, "" si es nuevo
@@ -405,10 +675,14 @@ function setSession(tok, u) {
   loginBtn.classList.toggle("hidden", !!user);
   logoutBtn.classList.toggle("hidden", !user);
   tabMine.classList.toggle("hidden", !user);
-  tabChords.classList.toggle("hidden", !(user && user.role === "admin"));
+  tabChords.classList.toggle("hidden", !esEditor());
+  tabProposals.classList.toggle("hidden", !user);
+  tabUsers.classList.toggle("hidden", !esAdmin());
   newBtn.classList.toggle("hidden", !user);
   if (!user && tab === "mine") tab = "public";
-  if (!(user && user.role === "admin") && tab === "chords") tab = "public";
+  if (!esEditor() && tab === "chords") tab = "public";
+  if (!user && tab === "proposals") tab = "public";
+  if (!esAdmin() && tab === "users") tab = "public";
 }
 
 function restoreSession() {
@@ -420,8 +694,7 @@ function restoreSession() {
 
 var registering = false;
 function showAuth(on) {
-  authView.classList.toggle("hidden", !on);
-  listView.classList.toggle("hidden", on);
+  showView(on ? "auth" : "list");
   authMsg.textContent = "";
 }
 function submitAuth() {
@@ -440,16 +713,113 @@ function submitAuth() {
   }).catch(function (e) { authMsg.textContent = e.message; });
 }
 
+/**
+ * Las secciones de <main> son excluyentes: se ve una y solo una. Tenerlo en un
+ * único sitio evita el fallo de que cada pantalla se escondiera por su cuenta
+ * y dejara otra abierta debajo.
+ */
+function showView(vista) {
+  var vistas = {
+    list: listView, auth: authView, edit: editView,
+    chords: chordsView, proposals: proposalsView, users: usersView
+  };
+  Object.keys(vistas).forEach(function (nombre) {
+    vistas[nombre].classList.toggle("hidden", nombre !== vista);
+  });
+}
+
+/** El equipo editorial: editor y admin. Misma regla que en el servidor. */
+function esEditor() { return !!user && (user.role === "editor" || user.role === "admin"); }
+function esAdmin() { return !!user && user.role === "admin"; }
+
 /* ---------- listados ---------- */
+
+/** Categorías que de verdad tienen partituras publicadas. */
+/**
+ * Pinta el desplegable del filtro. [lista] son pares {genre, total}. Si la
+ * categoría elegida ya no está entre ellas se añade igualmente: si no, al
+ * repintar se perdería el filtro sin avisar.
+ */
+function renderGenreOptions(lista) {
+  var opciones = '<option value="">Todas las categorías</option>';
+  var hayElegida = !genreBy;
+  lista.forEach(function (g) {
+    if (g.genre === genreBy) hayElegida = true;
+    opciones += '<option value="' + vEsc(g.genre) + '">' + vEsc(g.genre) +
+                (g.total ? " (" + g.total + ")" : "") + "</option>";
+  });
+  if (!hayElegida) {
+    opciones += '<option value="' + vEsc(genreBy) + '">' + vEsc(genreBy) + "</option>";
+  }
+  genreFilter.innerHTML = opciones;
+  genreFilter.value = genreBy;
+}
+
+/** Sugerencias del editor: las públicas y las propias, sin repetir. */
+function renderGenreDatalist(extra) {
+  var vistas = {};
+  var todas = [];
+  genres.concat(extra || []).forEach(function (g) {
+    var clave = (g.genre || "").toLowerCase();
+    if (!clave || vistas[clave]) return;
+    vistas[clave] = 1;
+    todas.push(g.genre);
+  });
+  todas.sort(function (a, b) { return a.localeCompare(b, "es"); });
+  genreList.innerHTML = todas.map(function (g) {
+    return '<option value="' + vEsc(g) + '"></option>';
+  }).join("");
+}
+
+/** Categorías presentes en una lista de partituras ya cargada. */
+function genresOf(lista) {
+  var cuenta = {};
+  lista.forEach(function (s) {
+    var g = (s.genre || "").trim();
+    if (g) cuenta[g] = (cuenta[g] || 0) + 1;
+  });
+  return Object.keys(cuenta).sort(function (a, b) { return a.localeCompare(b, "es"); })
+    .map(function (g) { return { genre: g, total: cuenta[g] }; });
+}
+
+/**
+ * Categorías del catálogo público. Se piden al arrancar y cada vez que algo
+ * puede haberlas cambiado (guardar, borrar, aprobar una publicación): antes se
+ * pedían una sola vez y una categoría nueva no aparecía hasta recargar.
+ */
+function loadGenres() {
+  return api("GET", "/api/genres").then(function (d) {
+    genres = d.genres || [];
+    if (tab !== "mine") renderGenreOptions(genres);
+    renderGenreDatalist(genresOf(songs));
+  }).catch(function () { /* sin categorías el filtro se queda vacío, no pasa nada */ });
+}
+
 function refresh() {
   tabPublic.setAttribute("aria-selected", tab === "public");
   tabMine.setAttribute("aria-selected", tab === "mine");
   tabChords.setAttribute("aria-selected", tab === "chords");
-  showChords(tab === "chords");
-  if (tab === "chords") return;
-  var path = tab === "mine" ? "/api/songs" : "/api/songs/public";
+  tabProposals.setAttribute("aria-selected", tab === "proposals");
+  tabUsers.setAttribute("aria-selected", tab === "users");
+  if (tab === "chords") { showChords(); return; }
+  if (tab === "proposals") { showProposals(); return; }
+  if (tab === "users") { showUsers(); return; }
+  showView("list");
+  // El catálogo puede ser enorme: género y orden los resuelve SQL. "Mis
+  // partituras" son pocas y se ordenan aquí mismo, sin ida y vuelta.
+  var path = tab === "mine"
+    ? "/api/songs"
+    : "/api/songs/public?sort=" + encodeURIComponent(sortBy) +
+      (genreBy ? "&genre=" + encodeURIComponent(genreBy) : "");
   api("GET", path).then(function (d) {
     songs = d.songs || [];
+    if (tab === "mine") songs = sortMine(songs);
+    // El filtro ofrece lo que hay delante: en "Mis partituras", tus categorías
+    // (también las de las privadas, que el catálogo público no conoce).
+    var propias = genresOf(songs);
+    if (tab === "mine") renderGenreOptions(propias);
+    else renderGenreOptions(genres);
+    renderGenreDatalist(propias);
     renderList();
   }).catch(function (e) {
     songs = [];
@@ -457,9 +827,19 @@ function refresh() {
   });
 }
 
+/** Mismo criterio que el catálogo, aplicado en el navegador. */
+function sortMine(lista) {
+  var copia = lista.slice();
+  if (sortBy === "recent") copia.sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
+  else if (sortBy === "old") copia.sort(function (a, b) { return (a.createdAt || 0) - (b.createdAt || 0); });
+  else copia.sort(function (a, b) { return (a.title || "").localeCompare(b.title || "", "es"); });
+  return copia;
+}
+
 function renderList(error) {
   var q = search.value.trim().toLowerCase();
   var shown = songs.filter(function (s) {
+    if (tab === "mine" && genreBy && (s.genre || "").toLowerCase() !== genreBy.toLowerCase()) return false;
     if (!q) return true;
     return ((s.title || "") + " " + (s.artist || "")).toLowerCase().indexOf(q) >= 0;
   });
@@ -472,8 +852,16 @@ function renderList(error) {
     a.textContent = s.artist || (s.ownerName ? "de " + s.ownerName : "");
     var t = document.createElement("div");
     t.className = "t";
-    t.textContent = (s.locked ? "🔒 " : "") + (s.title || "(sin título)");
+    // El candado es un seguro para quien edita, no información para quien lee:
+    // solo aparece en "Mis partituras" y en el editor.
+    t.textContent = (tab === "mine" && s.locked ? "🔒 " : "") + (s.title || "(sin título)");
     card.appendChild(a); card.appendChild(t);
+    if (s.genre) {
+      var g = document.createElement("span");
+      g.className = "badge";
+      g.textContent = s.genre;
+      card.appendChild(g);
+    }
     if (tab === "mine") {
       var b = document.createElement("span");
       b.className = "badge";
@@ -498,30 +886,53 @@ function openSong(id) {
     semis = 0; flats = false;
     var parsed = vParseSong(d.content);
     current.body = parsed.body || d.content;
-    vTitle.textContent = d.song.title || "(sin título)";
+    // Autor – título en una línea; sin autor, el guion sobra.
     vArtist.textContent = d.song.artist || "";
-    var capo = Number(d.song.capo) || 0;
-    vCapo.textContent = "Capo " + capo;
-    vCapo.classList.toggle("hidden", capo <= 0);
+    vSep.classList.toggle("hidden", !d.song.artist);
+    vTitle.textContent = d.song.title || "(sin título)";
+    setCapo(d.song.capo);
+    // Solo http(s): un href con javascript: en la cabecera sería un agujero.
+    var origen = String(d.song.sourceUrl || "");
+    var valida = /^https?:\/\//i.test(origen);
+    vSource.href = valida ? origen : "#";
+    vSource.classList.toggle("hidden", !valida);
     vEdit.classList.toggle("hidden", !(user && (user.id === d.song.ownerId || user.role === "admin")));
     renderViewer();
     vBody.scrollTop = 0;
     viewer.classList.add("on");
+    document.documentElement.classList.add("conVisor");
+    document.body.classList.add("conVisor");
+    renderTube();
+    loadVersions(d.song.id);
+    loadRatings(d.song.id);
+    loadComments(d.song.id);
   }).catch(function (e) { alert(e.message); });
+}
+
+/** Capo de lo que se está mirando; con 0 no se enseña nada. */
+function setCapo(capo) {
+  var n = Number(capo) || 0;
+  vCapo.innerHTML = n > 0 ? 'Capo <span class="n">' + n + '</span>' : "";
+  vCapo.classList.toggle("hidden", n <= 0);
 }
 
 function renderViewer() {
   vTone.textContent = (semis > 0 ? "+" : semis < 0 ? "" : "±") + semis;
   vFlat.style.fontWeight = flats ? "700" : "400";
   var keep = vBody.scrollTop;
-  vBody.innerHTML = '<div class="sheet">' +
-                    vRenderSong(vTransposeBody(current.body, semis, flats)) + "</div>";
+  vSheet.innerHTML = '<div class="sheet">' +
+                     vRenderSong(vTransposeBody(current.body, semis, flats)) + "</div>";
   vBody.style.setProperty("--fs", fontSize + "px");
   vBody.scrollTop = keep;
   renderChordBar();
 }
 
 function closeViewer() {
+  // Vaciar el marco para que el vídeo deje de sonar al salir.
+  vTube.classList.remove("on");
+  vTube.querySelector(".marco").innerHTML = "";
+  document.documentElement.classList.remove("conVisor");
+  document.body.classList.remove("conVisor");
   vChordBar.classList.add("hidden");
   stopScroll();
   if (metro.isRunning()) toggleMetro();
@@ -577,6 +988,549 @@ function toggleMetro() {
   }
 }
 metro.onBeat = renderBeats;
+
+/**
+ * Reproductor de la canción. El iframe solo se crea si hay vídeo: así no se
+ * carga nada de YouTube en las partituras que no lo tienen.
+ */
+function renderTube() {
+  var marco = vTube.querySelector(".marco");
+  var enlace = current && current.song ? current.song.youtubeUrl : "";
+  var incrustado = vEmbedUrl(enlace);
+  if (!incrustado) {
+    vTube.classList.remove("on");
+    marco.innerHTML = "";
+    return;
+  }
+  // Se compara antes de reescribir: reasignar el src reinicia el vídeo, y
+  // transponer o cambiar de versión no debería cortar la música.
+  var actual = marco.querySelector("iframe");
+  if (actual && actual.getAttribute("src") === incrustado) {
+    vTube.classList.add("on");
+    return;
+  }
+  marco.innerHTML = '<iframe src="' + vEsc(incrustado) + '" title="Vídeo de la canción" ' +
+    'allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" ' +
+    'referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>';
+  vTube.classList.add("on");
+}
+
+/* ---------- versiones ---------- */
+
+/**
+ * Una versión es un arreglo alternativo de la misma partitura: otro tono, otra
+ * cejilla, tablatura… El contenido propio de la partitura es el "Original" y
+ * las demás cuelgan de él, igual que en la app.
+ */
+function loadVersions(songId) {
+  versions = [];
+  currentVersion = null;
+  api("GET", "/api/songs/" + songId + "/versions").then(function (d) {
+    versions = d.versions || [];
+    renderVersionBar();
+  }).catch(function () { renderVersionBar(); });
+}
+
+/**
+ * Estrellas de una versión. Con sesión son pulsables (y volver a pulsar la que
+ * ya tenías marcada retira el voto); sin sesión son solo el dibujo de la media.
+ */
+function starsFor(versionId) {
+  var caja = document.createElement("span");
+  caja.className = "stars";
+  var mio = myRatings[versionId] || 0;
+  var media = (ratings[versionId] && ratings[versionId].average) || 0;
+  // Marcadas: las tuyas si has votado; si no, la media redondeada.
+  var marcadas = mio || Math.round(media);
+  for (var i = 1; i <= 5; i++) {
+    (function (valor) {
+      var e = document.createElement(user ? "button" : "span");
+      e.textContent = valor <= marcadas ? "★" : "☆";
+      e.className = valor <= marcadas ? "on" : "";
+      if (user) {
+        e.title = mio === valor ? "Quitar mi voto" : "Valorar con " + valor;
+        e.onclick = function (ev) {
+          ev.stopPropagation();          // no cambiar de versión al votar
+          rateVersion(versionId, mio === valor ? 0 : valor);
+        };
+      }
+      caja.appendChild(e);
+    })(i);
+  }
+  return caja;
+}
+
+/**
+ * Panel de versiones. Sale siempre, aunque solo esté el Original: es donde se
+ * ve la valoración de lo que estás tocando.
+ */
+function renderVersionBar() {
+  if (!current) return;
+  var puedeEditar = !!user && (user.id === current.song.ownerId || esEditor());
+  var puedeProponer = !!user && !puedeEditar && current.song.visibility === "public";
+
+  var filas = [{ id: "", nombre: "Original", capo: current.song.capo, autor: "" }].concat(
+    versions.map(function (v) {
+      return { id: v.id, nombre: v.name || "Sin nombre", capo: v.capo, autor: v.authorName || "" };
+    })
+  );
+
+  vVersions.classList.remove("hidden");
+  vVersions.innerHTML = "";
+  filas.forEach(function (f, indice) {
+    var fila = document.createElement("button");
+    fila.className = "vRow";
+    fila.setAttribute("aria-pressed", (currentVersion || "") === f.id);
+    fila.onclick = function () { showVersion(f.id || null); };
+
+    var cab = document.createElement("div");
+    cab.className = "num";
+    cab.textContent = "Versión " + (indice + 1) +
+                      (f.capo ? " · capo " + f.capo : "") +
+                      (f.autor ? " · " + f.autor : "");
+    var nombre = document.createElement("div");
+    nombre.className = "nm";
+    nombre.textContent = f.nombre;
+
+    var val = document.createElement("div");
+    val.className = "val";
+    val.appendChild(starsFor(f.id));
+    var nota = document.createElement("span");
+    nota.className = "nota";
+    var datos = ratings[f.id];
+    // Sin votos se enseña 0.0 igualmente: el hueco vacío confunde más.
+    nota.textContent = (datos ? datos.average.toFixed(1) : "0.0") + " / 5" +
+                       (datos && datos.count ? " (" + datos.count + ")" : "");
+    val.appendChild(nota);
+
+    fila.appendChild(cab);
+    fila.appendChild(nombre);
+    fila.appendChild(val);
+    vVersions.appendChild(fila);
+  });
+
+  vVersionActions.innerHTML = "";
+  if (puedeEditar) {
+    var nueva = document.createElement("button");
+    nueva.textContent = "+ Versión";
+    nueva.onclick = function () { newVersion(); };
+    vVersionActions.appendChild(nueva);
+    if (currentVersion) {
+      var editar = document.createElement("button");
+      editar.textContent = "Editar";
+      editar.onclick = function () { editVersion(currentVersion); };
+      vVersionActions.appendChild(editar);
+      var borrar = document.createElement("button");
+      borrar.textContent = "Eliminar";
+      borrar.style.color = "var(--vv-danger)";
+      borrar.onclick = function () { deleteVersion(currentVersion); };
+      vVersionActions.appendChild(borrar);
+    }
+  }
+  if (puedeProponer) {
+    var propon = document.createElement("button");
+    propon.textContent = "Proponer versión";
+    propon.title = "Un editor la revisará antes de que aparezca";
+    propon.onclick = function () { proposeVersion(); };
+    vVersionActions.appendChild(propon);
+  }
+}
+
+/* ---------- valoraciones ---------- */
+
+function loadRatings(songId) {
+  ratings = {}; myRatings = {};
+  api("GET", "/api/songs/" + songId + "/ratings").then(function (d) {
+    ratings = d.ratings || {};
+    myRatings = d.mine || {};
+    renderVersionBar();
+  }).catch(function () { renderVersionBar(); });
+}
+
+function rateVersion(versionId, stars) {
+  api("PUT", "/api/songs/" + current.song.id + "/ratings", {
+    versionId: versionId, stars: stars
+  }).then(function (d) {
+    ratings = d.ratings || {};
+    myRatings = d.mine || {};
+    renderVersionBar();
+  }).catch(function (e) { alert(e.message); });
+}
+
+/* ---------- comentarios ---------- */
+
+function loadComments(songId) {
+  comments = [];
+  api("GET", "/api/songs/" + songId + "/comments").then(function (d) {
+    comments = d.comments || [];
+    renderComments();
+  }).catch(function () { renderComments(); });
+}
+
+function renderComments() {
+  vComments.innerHTML = "";
+  if (!current) return;
+  var titulo = document.createElement("h4");
+  titulo.textContent = "Comentarios (" + comments.length + ")";
+  vComments.appendChild(titulo);
+
+  comments.forEach(function (c) {
+    var caja = document.createElement("div");
+    caja.className = "comentario";
+    var quien = document.createElement("div");
+    quien.className = "quien";
+    var nombre = document.createElement("span");
+    nombre.textContent = c.authorName || "Alguien";
+    var cuando = document.createElement("span");
+    cuando.textContent = new Date(c.createdAt).toLocaleDateString("es");
+    quien.appendChild(nombre);
+    quien.appendChild(cuando);
+    // Borrar: quien lo escribió y el equipo editorial. El servidor lo repite.
+    if (user && (c.authorId === user.id || esEditor())) {
+      var quitar = document.createElement("button");
+      quitar.className = "quitar";
+      quitar.textContent = "Borrar";
+      quitar.onclick = function () { deleteComment(c.id); };
+      quien.appendChild(quitar);
+    }
+    var texto = document.createElement("div");
+    texto.className = "texto";
+    texto.textContent = c.body;
+    caja.appendChild(quien);
+    caja.appendChild(texto);
+    vComments.appendChild(caja);
+  });
+
+  if (!comments.length) {
+    var vacio = document.createElement("div");
+    vacio.className = "nota";
+    vacio.textContent = "Todavía no hay comentarios.";
+    vComments.appendChild(vacio);
+  }
+
+  if (!user) {
+    var aviso = document.createElement("div");
+    aviso.className = "nota";
+    aviso.style.marginTop = "12px";
+    aviso.textContent = "Entra en tu cuenta para comentar.";
+    vComments.appendChild(aviso);
+    return;
+  }
+  var form = document.createElement("div");
+  form.id = "vCommentForm";
+  var area = document.createElement("textarea");
+  area.placeholder = "Escribe un comentario…";
+  area.maxLength = 2000;
+  var fila = document.createElement("div");
+  fila.className = "row";
+  var enviar = document.createElement("button");
+  enviar.className = "primary";
+  enviar.textContent = "Publicar";
+  enviar.onclick = function () {
+    var texto = area.value.trim();
+    if (!texto) return;
+    enviar.disabled = true;
+    api("POST", "/api/songs/" + current.song.id + "/comments", { body: texto })
+      .then(function () { area.value = ""; loadComments(current.song.id); })
+      .catch(function (e) { alert(e.message); })
+      .then(function () { enviar.disabled = false; });
+  };
+  fila.appendChild(enviar);
+  form.appendChild(area);
+  form.appendChild(fila);
+  vComments.appendChild(form);
+}
+
+function deleteComment(id) {
+  if (!confirm("¿Borrar este comentario?")) return;
+  api("DELETE", "/api/comments/" + id)
+    .then(function () { loadComments(current.song.id); })
+    .catch(function (e) { alert(e.message); });
+}
+
+/** Cambia lo que se lee sin salir del visor: se conservan tono y tamaño. */
+function showVersion(id) {
+  if (!id) {
+    currentVersion = null;
+    setCapo(current.song.capo);
+    var parsed = vParseSong(current.content);
+    current.body = parsed.body || current.content;
+    renderViewer();
+    renderVersionBar();
+    return;
+  }
+  api("GET", "/api/versions/" + id).then(function (d) {
+    currentVersion = id;
+    var p = vParseSong(d.content);
+    current.body = p.body || d.content;
+    setCapo(d.version.capo);
+    renderViewer();
+    renderVersionBar();
+    vBody.scrollTop = 0;
+  }).catch(function (e) { alert(e.message); });
+}
+
+function newVersion() {
+  editorMode = "version";
+  editingVersionId = null;
+  editingId = current.song.id;
+  eVersionName.value = "";
+  eSource.value = "";
+  editCapo = Number(current.song.capo) || 0;
+  renderCapoPills();
+  eContent.value = current.body || "";
+  renderEditorPreview();
+  closeViewer();
+  applyEditorMode();
+  showEdit(true);
+}
+
+function editVersion(id) {
+  var v = versions.filter(function (x) { return x.id === id; })[0];
+  if (!v) return;
+  api("GET", "/api/versions/" + id).then(function (d) {
+    editorMode = "version";
+    editingVersionId = id;
+    editingId = current.song.id;
+    eVersionName.value = v.name || "";
+    eSource.value = v.sourceUrl || "";
+    editCapo = Number(v.capo) || 0;
+    renderCapoPills();
+    eContent.value = d.content || "";
+    renderEditorPreview();
+    closeViewer();
+    applyEditorMode();
+    showEdit(true);
+  }).catch(function (e) { alert(e.message); });
+}
+
+function deleteVersion(id) {
+  if (!confirm("¿Eliminar esta versión? La partitura original no se toca.")) return;
+  api("DELETE", "/api/versions/" + id).then(function () {
+    currentVersion = null;
+    showVersion(null);
+    loadVersions(current.song.id);
+  }).catch(function (e) { alert(e.message); });
+}
+
+/** Proponer una versión: no toca nada hasta que alguien la apruebe. */
+function proposeVersion() {
+  editorMode = "proposal";
+  proposalTarget = current.song.id;
+  editingVersionId = null;
+  eVersionName.value = "";
+  eSource.value = "";
+  editCapo = Number(current.song.capo) || 0;
+  renderCapoPills();
+  eContent.value = current.body || "";
+  eNote.value = "";
+  renderEditorPreview();
+  closeViewer();
+  applyEditorMode();
+  showEdit(true);
+}
+
+/* ---------- propuestas ---------- */
+
+var ETIQUETA_ESTADO = {
+  pending: "pendiente", approved: "aprobada", rejected: "rechazada", withdrawn: "retirada"
+};
+
+function showProposals() {
+  showView("proposals");
+  propMineWrap.classList.toggle("hidden", !esEditor());   // quien no revisa solo ve las suyas
+  loadProposals();
+}
+
+function loadProposals() {
+  propMsg.textContent = "";
+  var q = "?status=" + encodeURIComponent(propStatus.value);
+  if (esEditor() && propMine.checked) q += "&mine=1";
+  api("GET", "/api/proposals" + q).then(function (d) {
+    proposals = d.proposals || [];
+    renderProposals();
+  }).catch(function (e) {
+    proposals = [];
+    renderProposals(e.message);
+  });
+}
+
+function renderProposals(error) {
+  propList.innerHTML = "";
+  propCount.textContent = proposals.length
+    ? proposals.length + (proposals.length === 1 ? " propuesta" : " propuestas")
+    : "";
+  proposals.forEach(function (p) {
+    var fila = document.createElement("div");
+    fila.className = "fila";
+
+    var cuerpo = document.createElement("div");
+    cuerpo.className = "cuerpo";
+    var titulo = document.createElement("div");
+    titulo.className = "t";
+    titulo.textContent = (p.kind === "publish" ? "Publicar: " : "Versión: ") +
+                         (p.kind === "publish" ? (p.songTitle || "(sin título)")
+                                               : (p.name || "sin nombre"));
+    var meta = document.createElement("div");
+    meta.className = "meta";
+    var partes = [];
+    if (p.kind === "version") partes.push("sobre «" + (p.songTitle || "?") + "»");
+    if (p.authorName) partes.push("de " + p.authorName);
+    if (p.capo) partes.push("capo " + p.capo);
+    partes.push(new Date(p.createdAt).toLocaleDateString("es"));
+    meta.textContent = partes.join(" · ");
+    cuerpo.appendChild(titulo);
+    cuerpo.appendChild(meta);
+    if (p.note) {
+      var nota = document.createElement("div");
+      nota.className = "nota";
+      nota.textContent = "«" + p.note + "»";
+      cuerpo.appendChild(nota);
+    }
+    if (p.reviewNote) {
+      var revision = document.createElement("div");
+      revision.className = "meta";
+      revision.textContent = "Revisión: " + p.reviewNote;
+      cuerpo.appendChild(revision);
+    }
+    fila.appendChild(cuerpo);
+
+    var estado = document.createElement("span");
+    estado.className = "estado";
+    estado.setAttribute("data-s", p.status);
+    estado.textContent = ETIQUETA_ESTADO[p.status] || p.status;
+    fila.appendChild(estado);
+
+    var acciones = document.createElement("div");
+    acciones.className = "row";
+    if (p.kind === "version") {
+      var ver = document.createElement("button");
+      ver.textContent = "Ver";
+      ver.onclick = function () { openProposal(p); };
+      acciones.appendChild(ver);
+    }
+    var abrir = document.createElement("button");
+    abrir.textContent = "Partitura";
+    abrir.onclick = function () { openSong(p.songId); };
+    acciones.appendChild(abrir);
+
+    if (p.status === "pending" && esEditor()) {
+      var aprobar = document.createElement("button");
+      aprobar.className = "primary";
+      aprobar.textContent = "Aprobar";
+      aprobar.onclick = function () { resolveProposal(p, "approve"); };
+      acciones.appendChild(aprobar);
+      var rechazar = document.createElement("button");
+      rechazar.textContent = "Rechazar";
+      rechazar.style.color = "var(--vv-danger)";
+      rechazar.onclick = function () { resolveProposal(p, "reject"); };
+      acciones.appendChild(rechazar);
+    }
+    if (p.status === "pending" && user && p.authorId === user.id) {
+      var retirar = document.createElement("button");
+      retirar.textContent = "Retirar";
+      retirar.onclick = function () {
+        if (!confirm("¿Retirar esta propuesta?")) return;
+        api("DELETE", "/api/proposals/" + p.id)
+          .then(loadProposals)
+          .catch(function (e) { propMsg.textContent = e.message; });
+      };
+      acciones.appendChild(retirar);
+    }
+    fila.appendChild(acciones);
+    propList.appendChild(fila);
+  });
+
+  var msg = error ? error
+    : proposals.length ? ""
+    : esEditor() ? "No hay propuestas con ese estado."
+                 : "Todavía no has enviado ninguna propuesta.";
+  propEmpty.textContent = msg;
+  propEmpty.classList.toggle("hidden", !msg);
+}
+
+/** Aprobar aplica el cambio; rechazar pide el motivo, que le llega al autor. */
+function resolveProposal(p, accion) {
+  var nota = "";
+  if (accion === "reject") {
+    nota = prompt("Motivo del rechazo (lo verá quien la propuso):");
+    if (nota === null) return;
+  } else if (!confirm(p.kind === "publish"
+      ? "¿Publicar «" + (p.songTitle || "") + "» en el catálogo? La verá cualquiera."
+      : "¿Añadir esta versión a la partitura?")) {
+    return;
+  }
+  api("POST", "/api/proposals/" + p.id + "/" + accion, { note: nota }).then(function () {
+    loadProposals();
+    loadGenres();
+  }).catch(function (e) { propMsg.textContent = e.message; });
+}
+
+/** Enseña el texto propuesto tal y como quedaría, sin aplicarlo. */
+function openProposal(p) {
+  api("GET", "/api/proposals/" + p.id).then(function (d) {
+    pmTitle.textContent = p.name || "Versión propuesta";
+    pmMeta.textContent = (p.authorName ? "de " + p.authorName : "") +
+                         (p.capo ? " · capo " + p.capo : "");
+    var parsed = vParseSong(d.content || "");
+    pmBody.innerHTML = '<div class="sheet">' + vRenderSong(parsed.body || d.content || "") + '</div>';
+    propModal.classList.remove("hidden");
+  }).catch(function (e) { propMsg.textContent = e.message; });
+}
+
+/* ---------- usuarios y roles ---------- */
+
+function showUsers() {
+  showView("users");
+  loadUsers();
+}
+
+function loadUsers() {
+  usersMsg.textContent = "";
+  api("GET", "/api/users").then(function (d) {
+    renderUsers(d.users || []);
+  }).catch(function (e) { usersMsg.textContent = e.message; });
+}
+
+function renderUsers(lista) {
+  usersList.innerHTML = "";
+  lista.forEach(function (u) {
+    var fila = document.createElement("div");
+    fila.className = "fila";
+    var cuerpo = document.createElement("div");
+    cuerpo.className = "cuerpo";
+    var nombre = document.createElement("div");
+    nombre.className = "t";
+    nombre.textContent = u.name || u.email;
+    var correo = document.createElement("div");
+    correo.className = "meta";
+    correo.textContent = u.email;
+    cuerpo.appendChild(nombre);
+    cuerpo.appendChild(correo);
+    fila.appendChild(cuerpo);
+
+    var select = document.createElement("select");
+    select.style.width = "auto";
+    [["user", "Usuario"], ["editor", "Editor"], ["admin", "Administrador"]].forEach(function (par) {
+      var o = document.createElement("option");
+      o.value = par[0];
+      o.textContent = par[1];
+      if (u.role === par[0]) o.selected = true;
+      select.appendChild(o);
+    });
+    // El servidor también lo rechaza; aquí se evita el viaje y la confusión.
+    var esYo = user && u.id === user.id;
+    select.disabled = esYo;
+    select.title = esYo ? "No puedes cambiar tu propio rol" : "";
+    select.onchange = function () {
+      api("PUT", "/api/users/" + u.id + "/role", { role: select.value })
+        .then(loadUsers)
+        .catch(function (e) { usersMsg.textContent = e.message; loadUsers(); });
+    };
+    fila.appendChild(select);
+    usersList.appendChild(fila);
+  });
+}
 
 /* ---------- acordes ---------- */
 
@@ -654,7 +1608,9 @@ function openChordModal(nombre) {
                        '<span class="va">' + (i + 1) + " de " + posiciones.length + "</span>";
       cmBody.appendChild(caja);
     });
-    cmEmpty.textContent = posiciones.length ? "" : "Este acorde no está en el diccionario.";
+    cmEmpty.textContent = posiciones.length
+      ? ""
+      : "Este acorde no está en el diccionario global todavía.";
     cmEmpty.classList.toggle("hidden", !!posiciones.length);
     chordModal.classList.remove("hidden");
   });
@@ -662,10 +1618,9 @@ function openChordModal(nombre) {
 
 /* ---------- diccionario: administración ---------- */
 
-function showChords(on) {
-  chordsView.classList.toggle("hidden", !on);
-  listView.classList.toggle("hidden", on);
-  if (on) loadChords().then(renderChordList);
+function showChords() {
+  showView("chords");
+  loadChords().then(renderChordList);
 }
 
 function renderChordList() {
@@ -746,16 +1701,28 @@ function renderChordPositions() {
     fila.appendChild(envoltorio);
 
     var base = document.createElement("div");
-    base.className = "grp";
     var lb = document.createElement("span");
     lb.className = "lbl"; lb.textContent = "Traste base";
-    var ib = document.createElement("input");
-    ib.type = "number"; ib.min = "1"; ib.max = "24"; ib.value = pos.baseFret || 1;
-    ib.oninput = function () {
-      pos.baseFret = parseInt(ib.value, 10) || 1;
-      vista.innerHTML = vChordSvg(pos, 92);
-    };
-    base.appendChild(lb); base.appendChild(ib);
+    var pastillas = document.createElement("div");
+    pastillas.className = "pills";
+    function pintaBase() {
+      pastillas.innerHTML = "";
+      for (var t = 1; t <= 12; t++) {
+        (function (traste) {
+          var b = document.createElement("button");
+          b.textContent = traste;
+          b.setAttribute("aria-pressed", (pos.baseFret || 1) === traste);
+          b.onclick = function () {
+            pos.baseFret = traste;
+            pintaBase();
+            vista.innerHTML = vChordSvg(pos, 92);
+          };
+          pastillas.appendChild(b);
+        })(t);
+      }
+    }
+    pintaBase();
+    base.appendChild(lb); base.appendChild(pastillas);
     fila.appendChild(base);
 
     var cej = document.createElement("div");
@@ -837,6 +1804,34 @@ function seedChords() {
 
 /* ---------- editor ---------- */
 
+var editCapo = 0;
+
+/**
+ * Capo de 0 a 12 en botones. Se elige de un toque y no hay forma de escribir
+ * un valor imposible; 0 es "sin capo" y por eso va con su propia etiqueta.
+ */
+function renderCapoPills() {
+  eCapoPills.innerHTML = "";
+  for (var i = 0; i <= 12; i++) {
+    (function (valor) {
+      var b = document.createElement("button");
+      b.textContent = valor === 0 ? "Sin capo" : String(valor);
+      b.setAttribute("aria-pressed", valor === editCapo);
+      b.onclick = function () { editCapo = valor; renderCapoPills(); };
+      eCapoPills.appendChild(b);
+    })(i);
+  }
+}
+
+/** Marca los acordes del texto con la misma lógica que el panel /admin. */
+function detectChords() {
+  var r = vDetectChords(eContent.value);
+  if (!r.marked) { editMsg.textContent = "No se ha detectado ninguna línea de acordes."; return; }
+  eContent.value = r.text;
+  renderEditorPreview();
+  editMsg.textContent = "Marcados " + r.marked + " acordes.";
+}
+
 /**
  * Pinta el panel derecho con el mismo render que el visor. Las cabeceras
  * #clave: valor no se muestran (son metadatos, no letra), igual que al ver la
@@ -865,39 +1860,86 @@ function linkPaneScroll(origen, destino) {
   });
 }
 
+/**
+ * El editor sirve para tres cosas y enseña solo lo que toca en cada una:
+ * la partitura, una versión suya, o una versión que se propone a revisión.
+ */
+function applyEditorMode() {
+  var esVersion = editorMode === "version" || editorMode === "proposal";
+  eVersionHead.classList.toggle("hidden", !esVersion);
+  eNoteWrap.classList.toggle("hidden", editorMode !== "proposal");
+  eTitle.parentNode.classList.toggle("hidden", esVersion);
+  eArtist.parentNode.classList.toggle("hidden", esVersion);
+  eGenre.parentNode.classList.toggle("hidden", esVersion);
+  eVisibilityWrap.classList.toggle("hidden", esVersion || !esEditor());
+  eLockedWrap.classList.toggle("hidden", esVersion);
+  deleteBtn.classList.toggle("hidden", esVersion || !editingId);
+  saveBtn.textContent = editorMode === "proposal" ? "Enviar a revisión" : "Guardar";
+
+  var puedeProponerPublicar = editorMode === "song" && !!editingId && !esEditor() &&
+                              current && current.song && current.song.visibility !== "public";
+  proposeBtn.classList.toggle("hidden", !puedeProponerPublicar);
+
+  editAviso.classList.add("hidden");
+  if (editorMode === "proposal") {
+    editAviso.textContent = "Esto no cambia la partitura: se envía a revisión y un editor decide.";
+    editAviso.classList.remove("hidden");
+  } else if (editorMode === "song" && !esEditor()) {
+    editAviso.textContent = "Tus partituras nacen privadas. Para que salgan en el catálogo, propón su publicación.";
+    editAviso.classList.remove("hidden");
+  }
+}
+
 function showEdit(on) {
-  editView.classList.toggle("hidden", !on);
-  listView.classList.toggle("hidden", on);
+  showView(on ? "edit" : "list");
   editMsg.textContent = "";
 }
 function newSong() {
   editingId = null;
-  eTitle.value = ""; eArtist.value = ""; eCapo.value = ""; eContent.value = "";
+  eTitle.value = ""; eArtist.value = ""; eSource.value = ""; eContent.value = ""; eGenre.value = "";
+  eTube.value = ""; eTubeMsg.textContent = "";
+  editCapo = 0; renderCapoPills();
+  eLocked.checked = false;
+  editorMode = "song"; editingVersionId = null;
   eVisibility.value = "private";
-  deleteBtn.classList.add("hidden");
   renderEditorPreview();
+  applyEditorMode();
   showEdit(true);
 }
 function editCurrent() {
   if (!current) return;
+  editorMode = "song";
+  editingVersionId = null;
   editingId = current.song.id;
   if (current.song.locked &&
       !confirm("Esta partitura está bloqueada para evitar cambios accidentales. ¿Editarla igualmente?")) return;
   eTitle.value = current.song.title || "";
   eArtist.value = current.song.artist || "";
-  eCapo.value = current.song.capo || "";
+  editCapo = Number(current.song.capo) || 0;
+  renderCapoPills();
+  eSource.value = current.song.sourceUrl || "";
+  eGenre.value = current.song.genre || "";
+  eTube.value = current.song.youtubeUrl || "";
+  eTubeMsg.textContent = "";
+  eLocked.checked = !!current.song.locked;
   eVisibility.value = current.song.visibility || "private";
   eContent.value = current.content || "";
-  deleteBtn.classList.remove("hidden");
   renderEditorPreview();
   closeViewer();
+  applyEditorMode();
   showEdit(true);
 }
 function saveSong() {
+  if (editorMode === "version") return saveVersion();
+  if (editorMode === "proposal") return sendVersionProposal();
   var payload = {
     title: eTitle.value.trim(),
     artist: eArtist.value.trim(),
-    capo: parseInt(eCapo.value, 10) || 0,
+    capo: editCapo,
+    genre: eGenre.value.trim(),
+    youtubeUrl: eTube.value.trim(),
+    locked: eLocked.checked,
+    sourceUrl: eSource.value.trim(),
     visibility: eVisibility.value,
     content: eContent.value
   };
@@ -906,14 +1948,64 @@ function saveSong() {
   req.then(function () {
     showEdit(false);
     tab = "mine";
+    loadGenres();          // la categoría puede ser nueva
     refresh();
   }).catch(function (e) { editMsg.textContent = e.message; });
 }
+/** Guarda una versión de la partitura abierta (alta o edición). */
+function saveVersion() {
+  var payload = {
+    name: eVersionName.value.trim() || "Sin nombre",
+    capo: editCapo,
+    sourceUrl: eSource.value.trim(),
+    content: eContent.value
+  };
+  var req = editingVersionId
+    ? api("PUT", "/api/versions/" + editingVersionId, payload)
+    : api("POST", "/api/songs/" + editingId + "/versions", payload);
+  req.then(function () {
+    editorMode = "song";
+    showEdit(false);
+    openSong(editingId);
+  }).catch(function (e) { editMsg.textContent = e.message; });
+}
+
+/** Envía la versión a revisión en vez de aplicarla. */
+function sendVersionProposal() {
+  api("POST", "/api/songs/" + proposalTarget + "/proposals", {
+    kind: "version",
+    name: eVersionName.value.trim() || "Versión propuesta",
+    capo: editCapo,
+    sourceUrl: eSource.value.trim(),
+    note: eNote.value.trim(),
+    content: eContent.value
+  }).then(function () {
+    editorMode = "song";
+    showEdit(false);
+    tab = "proposals";
+    refresh();
+  }).catch(function (e) { editMsg.textContent = e.message; });
+}
+
+/** Pide que la partitura entre en el catálogo. No la publica: la propone. */
+function proposePublish() {
+  if (!editingId) return;
+  var nota = prompt("¿Algo que quieras contarle a quien la revise? (opcional)");
+  if (nota === null) return;
+  api("POST", "/api/songs/" + editingId + "/proposals", { kind: "publish", note: nota })
+    .then(function () {
+      showEdit(false);
+      tab = "proposals";
+      refresh();
+    }).catch(function (e) { editMsg.textContent = e.message; });
+}
+
 function deleteSong() {
   if (!editingId) return;
   if (!confirm("¿Mover esta partitura a la papelera?")) return;
   api("DELETE", "/api/songs/" + editingId).then(function () {
     showEdit(false);
+    loadGenres();
     refresh();
   }).catch(function (e) { editMsg.textContent = e.message; });
 }
@@ -922,7 +2014,17 @@ function deleteSong() {
 loginBtn.onclick = function () { registering = false; authTitle.textContent = "Entrar en Vivace";
   authSubmit.textContent = "Entrar"; authSwitch.textContent = "Crear una cuenta";
   nameWrap.classList.add("hidden"); showAuth(true); };
-logoutBtn.onclick = function () { setSession("", null); tab = "public"; refresh(); };
+logoutBtn.onclick = function () {
+  closeViewer();
+  current = null;
+  editingId = null;
+  editingVersionId = null;
+  editorMode = "song";
+  chordDict = null;              // el diccionario se recarga con la sesión nueva
+  setSession("", null);
+  tab = "public";
+  refresh();
+};
 authSwitch.onclick = function () {
   registering = !registering;
   authTitle.textContent = registering ? "Crear cuenta en Vivace" : "Entrar en Vivace";
@@ -939,8 +2041,72 @@ tabMine.onclick = function () { tab = "mine"; refresh(); };
 search.oninput = function () { renderList(); };
 tabChords.onclick = function () { tab = "chords"; refresh(); };
 vChords.onclick = toggleChordBar;
+/**
+ * Globo con las digitaciones al pasar por encima de un acorde. El clic sigue
+ * abriendo el modal completo; esto es para consultar de pasada sin perder el
+ * sitio en la letra.
+ */
+var hoverTimer = 0;
+function hideChordHover() {
+  if (hoverTimer) { clearTimeout(hoverTimer); hoverTimer = 0; }
+  chordHover.classList.remove("on");
+}
+function showChordHover(el, nombre) {
+  var posiciones = chordPositionsOf(nombre);
+  if (!posiciones.length) return;
+  chordHover.innerHTML = '<span class="nm">' + vEsc(nombre) + '</span>' +
+    posiciones.slice(0, 4).map(function (p) { return vChordSvg(p, 84); }).join("");
+  chordHover.classList.add("on");
+  // Se coloca debajo del acorde y se mete hacia dentro si no cabe a la derecha.
+  var r = el.getBoundingClientRect();
+  var ancho = chordHover.offsetWidth;
+  var alto = chordHover.offsetHeight;
+  var x = Math.min(Math.max(8, r.left), window.innerWidth - ancho - 8);
+  var y = r.bottom + 8;
+  if (y + alto > window.innerHeight - 8) y = Math.max(8, r.top - alto - 8);
+  chordHover.style.left = x + "px";
+  chordHover.style.top = y + "px";
+}
+vBody.onmouseover = function (e) {
+  var destino = e.target;
+  if (!destino || !destino.classList || !destino.classList.contains("chord")) return;
+  var nombre = destino.textContent.trim();
+  if (hoverTimer) clearTimeout(hoverTimer);
+  // Un respiro antes de aparecer: si no, pasar el ratón por encima de la letra
+  // dispara globos sin parar.
+  hoverTimer = setTimeout(function () {
+    loadChords().then(function () { showChordHover(destino, nombre); });
+  }, 220);
+};
+vBody.onmouseout = function (e) {
+  var destino = e.target;
+  if (destino && destino.classList && destino.classList.contains("chord")) hideChordHover();
+};
+vBody.onscroll = hideChordHover;
+
+vBody.onclick = function (e) {
+  var destino = e.target;
+  if (!destino || !destino.classList || !destino.classList.contains("chord")) return;
+  // El texto del acorde ya está transpuesto: es lo que se está tocando.
+  hideChordHover();
+  openChordModal(destino.textContent.trim());
+};
 cmClose.onclick = function () { chordModal.classList.add("hidden"); };
+document.addEventListener("keydown", function (e) {
+  if (e.key === "Escape" && !chordModal.classList.contains("hidden")) {
+    chordModal.classList.add("hidden");
+  }
+});
 chordModal.onclick = function (e) { if (e.target === chordModal) chordModal.classList.add("hidden"); };
+tabProposals.onclick = function () { tab = "proposals"; refresh(); };
+tabUsers.onclick = function () { tab = "users"; refresh(); };
+propStatus.onchange = loadProposals;
+propMine.onchange = loadProposals;
+pmClose.onclick = function () { propModal.classList.add("hidden"); };
+propModal.onclick = function (e) { if (e.target === propModal) propModal.classList.add("hidden"); };
+proposeBtn.onclick = proposePublish;
+genreFilter.onchange = function () { genreBy = genreFilter.value; refresh(); };
+sortSel.onchange = function () { sortBy = sortSel.value; refresh(); };
 chordSearch.oninput = renderChordList;
 chordNew.onclick = function () { openChordEditor(""); };
 chordSeed.onclick = seedChords;
@@ -948,6 +2114,18 @@ chClose.onclick = function () { chordEditor.classList.add("hidden"); };
 chAddPos.onclick = function () {
   chordPositions.push({ frets: [-1, -1, -1, -1, -1, -1], fingers: [0, 0, 0, 0, 0, 0], baseFret: 1, barres: [] });
   renderChordPositions();
+};
+eDetect.onclick = detectChords;
+// Comprobación en el momento: pegar algo que no es de YouTube se ve al instante.
+eTube.oninput = function () {
+  var v = eTube.value.trim();
+  eTubeMsg.textContent = !v ? "" : (vEmbedUrl(v) ? "Vídeo reconocido" : "No parece un enlace de YouTube");
+};
+eTubeSearch.onclick = function () {
+  var consulta = (eArtist.value.trim() + " " + eTitle.value.trim()).trim();
+  if (!consulta) { eTubeMsg.textContent = "Pon antes el título o el artista."; return; }
+  window.open("https://www.youtube.com/results?search_query=" + encodeURIComponent(consulta),
+              "_blank", "noopener");
 };
 chSave.onclick = saveChord;
 chDelete.onclick = deleteChord;
@@ -975,6 +2153,7 @@ document.addEventListener("keydown", function (e) {
 });
 
 renderBeats(0);
+loadGenres();
 restoreSession().then(function () {
   if (user) tab = "mine";
   refresh();

@@ -1,19 +1,11 @@
-// Dev check: extrae el núcleo de detección de acordes del ADMIN_HTML y lo
-// prueba con texto real. Se prueba `detectChordsInText`, que es la función pura
-// que comparten el editor y la detección en lote.
-import { readFileSync } from "fs";
+// Dev check: prueba la detección de acordes con texto real. La función vive en
+// client-lib.js y la comparten la web y el panel /admin, así que probarla aquí
+// cubre las dos páginas.
+import { CLIENT_JS } from "./src/client-lib.js";
 
-const src = readFileSync(new URL("./src/admin-html.js", import.meta.url), "utf8");
-const tpl = src.match(/const ADMIN_HTML = `([\s\S]*)`;/)[1];
-const html = tpl.replace(/\\`/g, "`").replace(/\\\\/g, "\\");
-const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
-
-// Aísla las constantes + la función pura (desde CHORD_RE hasta el cierre de
-// detectChordsInText, marcado por su `return { text: ..., marked };`).
-const part = script.match(
-  /const CHORD_RE[\s\S]*?return \{ text: out\.join\("\\n"\), marked \};\n\}/
-)[0];
-const detect = new Function(part + "\nreturn detectChordsInText;")();
+// La librería es JavaScript de navegador que viaja como texto: se compila y se
+// pide la función, sin ejecutar nada más.
+const detect = new Function(CLIENT_JS + "\nreturn vDetectChords;")();
 
 const cases = [
   // [entrada, salida esperada]
@@ -51,4 +43,4 @@ if (detect("C G Am\nletra").marked !== 3) {
 }
 
 if (fail) { console.error(fail + " fallos"); process.exit(1); }
-console.log("detectChordsInText: " + (cases.length + 2) + " casos OK");
+console.log("vDetectChords: " + (cases.length + 2) + " casos OK");

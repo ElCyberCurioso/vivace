@@ -54,12 +54,32 @@
     Cloudflare. Util para saber quien es el admin cuando el catalogo sale vacio.
 
 .PARAMETER PromoteAdmin
-    Da el rol de administrador a la cuenta indicada en -AdminEmail, escribiendo
-    directamente en D1 con wrangler. Es la salida cuando nadie tiene la
-    contrasena del admin original.
+    Cambia el rol de la cuenta indicada en -AdminEmail, escribiendo directamente
+    en D1 con wrangler. Es la salida cuando nadie tiene la contrasena del admin
+    original, y la via para nombrar editores.
 
 .PARAMETER AdminEmail
-    Email de la cuenta que se promociona con -PromoteAdmin.
+    Email de la cuenta cuyo rol se cambia con -PromoteAdmin.
+
+.PARAMETER Role
+    Rol que se le da: "admin" (por defecto), "editor" o "user". El editor
+    gestiona el catalogo, revisa propuestas y mantiene el diccionario de
+    acordes; el admin ademas reparte roles.
+
+.PARAMETER Categorize
+    Propone una categoria musical para cada partitura a partir del artista y del
+    titulo, y la aplica a las que no tengan ninguna. Primero ensena el recuento
+    en seco y pregunta antes de escribir. Las reglas estan en
+    worker/src/genres.js, a la vista para poder corregirlas.
+
+.PARAMETER Overwrite
+    Con -Categorize, repasa tambien las partituras que YA tienen categoria y las
+    pisa con la que propongan las reglas. Sin esto solo se rellenan los huecos.
+
+.PARAMETER ApplySchema
+    Aplica schema.sql a la base de produccion. Todas las sentencias son
+    CREATE ... IF NOT EXISTS, asi que repetirlo no rompe nada: es como se
+    ponen al dia las tablas nuevas (versiones, propuestas) sin tocar los datos.
 
 .PARAMETER Notes
     Texto de novedades que va en latest.json y que la app ensena en el aviso de
@@ -105,6 +125,10 @@ param(
     [switch]$ListUsers,
     [switch]$PromoteAdmin,
     [string]$AdminEmail = "",
+    [ValidateSet("admin", "editor", "user")][string]$Role = "admin",
+    [switch]$Categorize,
+    [switch]$Overwrite,
+    [switch]$ApplySchema,
     [string]$Notes = "",
     [string]$BaseUrl = "",
     [switch]$SkipTests,
@@ -386,6 +410,36 @@ function Get-BucketName {
     Fail "No se encontro bucket_name en wrangler.toml."
 }
 
+# Las tablas nuevas se anaden con el mismo fichero que crea las de cero: todo
+# el esquema es CREATE ... IF NOT EXISTS.
+function Invoke-ApplySchema {
+    Write-Step "Aplicar el esquema a la base de produccion"
+    Write-Note "Solo crea lo que falte (tablas e indices). No borra ni reescribe datos."
+    if (-not (Confirm-Step "Aplicar schema.sql sobre la base 'vivace'?")) {
+        Write-Note "Cancelado."
+        return
+    }
+    Invoke-Tool -Exe "npx.cmd" -WorkDir $WorkerDir -Arguments @(
+        "wrangler", "d1", "execute", "vivace", "--remote", "--file=schema.sql")
+
+    # migrations.sql lleva los ALTER TABLE. SQLite no tiene "ADD COLUMN IF NOT
+    # EXISTS", asi que al repetirlo falla con "duplicate column name": eso es
+    # justo lo que se espera cuando ya estaba aplicado, y no es un error.
+    Write-Info "Cambios sobre tablas existentes (migrations.sql)..."
+    Push-Location $WorkerDir
+    try {
+        & npx.cmd wrangler d1 execute vivace --remote --file=migrations.sql
+        $codigo = $LASTEXITCODE
+    } finally {
+        Pop-Location
+    }
+    if ($codigo -ne 0) {
+        Write-Note "Alguna migracion no se aplico. Si el motivo es 'duplicate column name',"
+        Write-Note "ya estaba puesta y no hay nada que hacer; cualquier otro motivo, miralo."
+    }
+    Write-Ok "Esquema al dia"
+}
+
 function Invoke-InitBackend {
     Write-Step "Puesta en marcha del backend (solo la primera vez)"
     $bucket = Get-BucketName
@@ -555,20 +609,27 @@ function Show-Users {
 }
 
 function Invoke-PromoteAdmin {
-    Write-Step "Promocionar una cuenta a administradora"
+    Write-Step "Cambiar el rol de una cuenta"
     if ([string]::IsNullOrWhiteSpace($AdminEmail)) {
-        Fail "Falta -AdminEmail con la cuenta que quieres promocionar."
+        Fail "Falta -AdminEmail con la cuenta cuyo rol quieres cambiar."
     }
     Show-Users
 
     $correo = ConvertTo-SqlLiteral $AdminEmail.Trim().ToLowerInvariant()
-    Write-Note "Vas a dar permisos de administrador sobre TODO el contenido a $AdminEmail."
-    Write-Note "El admin puede ver, editar y borrar partituras de cualquier usuario."
-    if (-not (Confirm-Step "Promocionar a $AdminEmail?")) {
+    if ($Role -eq "admin") {
+        Write-Note "Vas a dar permisos de administrador sobre TODO el contenido a $AdminEmail."
+        Write-Note "El admin ve, edita y borra partituras de cualquiera, y reparte roles."
+    } elseif ($Role -eq "editor") {
+        Write-Note "El editor gestiona el catalogo: edita y despublica partituras publicas,"
+        Write-Note "resuelve propuestas y mantiene el diccionario de acordes."
+    } else {
+        Write-Note "Vas a QUITARLE los permisos a $AdminEmail y dejarlo como usuario normal."
+    }
+    if (-not (Confirm-Step "Poner a $AdminEmail como '$Role'?")) {
         Write-Note "Cancelado. No se ha tocado la base."
         return
     }
-    Invoke-D1 ("UPDATE users SET role = 'admin' WHERE email_lower = $correo")
+    Invoke-D1 ("UPDATE users SET role = '$Role' WHERE email_lower = $correo")
     Show-Users
     Write-Note "Si arriba sigue habiendo un admin mas antiguo, el catalogo seguira siendo el suyo."
     Write-Note "Para que el tuyo mande, degrada al viejo con:"
@@ -626,10 +687,115 @@ function Get-ErrorBody {
 function Format-HttpError {
     param($Registro, [string]$Prefijo)
     $cuerpo = Get-ErrorBody $Registro
-    if ([string]::IsNullOrWhiteSpace($cuerpo)) {
-        return ("{0}: {1}" -f $Prefijo, $Registro.Exception.Message)
+    $texto = "{0}: {1}" -f $Prefijo, $Registro.Exception.Message
+    if (-not [string]::IsNullOrWhiteSpace($cuerpo)) {
+        $texto += "`n      respuesta: $cuerpo"
     }
-    return ("{0}: {1}`n      respuesta: {2}" -f $Prefijo, $Registro.Exception.Message, $cuerpo)
+    # Un 404 en una ruta de la API casi siempre significa que el Worker
+    # desplegado es anterior al codigo local, no que la ruta no exista.
+    $codigo = 0
+    try { $codigo = [int]$Registro.Exception.Response.StatusCode } catch { $codigo = 0 }
+    if ($codigo -eq 404) {
+        $texto += "`n      El Worker desplegado no conoce esa ruta. Publica primero el codigo:"
+        $texto += "`n        .\tools\deploy.ps1 -Worker"
+    }
+    return $texto
+}
+
+# Clasificar es adivinar: por eso va en dos pasos, primero en seco.
+function Invoke-Categorize {
+    Write-Step "Categorias del catalogo"
+    $base = Get-BaseUrl
+    $sesion = Get-EditorSession $base
+
+    Write-Info "Reglas en worker/src/genres.js: artista primero, luego el titulo,"
+    Write-Info "y 'Varios' para lo que no encaje. Se corrigen a mano cuando quieras."
+    Write-Note "Esto usa una ruta nueva de la API: si no has desplegado el Worker"
+    Write-Note "despues del ultimo cambio, hazlo antes (.\tools\deploy.ps1 -Worker)."
+
+    $resumen = Invoke-Categorize-Pasada $base $sesion.token $true
+    if ($resumen.Total -eq 0) {
+        Write-Ok "No hay nada que clasificar."
+        return
+    }
+    Write-Note ("Se asignaria categoria a {0} partituras:" -f $resumen.Total)
+    $resumen.Tally.GetEnumerator() | Sort-Object -Property Value -Descending | ForEach-Object {
+        Write-Host ("      {0,-18} {1}" -f $_.Key, $_.Value) -ForegroundColor DarkGray
+    }
+    if ($Overwrite) { Write-Note "-Overwrite: se pisaran tambien las que YA tienen categoria." }
+    if (-not (Confirm-Step "Aplicar estas categorias?")) {
+        Write-Note "Cancelado. No se ha tocado nada."
+        return
+    }
+    $aplicado = Invoke-Categorize-Pasada $base $sesion.token $false
+    Write-Ok ("Categorias asignadas a {0} partituras" -f $aplicado.Total)
+}
+
+# Una pasada completa, encadenando tandas con el cursor que devuelve el Worker.
+function Invoke-Categorize-Pasada {
+    param([string]$Base, [string]$Token, [bool]$EnSeco)
+    $tally = @{}
+    $total = 0
+    $cursor = ""
+    $tanda = 0
+    do {
+        $tanda++
+        try {
+            $r = Invoke-JsonPost -Uri "$Base/api/genres/auto" -Token $Token -Body @{
+                dryRun = $EnSeco; overwrite = [bool]$Overwrite; cursor = $cursor; limit = 200
+            }
+        } catch {
+            Fail (Format-HttpError $_ "Fallo la clasificacion")
+        }
+        $total += [int]$r.wouldUpdate
+        foreach ($p in $r.tally.PSObject.Properties) {
+            $tally[$p.Name] = [int]$tally[$p.Name] + [int]$p.Value
+        }
+        $cursor = $r.cursor
+        if (-not $EnSeco -and [int]$r.updated -gt 0) {
+            Write-Info ("tanda {0}: {1} clasificadas" -f $tanda, $r.updated)
+        }
+        if ($tanda -ge 500) { Write-Note "Demasiadas tandas; se para aqui."; break }
+    } while (-not $r.done)
+    return @{ Total = $total; Tally = $tally }
+}
+
+# Pide credenciales y devuelve la sesion. La contrasena la escribe la persona y
+# se libera de memoria en cuanto se ha usado.
+function Get-EditorSession {
+    param([string]$Base, [switch]$SoloAdmin)
+    if ($SoloAdmin) {
+        Write-Note "Entra con la cuenta de ADMINISTRADOR (el primer usuario que se registro)."
+    } else {
+        Write-Note "Entra con una cuenta de editor o administrador."
+    }
+    $email = Read-Host "Email"
+    $segura = Read-Host "Contrasena" -AsSecureString
+    $puntero = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($segura)
+    $sesion = $null
+    try {
+        $clave = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($puntero)
+        try {
+            $sesion = Invoke-JsonPost -Uri "$Base/auth/login" -Body @{ email = $email; password = $clave }
+        } catch {
+            Fail (Format-HttpError $_ "No se pudo iniciar sesion")
+        }
+    } finally {
+        [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($puntero)
+        $clave = $null
+    }
+    if ($null -eq $sesion -or [string]::IsNullOrWhiteSpace($sesion.token)) {
+        Fail "El servidor no devolvio ninguna sesion."
+    }
+    $rol = $sesion.user.role
+    if ($SoloAdmin -and $rol -ne "admin") {
+        Fail ("La cuenta '{0}' no es administradora." -f $email)
+    }
+    if (-not $SoloAdmin -and $rol -ne "admin" -and $rol -ne "editor") {
+        Fail ("La cuenta '{0}' no es editora ni administradora." -f $email)
+    }
+    Write-Ok ("Sesion de {0}: {1}" -f $rol, $sesion.user.email)
+    return $sesion
 }
 
 function Invoke-PublishCatalog {
@@ -638,29 +804,7 @@ function Invoke-PublishCatalog {
 
     Write-Info "Las partituras anteriores al multiusuario estan en R2 pero no en la base,"
     Write-Info "y la web lista desde la base: por eso el catalogo sale vacio."
-    Write-Note "Entra con la cuenta de ADMINISTRADOR (el primer usuario que se registro)."
-    $email = Read-Host "Email"
-    $segura = Read-Host "Contrasena" -AsSecureString
-    $puntero = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($segura)
-    try {
-        $clave = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($puntero)
-        try {
-            $sesion = Invoke-JsonPost -Uri "$base/auth/login" -Body @{ email = $email; password = $clave }
-        } catch {
-            Fail (Format-HttpError $_ "No se pudo iniciar sesion")
-        }
-    } finally {
-        # La contrasena sale de memoria en cuanto se ha usado.
-        [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($puntero)
-        $clave = $null
-    }
-    if ($null -eq $sesion -or [string]::IsNullOrWhiteSpace($sesion.token)) {
-        Fail "El servidor no devolvio ninguna sesion."
-    }
-    if ($sesion.user.role -ne "admin") {
-        Fail ("La cuenta '{0}' no es administradora; /admin/migrate solo lo puede lanzar el admin." -f $email)
-    }
-    Write-Ok ("Sesion de admin: {0}" -f $sesion.user.email)
+    $sesion = Get-EditorSession $base -SoloAdmin
 
     if ($CatalogVisibility -eq "public") {
         Write-Note "Con visibilidad 'public' esas partituras quedan visibles para CUALQUIERA que entre en la web."
@@ -714,7 +858,8 @@ function Invoke-PublishCatalog {
 # --------------------------------------------------------------------- main --
 
 if ($All) { $Setup = $true; $Worker = $true; $App = $true }
-if (-not ($Setup -or $InitBackend -or $Worker -or $App -or $PublishCatalog -or $ListUsers -or $PromoteAdmin)) {
+if (-not ($Setup -or $InitBackend -or $Worker -or $App -or $PublishCatalog -or $ListUsers -or
+          $PromoteAdmin -or $ApplySchema -or $Categorize)) {
     $Setup = $true
 }
 
@@ -726,7 +871,7 @@ Write-Host "Repositorio: $Root" -ForegroundColor DarkGray
 # -PublishCatalog solo habla por HTTP con el Worker ya desplegado: no necesita
 # ni cadena de compilacion ni sesion de wrangler. -ListUsers y -PromoteAdmin si
 # usan wrangler (hablan con D1), pero no la cadena de compilacion de Android.
-if ($ListUsers -or $PromoteAdmin) {
+if ($ListUsers -or $PromoteAdmin -or $ApplySchema) {
     Initialize-Node
     Initialize-WorkerDeps
     Initialize-Cloudflare
@@ -746,11 +891,13 @@ if ($Setup -or $InitBackend -or $Worker -or $App) {
     }
 }
 if ($InitBackend) { Invoke-InitBackend }
+if ($ApplySchema) { Invoke-ApplySchema }
 if ($Worker) { Publish-Worker }
 if ($App) { Publish-App }
 if ($ListUsers -and -not $PromoteAdmin) { Show-Users }
 if ($PromoteAdmin) { Invoke-PromoteAdmin }
 if ($PublishCatalog) { Invoke-PublishCatalog }
+if ($Categorize) { Invoke-Categorize }
 
 Write-Step "Hecho"
 if ($Setup -and -not ($Worker -or $App -or $PublishCatalog)) {

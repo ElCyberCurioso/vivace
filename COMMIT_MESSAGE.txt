@@ -1,98 +1,111 @@
-feat: multiusuario, estilo Vivace, acordes globales y despliegue
+feat: roles, versiones, propuestas y social en la web
 
-Todo lo que quedaba pendiente desde 3e22314. Aquí va el resumen por
-bloques; el detalle y las decisiones que conviene no deshacer sin querer
-están en CONTEXTO.md.
+Segunda tanda sobre la web del Worker: el catálogo deja de ser una lista
+plana con un dueño y pasa a tener equipo editorial, versiones, revisión,
+comentarios y valoraciones. La app Android no se toca.
 
-Sistema multiusuario (D1 + R2):
-- Cuentas con PBKDF2-SHA256 (100k iteraciones, sal por usuario) y sesión
-  JWT HS256 firmada con AUTH_SECRET. El primer usuario que se registra
-  queda como administrador. El login responde lo mismo para un email
-  inexistente que para una contraseña mala: no se filtra qué correos
-  están dados de alta.
-- Partituras private/public con las reglas de acceso en lógica pura
-  (permissions.js). El texto sigue viviendo en R2: songs.r2_key apunta a
-  la clave original, así que indexar no mueve ni reescribe objetos.
-- La app entra con la misma cuenta (VivaceClient + AccountSyncManager).
-  El primer sync casa por clave de R2 lo que ya estaba subido con el
-  token compartido, de modo que no se duplica nada.
-- POST /admin/migrate indexa lo que ya había en R2. Va por tandas
-  (?limit=, ?cursor=): un Worker tiene tope de subpeticiones por
-  invocación y un catálogo grande se caía con un 500 a media
-  importación. Precarga las claves conocidas en una consulta y agrupa
-  las altas en un db.batch, de 4 subpeticiones por canción a ~1.
+Roles y publicación revisada:
+- Tres roles en `permissions.js` (lógica pura): `user` crea lo suyo y
+  propone; `editor` cuida el catálogo —edita y despublica lo público,
+  resuelve propuestas y mantiene el diccionario de acordes—; `admin`
+  además reparte roles. Un editor NO toca las privadas de nadie: manda
+  sobre el catálogo, no sobre el cajón de cada uno.
+- `visibility` deja de ser cosa de quien sube la partitura. Pedirla al
+  crear o editar se ignora en silencio si no eres editor, en vez de
+  rechazar la edición entera y perder el trabajo por un campo.
+- Pestaña «Usuarios» y `-PromoteAdmin -Role editor` para repartir roles
+  sin entrar en la web.
 
-Web Vivace (worker/src/web-html.js):
-- Catálogo, «Mis partituras», visor con auto-scroll, metrónomo,
-  transposición ±11 con bemoles, tamaño de letra y capo, y editor con
-  conmutador privada/pública.
-- Editor a dos paneles: el texto a la izquierda y el resultado final a
-  la derecha, con el mismo render que el visor y el scroll atado en
-  proporción al recorrido de cada panel, que no miden lo mismo.
-- La partitura se centra como bloque (.sheet, width:max-content) y no
-  con text-align: las columnas son las del fichero y centrar el texto
-  descolocaría cada acorde de su sílaba.
+Versiones y propuestas:
+- `song_versions` calcado al modelo de la app: el contenido propio es el
+  «Original» y los arreglos cuelgan de él, con nombre, capo,
+  URL y orden. Gestión completa: crear, editar y borrar (lógico).
+- `proposals` con dos tipos: publicar lo propio y aportar una versión a
+  algo ya publicado. El texto propuesto vive en su objeto de R2 y no
+  toca nada hasta que alguien aprueba; al aprobar, el crédito es
+  de quien la propuso, no del revisor. Rechazo con motivo visible
+  y retirada por el autor mientras siga pendiente.
+- Cola de revisión para editores, historial propio para el resto.
 
-Diccionario global de acordes:
-- Blob único en R2 (chords/global-chords.json). Lo lee cualquiera,
-  también sin cuenta, porque ver la digitación es parte de leer la
-  partitura; escribirlo es cosa solo del administrador.
-- Se valida antes de guardar (seis trastes, rangos, traste base,
-  cejillas) y se descartan los campos de más. Semilla de 348 acordes
-  generada desde chords-db (MIT), el mismo origen que usa la app, que
-  añade lo que falta sin pisar lo definido a mano.
-- En el visor, botón «Acordes» con los diagramas de la canción, que
-  siguen a la transposición. Pestaña «Acordes» para administrarlos.
-- No se mezcla con /api/chords, que son los acordes personales de cada
-  usuario y siguen por su lado.
+Comentarios y valoraciones:
+- Hilo plano por partitura, con borrado lógico. Escribe quien pueda ver
+  la partitura; borra su autor o un editor.
+- Estrellas POR VERSIÓN, con clave primaria (song_id, version_id,
+  user_id): un voto por persona y versión, y el upsert sale gratis. El
+  «Original» es la cadena vacía, porque con NULL la clave única no
+  funcionaría —un NULL no es igual a otro.
 
-Estilo Vivace «Nocturno»:
-- Los mismos tokens en los tres sitios: --vv-* en la web, vv_* en los
-  recursos XML y esos valores en ui/theme/Theme.kt. Los roles que pide
-  Material 3 y la marca no define se derivan del acento y van marcados
-  como derivados.
-- Space Grotesk y JetBrains Mono empaquetadas (OFL, versión variable,
-  licencias en app/licenses/). Las cifras -BPM, hercios, cents- van en
-  la monoespaciada. El verde «beat» queda reservado a tempo y estado
-  positivo, no como adorno.
-- Icono adaptativo, splash y panel /admin con la misma paleta.
+Categorías, orden y búsqueda:
+- Categoría por partitura con filtro y orden (título, más recientes, más
+  antiguas) en el catálogo; el filtro ofrece lo que hay delante: las
+  públicas en el catálogo y las propias —privadas incluidas— en «Mis
+  partituras».
+- `genres.js` propone una categoría por artista y, si no, por palabras
+  del título, con «Varios» de reserva. Se aplica con `-Categorize`, que
+  enseña el recuento en seco antes de escribir. Adivinar el estilo es
+  aproximado: las reglas están a la vista para corregirlas.
 
-Entrenamiento, herramientas y UX de la app:
-- Área de oído con síntesis por AudioTrack y 9 ejercicios; escuchar los
-  acordes desde el modal y el buscador; practicar los acordes de una
-  canción, que a propósito no puntúa: metería ejercicios fuera del
-  curriculum y falsearía las estadísticas.
-- Modo concierto, papelera de 90 días, auto-actualización con banner,
-  snackbar de deshacer, y orden y buscador en favoritas y en búsqueda.
-- Correcciones de la auditoría: una partitura en la papelera podía
-  resucitar al sincronizar, las huérfanas se quedaban marcadas como
-  sincronizadas para siempre y las operaciones en lote no eran atómicas.
+Vídeo de YouTube:
+- Enlace por partitura y reproductor a la derecha de la hoja. Se aceptan
+  las formas habituales del enlace y se valida en cliente Y servidor:
+  sin eso, un `javascript:` acabaría en el src de un iframe.
+- Se incrusta desde youtube-nocookie y el iframe solo se crea si hay
+  vídeo, así que una partitura sin él no carga nada de YouTube. Repintar
+  no reinicia la reproducción y cerrar el visor la para.
 
-Despliegue (tools/deploy.ps1):
-- Un script para preparar el entorno (JDK 17+, Node, SDK 35, las
-  dependencias del worker y la sesión de Cloudflare), arrancar el
-  backend, publicar Worker y APK, y administrar cuentas y catálogo.
-- Publicar siempre pregunta antes, y se niega a subir un APK firmado con
-  la clave de depuración: si la firma cambia, nadie puede actualizar
-  encima de lo que ya tiene instalado.
+Visor y editor:
+- Los mandos y el listado de versiones pasan a dos recuadros en una
+  columna a la izquierda. Se centra el CONJUNTO y no la hoja dentro del
+  hueco sobrante: los mandos quedan a 32 px de la partitura en vez de
+  a 334.
+- Cabecera: autor – título centrado, y el capo al lado en ámbar.
+- Acordes pulsables en la letra, con globo de digitaciones al pasar por
+  encima.
+- Editor: detección de acordes (la misma del panel /admin, ver abajo),
+  capo y traste base por botones, URL de la original, categoría
+  y candado.
 
-Correcciones de esta tanda:
-- El registro en la web reventaba con «Cannot read properties of
-  undefined»: el id «name» no gana a window.name, que ya existe como
-  cadena nativa, así que name.value era undefined.
-- npm run check compilaba una cadena distinta de la que se sirve (no
-  des-escapaba \") y dejó pasar un error de sintaxis a la página. Pasa a
-  importar los módulos y a comprobar el HTML real, client-lib incluido.
+Correcciones:
+- El candado no estaba implementado en la web pese a existir en la base.
+  Ahora se pone desde el editor y solo se enseña donde sirve: «Mis
+  partituras» y el editor, no el catálogo.
+- Título largo desbordando la tarjeta: `.card` es un <button> y heredaba
+  `white-space:nowrap`.
+- Al salir de la sesión con el editor abierto, «Entrar» seguía enseñando
+  el editor: cada pantalla se escondía a sí misma sin tocar a las demás.
+  Ahora `showView` es el único dueño de qué sección se ve.
+- El panel de versiones salía vacío a partir de la segunda partitura
+  abierta: `closeViewer` escondía la lista y nadie volvía a mostrarla.
+- Dos barras de desplazamiento con el visor abierto: la página de detrás
+  conservaba la suya.
+- Paneles del editor desalineados: cabeceras de distinta altura,
+  distinto relleno y distinta altura de línea (20,3 px contra 18,9).
+- El desplegable de categorías se pedía solo al arrancar, así que
+  una categoría nueva no aparecía hasta recargar.
+- `listPublicGenres` miraba todas las públicas mientras el catálogo
+  enseña solo las de su dueño: podía ofrecer un filtro sin resultados.
+
+Deduplicación y herramientas:
+- La detección de acordes se muda a `client-lib.js` y el panel /admin
+  pasa a usarla: había una sola implementación probada y duplicarla era
+  garantizar que divergieran. `test-detect.mjs` prueba ahora la
+  compartida, así que cubre las dos páginas.
+- El parser de YouTube sí está duplicado a la fuerza (un Worker no puede
+  ejecutar el texto de client-lib); un test compara ambas con 18
+  formas de enlace para que no se separen.
+- `deploy.ps1`: `-ApplySchema` (schema + migrations, tolerando el
+  "duplicate column name" al repetir), `-Categorize`, `-Role`, sesión de
+  editor compartida, y un 404 de la API que ahora explica que hay que
+  desplegar el Worker en vez de soltar el error crudo.
 
 Notas de migración:
-- El panel de administración se mueve de / a /admin; en / va la web
-  pública.
-- Room sube a la versión 16: created_at, locked, deleted_at, índice
-  único en remote_key (con deduplicación defensiva previa), remote_id y
-  visibility.
-- El Worker necesita D1 creada con schema.sql y los secretos
-  AUTH_SECRET y SYNC_TOKEN.
+- Tablas nuevas (`song_versions`, `proposals`, `comments`, `ratings`) e
+  índices en schema.sql; `songs.youtube_url` en migrations.sql,
+  aparte porque SQLite no tiene ADD COLUMN IF NOT EXISTS.
+- La app Android manda `visibility` al sincronizar y el servidor ya
+  no le hace caso salvo que la cuenta sea editora: una marcada como
+  pública en el móvil deja de publicarse sola. Pendiente adaptar la app.
 
-Tests: 102 en la app (JVM) y 55 en el worker.
+Tests del worker: 111 (eran 36).
 
 Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>

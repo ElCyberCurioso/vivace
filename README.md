@@ -81,6 +81,7 @@ Sin ese fichero, `assembleRelease` firma con la clave de depuración. Sube `vers
 .\tools\deploy.ps1 -App -Notes "Novedades"   # APK firmado + subida a R2 con su latest.json
 .\tools\deploy.ps1 -All            # todo seguido
 .\tools\deploy.ps1 -PublishCatalog # indexa en la base las partituras que ya estaban en R2
+.\tools\deploy.ps1 -Categorize     # propone una categoria para cada partitura y la aplica
 ```
 
 Detalles que conviene saber:
@@ -141,6 +142,8 @@ La misma URL del Worker sirve **Vivace web** en `/`: catálogo publicado (visibl
 
 El panel de administración con token compartido sigue disponible en **`/admin`**.
 
+El editor de la web trae **detección automática de acordes** (marca las líneas que solo llevan acordes envolviéndolos en `{X}`, la misma lógica que el panel), **capo por botones** de 0 a 12 y un campo para la **URL de la partitura original**, que aparece como enlace en el visor.
+
 ## Worker y API
 
 El Worker de Cloudflare es a la vez almacén (R2 + D1), API multiusuario, web y panel de administración.
@@ -180,17 +183,78 @@ curl -X POST "$URL/admin/migrate?visibility=public" -H "Authorization: Bearer $J
 | `GET /api/songs/public[?owner=<id>\|all]` | pública (catálogo del admin por defecto) |
 | `GET /api/songs`, `POST /api/songs` | sesión |
 | `GET /api/songs/:id` | pública si la partitura es pública; si no, dueño o admin |
-| `PUT`/`DELETE /api/songs/:id` | dueño o admin |
+| `PUT`/`DELETE /api/songs/:id` | dueño, editor si es pública, o admin |
 | `GET /api/chords/global` | pública (los diagramas se ven sin cuenta) |
-| `PUT /api/chords/global`, `POST /api/chords/global/seed` | solo admin |
+| `PUT /api/chords/global`, `POST /api/chords/global/seed` | editor o admin |
+| `GET /api/genres` | pública (categorías con partituras publicadas) |
+| `POST /api/genres/auto` | editor o admin |
+| `GET /api/songs/without-video` | editor o admin |
+| `GET`/`POST /api/songs/:id/versions` | ver: como la partitura · crear: dueño o editor |
+| `GET`/`PUT`/`DELETE /api/versions/:id` | ver: como la partitura · tocar: dueño o editor |
+| `POST /api/songs/:id/proposals` | sesión (publicar lo propio, versionar lo público) |
+| `GET /api/proposals` | sesión (las tuyas; los editores ven la cola) |
+| `POST /api/proposals/:id/approve`, `/reject` | editor o admin |
+| `DELETE /api/proposals/:id` | su autor mientras siga pendiente, o un editor |
+| `GET /api/users`, `PUT /api/users/:id/role` | solo admin |
+| `GET`/`POST /api/songs/:id/comments` | leer: como la partitura · escribir: sesión |
+| `DELETE /api/comments/:id` | su autor o un editor |
+| `GET`/`PUT /api/songs/:id/ratings` | leer: como la partitura · votar: sesión |
 
-Cada partitura es `private` o `public`; publicarla la hace visible para todos, pero editarla sigue siendo cosa de su dueño.
+Cada partitura es `private` o `public`. **Publicar es un acto editorial**: quien la sube no marca la casilla, la propone.
+
+### Roles
+
+| Rol | Qué puede hacer |
+|---|---|
+| `user` | Crear partituras suyas (nacen privadas), proponer su publicación y proponer versiones de lo ya publicado |
+| `editor` | Todo lo anterior, más editar y despublicar partituras **públicas**, resolver propuestas y mantener el diccionario de acordes |
+| `admin` | Todo, incluidas las partituras privadas ajenas y el reparto de roles |
+
+Un editor **no** toca las partituras privadas de nadie: manda sobre el catálogo, no sobre el cajón de cada uno. Los roles se reparten desde la pestaña «Usuarios», o sin entrar en la web:
+
+```powershell
+.\tools\deploy.ps1 -PromoteAdmin -AdminEmail alguien@correo.com -Role editor
+```
+
+### Versiones y propuestas
+
+Una **versión** es un arreglo alternativo de una partitura —otro tono, otra cejilla, tablatura—; el contenido propio de la partitura es el «Original» y las versiones cuelgan de él, igual que en la app. Salen listadas en el visor y se cambia de una a otra sin perder tono ni tamaño de letra.
+
+Quien puede editar la partitura añade versiones directamente. El resto **propone**, y la propuesta espera en la cola de revisión sin tocar nada. Al aprobarla, la versión se crea **a nombre de quien la propuso**, no del revisor.
+
+Las propuestas viven en la pestaña «Propuestas»: cola de pendientes para editores, historial propio para todos los demás. Rechazar pide un motivo, que ve el autor.
+### Categorías
+
+Cada partitura tiene una categoría (`songs.genre`), y el catálogo filtra por ella. `-Categorize` propone una para las que no la tienen, mirando primero el **artista** y luego palabras del **título**; lo que no encaja va a «Varios». Las reglas están en [`worker/src/genres.js`](worker/src/genres.js), a la vista para corregirlas, y cualquier categoría se cambia luego a mano desde el editor.
+
+Adivinar el estilo por el título y el artista es aproximado por definición: el comando enseña primero el recuento de lo que haría y pregunta antes de escribir. Con `-Overwrite` repasa también las que ya tienen categoría.
+### Vídeo de la canción
+
+Cada partitura puede llevar un enlace de YouTube (`songs.youtube_url`), que se pega en el editor y sale como reproductor **a la derecha de la partitura**. Se aceptan las formas habituales (`watch?v=`, `youtu.be/`, `shorts/`, `embed/`, o el id suelto) y el editor avisa al momento si el enlace no se reconoce; el botón «Buscar en YouTube» abre la búsqueda con el artista y el título ya puestos.
+
+Se incrusta desde `youtube-nocookie.com` y el `iframe` **solo se crea si hay vídeo**, así que una partitura sin él no carga nada de YouTube. Al cerrar el visor el marco se vacía para que la música pare.
+
+`GET /api/songs/without-video` (editor) lista las que aún no tienen ninguno, con su enlace de búsqueda ya montado, para ir completándolas.
+### Comentarios, estrellas y candado
+
+Al final de cada partitura hay un **hilo de comentarios**: escribe quien tenga sesión y pueda verla, y borra el autor o un editor. Cada **versión se valora por separado** con estrellas de 0 a 5; volver a pulsar la estrella que ya tenías marcada retira el voto. Las medias las ve cualquiera, votar pide cuenta.
+
+El visor tiene una **columna a la izquierda** con dos recuadros: arriba los mandos —scroll, tono, tamaño, metrónomo, acordes— y debajo el listado de versiones. Por debajo de 900 px se apilan encima de la partitura. El recuadro de versiones sale siempre, aunque solo esté el Original, con su número y su puntuación.
+
+El **candado** (`locked`) es un seguro contra el despiste, no un permiso: se pone desde el editor y hace que editar pida confirmación. No se enseña en el catálogo —a quien lee no le dice nada—, solo en «Mis partituras» y en el editor.
+
+
+Después de desplegar esto por primera vez hay que crear las tablas nuevas (todo el esquema es `CREATE ... IF NOT EXISTS`, repetirlo no rompe nada):
+
+```powershell
+.\tools\deploy.ps1 -ApplySchema
+```
 
 ### Acordes
 
 Los diagramas salen de un **diccionario global** guardado en R2 (`chords/global-chords.json`): uno solo para toda la instalación, que lee cualquiera —también sin cuenta, porque ver la digitación es parte de leer la partitura— y que **solo edita el administrador**, desde la pestaña «Acordes» de la web.
 
-En el visor, el botón **♦ Acordes** despliega los diagramas de los acordes de esa partitura, y al pulsar uno se ven todas sus digitaciones. Si transpones, los diagramas cambian con la canción.
+En el visor, el botón **♦ Acordes** despliega los diagramas de los acordes de esa partitura. Además, cada acorde de la letra es interactivo: al **pasar el ratón** sale un globo con sus digitaciones y al **pulsarlo** se abren todas en grande. Si transpones, los diagramas cambian con la canción.
 
 «Importar diccionario base» carga los 348 acordes de `src/chords-seed.js` (generado desde [chords-db](https://github.com/tombatossals/chords-db), MIT, el mismo origen que usa la app) **sin pisar** los que ya hayas definido a mano.
 

@@ -169,6 +169,83 @@ function vChordSvg(pos, ancho) {
   return partes.join("");
 }
 
+/* ---------- detección automática de acordes ---------- */
+
+// Una línea cuenta como "línea de acordes" si TODOS sus tokens son acordes en
+// notación anglosajona (C, Am7, F#m7b5, D/F#…) o separadores (|, x2, N.C.…).
+// Sus acordes se envuelven en {X}; como al pintar se quitan las llaves, las
+// columnas sobre la letra no se desplazan. No toca bloques {tab} ni líneas que
+// ya tengan alguna llave.
+var V_CHORD_RE = /^\\(?[A-G][#b]?(?:maj|min|sus|add|aug|dim|m|M|º|°|\\+|-|b|#|\\d)*(?:\\/[A-G][#b]?)?\\)?$/;
+var V_SEP_RE = /^(?:\\||\\/|-+|–|%|x\\d+|\\(x\\d+\\)|N\\.?C\\.?)$/i;
+
+/**
+ * Marca los acordes de un texto. Devuelve { text, marked }: el texto con los
+ * acordes entre llaves y cuántos ha marcado, para poder decírselo a quien
+ * pulsa el botón.
+ */
+function vDetectChords(text) {
+  var lines = (text || "").replace(/\\r\\n/g, "\\n").split("\\n");
+  var inTab = false, marked = 0;
+  var out = lines.map(function (line) {
+    var t = line.trim();
+    if (t === "{tab}") { inTab = true; return line; }
+    if (t === "{/tab}") { inTab = false; return line; }
+    if (inTab || !t || line.indexOf("{") >= 0) return line;
+    var chords = 0, tokens = t.split(/\\s+/), corta = false;
+    for (var i = 0; i < tokens.length; i++) {
+      if (V_CHORD_RE.test(tokens[i])) chords++;
+      else if (!V_SEP_RE.test(tokens[i])) { corta = true; break; }  // token de letra
+    }
+    if (corta || !chords) return line;
+    marked += chords;
+    return line.split(/(\\s+)/).map(function (part) {
+      return part && !/^\\s/.test(part) && V_CHORD_RE.test(part) ? "{" + part + "}" : part;
+    }).join("");
+  });
+  return { text: out.join("\\n"), marked: marked };
+}
+
+/* ---------- vídeo de YouTube ---------- */
+
+// Mismo criterio que src/youtube.js, que es quien valida en el servidor. El
+// Worker no puede ejecutar este texto (nada de eval), asi que hay dos copias:
+// test/youtube.test.mjs las compara caso por caso para que no se separen.
+var V_YT_ID = /^[A-Za-z0-9_-]{11}$/;
+
+function vYoutubeId(url) {
+  var texto = String(url == null ? "" : url).trim();
+  if (!texto) return "";
+  if (V_YT_ID.test(texto)) return texto;
+  var u;
+  try {
+    u = new URL(texto.indexOf("//") < 0 ? "https://" + texto : texto);
+  } catch (e) {
+    return "";
+  }
+  var host = u.hostname.replace(/^www\./, "").toLowerCase();
+  if (host === "youtu.be") {
+    var corto = u.pathname.slice(1).split("/")[0];
+    return V_YT_ID.test(corto) ? corto : "";
+  }
+  if (host !== "youtube.com" && host !== "m.youtube.com" && host !== "youtube-nocookie.com") {
+    return "";
+  }
+  var v = u.searchParams.get("v");
+  if (v && V_YT_ID.test(v)) return v;
+  var partes = u.pathname.split("/").filter(Boolean);
+  if (partes.length >= 2 && ["embed", "shorts", "live", "v"].indexOf(partes[0]) >= 0) {
+    return V_YT_ID.test(partes[1]) ? partes[1] : "";
+  }
+  return "";
+}
+
+/** URL para incrustar, en el dominio sin cookies. Vacio si no se reconoce. */
+function vEmbedUrl(url) {
+  var id = vYoutubeId(url);
+  return id ? "https://www.youtube-nocookie.com/embed/" + id : "";
+}
+
 /* ---------- transposición ---------- */
 
 var V_SHARP = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];

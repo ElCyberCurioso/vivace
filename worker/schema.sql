@@ -36,3 +36,80 @@ CREATE TABLE IF NOT EXISTS songs (
 CREATE INDEX IF NOT EXISTS idx_songs_owner      ON songs(owner_id, deleted_at);
 CREATE INDEX IF NOT EXISTS idx_songs_visibility ON songs(visibility, deleted_at);
 CREATE INDEX IF NOT EXISTS idx_songs_title      ON songs(title);
+
+-- ---------------------------------------------------------------------------
+-- Versiones y propuestas (segunda tanda)
+--
+-- Una "versión" es un arreglo alternativo de una partitura: otro tono, otra
+-- cejilla, tablatura… El contenido propio de la partitura es el "Original" y
+-- las demás cuelgan de aquí, igual que en la app Android (song_versions).
+--
+-- El texto vive en R2, como el de las partituras: aquí solo la clave.
+CREATE TABLE IF NOT EXISTS song_versions (
+  id          TEXT PRIMARY KEY,
+  song_id     TEXT NOT NULL REFERENCES songs(id) ON DELETE CASCADE,
+  name        TEXT NOT NULL DEFAULT '',
+  r2_key      TEXT NOT NULL UNIQUE,
+  capo        INTEGER NOT NULL DEFAULT 0,
+  source_url  TEXT NOT NULL DEFAULT '',
+  position    INTEGER NOT NULL DEFAULT 0,
+  author_id   TEXT NOT NULL REFERENCES users(id),
+  created_at  INTEGER NOT NULL,
+  updated_at  INTEGER NOT NULL,
+  deleted_at  INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_versions_song ON song_versions(song_id, deleted_at, position);
+
+-- Propuestas pendientes de revisión: publicar una partitura propia en el
+-- catálogo, o aportar una versión a algo ya publicado.
+CREATE TABLE IF NOT EXISTS proposals (
+  id           TEXT PRIMARY KEY,
+  kind         TEXT NOT NULL,                     -- 'publish' | 'version'
+  status       TEXT NOT NULL DEFAULT 'pending',   -- pending|approved|rejected|withdrawn
+  song_id      TEXT NOT NULL REFERENCES songs(id) ON DELETE CASCADE,
+  author_id    TEXT NOT NULL REFERENCES users(id),
+  name         TEXT NOT NULL DEFAULT '',          -- nombre de la versión propuesta
+  capo         INTEGER NOT NULL DEFAULT 0,
+  source_url   TEXT NOT NULL DEFAULT '',
+  r2_key       TEXT NOT NULL DEFAULT '',          -- texto propuesto (solo 'version')
+  note         TEXT NOT NULL DEFAULT '',          -- por qué lo propone
+  reviewer_id  TEXT REFERENCES users(id),
+  review_note  TEXT NOT NULL DEFAULT '',
+  created_at   INTEGER NOT NULL,
+  resolved_at  INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_proposals_status ON proposals(status, created_at);
+CREATE INDEX IF NOT EXISTS idx_proposals_author ON proposals(author_id, status);
+CREATE INDEX IF NOT EXISTS idx_proposals_song ON proposals(song_id, status);
+
+-- Género/categoría: la columna ya existe en songs desde el principio, pero sin
+-- índice. El catálogo filtra por ella.
+CREATE INDEX IF NOT EXISTS idx_songs_genre ON songs(genre, visibility, deleted_at);
+
+-- ---------------------------------------------------------------------------
+-- Comentarios y valoraciones (tercera tanda)
+
+-- Un hilo plano por partitura: quien tiene sesión opina, y el autor o un
+-- editor pueden retirar un comentario. Borrado lógico, como todo lo demás.
+CREATE TABLE IF NOT EXISTS comments (
+  id          TEXT PRIMARY KEY,
+  song_id     TEXT NOT NULL REFERENCES songs(id) ON DELETE CASCADE,
+  author_id   TEXT NOT NULL REFERENCES users(id),
+  body        TEXT NOT NULL,
+  created_at  INTEGER NOT NULL,
+  deleted_at  INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_comments_song ON comments(song_id, deleted_at, created_at);
+
+-- Estrellas por VERSIÓN, no por partitura: cada arreglo se valora aparte.
+-- `version_id` vacío es el "Original". La clave primaria compuesta garantiza
+-- un voto por persona y versión, y permite el upsert sin buscar antes.
+CREATE TABLE IF NOT EXISTS ratings (
+  song_id     TEXT NOT NULL REFERENCES songs(id) ON DELETE CASCADE,
+  version_id  TEXT NOT NULL DEFAULT '',
+  user_id     TEXT NOT NULL REFERENCES users(id),
+  stars       INTEGER NOT NULL,
+  updated_at  INTEGER NOT NULL,
+  PRIMARY KEY (song_id, version_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_ratings_song ON ratings(song_id, version_id);

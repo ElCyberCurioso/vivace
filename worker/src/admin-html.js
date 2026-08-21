@@ -285,6 +285,7 @@ export const ADMIN_HTML = `<!doctype html>
   </div>
 </div>
 
+<script src="/static/vivace.js"></script>
 <script>
 const SONG_PREFIX = "songs/";
 const TITLE_RE = /^#([A-Za-z]+):[ \\t]?(.*)$/;
@@ -780,37 +781,11 @@ async function importFiles(files) {
 }
 
 // ---- detección automática de acordes ----
-// Una línea cuenta como "línea de acordes" si TODOS sus tokens son acordes en
-// notación anglosajona (C, Am7, F#m7b5, D/F#…) o separadores (|, x2, N.C.…).
-// Sus acordes se envuelven en {X}; como la vista quita las llaves al pintar,
-// las columnas sobre la letra no se desplazan. No toca bloques {tab} ni
-// líneas que ya tengan alguna llave.
-const CHORD_RE = /^\\(?[A-G][#b]?(?:maj|min|sus|add|aug|dim|m|M|º|°|\\+|-|b|#|\\d)*(?:\\/[A-G][#b]?)?\\)?$/;
-const SEP_RE = /^(?:\\||\\/|-+|–|%|x\\d+|\\(x\\d+\\)|N\\.?C\\.?)$/i;
-
-// Núcleo puro: recibe el cuerpo de una partitura y devuelve { text, marked }.
-// Lo usan tanto la detección del editor abierto como la detección en lote.
-function detectChordsInText(text) {
-  const lines = text.replace(/\\r\\n/g, "\\n").split("\\n");
-  let inTab = false, marked = 0;
-  const out = lines.map(line => {
-    const t = line.trim();
-    if (t === "{tab}") { inTab = true; return line; }
-    if (t === "{/tab}") { inTab = false; return line; }
-    if (inTab || !t || line.includes("{")) return line;
-    let chords = 0;
-    for (const tok of t.split(/\\s+/)) {
-      if (CHORD_RE.test(tok)) chords++;
-      else if (!SEP_RE.test(tok)) return line;   // token de letra: no es línea de acordes
-    }
-    if (!chords) return line;
-    marked += chords;
-    return line.split(/(\\s+)/).map(part =>
-      part && !/^\\s/.test(part) && CHORD_RE.test(part) ? "{" + part + "}" : part
-    ).join("");
-  });
-  return { text: out.join("\\n"), marked };
-}
+// La lógica vive en client-lib.js (/static/vivace.js) y la comparten el panel
+// y la web: una sola implementación, un solo sitio donde arreglar los fallos.
+// Envuelta y no asignada directamente: si /static/vivace.js no cargara, una
+// const que evalua vDetectChords al arrancar tumbaria el panel entero.
+function detectChordsInText(text) { return vDetectChords(text); }
 
 function detectChords() {
   if (!current) return;
