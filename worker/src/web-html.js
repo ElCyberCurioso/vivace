@@ -1,28 +1,18 @@
 /*
  * Vivace · aplicación web (servida en /).
  *
- * Página autocontenida (sin build) que habla con la API multiusuario:
- * catálogo publicado, partituras propias, visor con auto-scroll, metrónomo y
- * transposición, y editor con publicación.
+ * La página no lleva build: es HTML servido tal cual, con el CSS y el JS en
+ * dos ficheros aparte (/static/vivace.css y /static/vivace-app.js).
  *
- * Los estilos son deliberadamente sobrios: el diseño definitivo llegará
- * después y solo habrá que tocar el bloque <style> y las variables de color.
+ * Están fuera del HTML a propósito. Antes iba todo en línea, así que cada
+ * visita se descargaba ~90 KB otra vez —el HTML no se puede cachear, porque
+ * cambia con el contenido— y cualquier CSP que prohibiera 'unsafe-inline'
+ * habría roto la página entera. Separados, el navegador los guarda y solo
+ * revalida su ETag.
  */
 
-export const WEB_HTML = `<!doctype html>
-<html lang="es">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Vivace</title>
-<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-<meta name="theme-color" content="#0F1113" media="(prefers-color-scheme: dark)">
-<meta name="theme-color" content="#F6F4EF" media="(prefers-color-scheme: light)">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-<style>
-  /* Vivace · estilo Nocturno. Oscuro por defecto; claro con [data-theme=light]
+/** Hoja de estilos, servida en /static/vivace.css. */
+export const WEB_CSS = `  /* Vivace · estilo Nocturno. Oscuro por defecto; claro con [data-theme=light]
      o si el sistema lo pide. Los nombres --vv-* son los del paquete de marca. */
   :root {
     color-scheme: dark light;
@@ -37,6 +27,10 @@ export const WEB_HTML = `<!doctype html>
     --vv-font-ui:'Space Grotesk',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
     --vv-font-mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
     --vv-radius-sm:8px; --vv-radius-md:10px; --vv-radius-lg:16px;
+    /* Ancho de la hoja de partitura, en caracteres del tipo monoespaciado.
+       Va en ch y no en px a propósito: al cambiar el tamaño de letra, la hoja
+       sigue teniendo el mismo número de columnas y la lectura no se descoloca. */
+    --vv-sheet:68ch;
   }
   [data-theme=light] {
     color-scheme: light;
@@ -132,9 +126,33 @@ export const WEB_HTML = `<!doctype html>
   .estado[data-s=rejected], .estado[data-s=withdrawn] { color:var(--vv-danger); border-color:var(--vv-danger); }
   .aviso { background:var(--vv-accent-soft); border:1px solid var(--vv-accent);
            border-radius:var(--vv-radius-md); padding:10px 12px; margin-bottom:12px; font-size:14px; }
-  .filtros { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
-  .filtros input { flex:1 1 220px; }
-  .filtros select { flex:0 1 190px; width:auto; }
+  .filtros { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; align-items:flex-end; }
+  /* La etiqueta va encima del control: antes el nombre del filtro solo existía
+     como title=, que ni se lee con lector de pantalla ni se ve al tocar. */
+  .filtro { display:flex; flex-direction:column; gap:4px; flex:0 1 190px; font-size:11px;
+            text-transform:uppercase; letter-spacing:.08em; color:var(--vv-text-muted); }
+  .filtro:first-child { flex:1 1 220px; }
+  /* El control ocupa el ancho de su etiqueta y NADA de flex propio: dentro de
+     una columna, un flex-basis se convertiría en altura y salen cajas gigantes. */
+  .filtro input, .filtro select { width:100%; flex:0 0 auto; }
+  #favFilter[aria-pressed=true] { background:var(--vv-accent); color:var(--vv-on-accent);
+                                  border-color:var(--vv-accent); }
+  .listas { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px; }
+  .listas .etiqueta { font-size:11px; text-transform:uppercase; letter-spacing:.08em;
+                      color:var(--vv-text-muted); }
+  .chips { display:flex; gap:6px; flex-wrap:wrap; }
+  .chip { border:1px solid var(--vv-border); border-radius:999px; padding:4px 12px;
+          font-size:13px; background:transparent; color:inherit; cursor:pointer; }
+  .chip[aria-pressed=true] { background:var(--vv-accent); color:var(--vv-on-accent);
+                             border-color:var(--vv-accent); }
+  .card .fav { float:right; border:0; background:transparent; font-size:16px; line-height:1;
+               padding:0 0 0 8px; cursor:pointer; color:var(--vv-text-muted); }
+  .card .fav[aria-pressed=true] { color:var(--vv-accent); }
+  .acciones { display:flex; gap:6px; margin-top:8px; }
+  .adminTool { border:1px solid var(--vv-border); border-radius:var(--vv-radius);
+               padding:14px; margin-bottom:12px; }
+  .adminTool h3 { margin:0 0 6px; font-size:15px; }
+  .adminTool p { margin:0 0 10px; font-size:13px; color:var(--vv-text-muted); }
   .badge { display:inline-block; font-size:11px; border-radius:999px; padding:2px 9px;
            border:1px solid var(--vv-border-strong); color:var(--vv-text-muted); margin-top:6px;
            font-family:var(--vv-font-mono); }
@@ -145,7 +163,14 @@ export const WEB_HTML = `<!doctype html>
   /* La partitura se centra como bloque, pero el texto sigue alineado a la
      izquierda: las columnas son las del fichero y mover el texto descolocaria
      los acordes de sus silabas. max-content = ancho de la linea mas larga. */
-  .sheet { width:max-content; max-width:100%; margin:0 auto; }
+  /* Ancho fijo para todas. Antes era max-content y se centraba con margin
+     auto: cada partitura salía con un ancho distinto según su línea más larga,
+     y las cortas aparecían centradas mientras las largas iban a la izquierda. */
+  .sheet { width:var(--vv-sheet); max-width:100%; margin:0; text-align:left;
+           /* Las líneas más anchas que la hoja se desplazan DENTRO de ella:
+              los acordes van sobre la sílaba exacta, así que partir la línea
+              no es una opción. */
+           overflow-x:auto; }
   /* ---- editor a dos paneles ---- */
   .editor { max-width:1520px; margin:0 auto; display:flex; flex-direction:column; gap:12px; }
   .editHead { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
@@ -211,18 +236,21 @@ export const WEB_HTML = `<!doctype html>
   #vTube iframe { position:absolute; inset:0; width:100%; height:100%; border:0; }
   @media (max-width:1200px) { #vTube { flex-basis:280px; } }
   @media (max-width:900px) { #vTube { flex:0 0 auto; } }
-  #vBody { flex:0 1 auto; min-width:0; overflow:auto; padding:16px 18px 60px;
-           font-family:var(--vv-font-mono); font-size:var(--fs,18px); }
-  /* La columna de lectura mide lo que mide la partitura. */
-  #vSheet { width:max-content; max-width:100%; }
-  @media (min-width:901px) {
-    /* Con los recuadros al lado, la hoja se apoya en ellos: centrarla dentro de
-       su columna volvería a abrir el hueco. Lo que va centrado en la ventana es
-       el conjunto. El mínimo evita que una canción corta deje los comentarios
-       en una tira de dos palabras. */
-    #vSheet { min-width:460px; }
-    #vSheet .sheet { margin-left:0; }
-  }
+  /* En vertical se mueve toda la columna; en horizontal, solo la hoja (ver
+     .sheet). Si el desplazamiento lateral fuese de aquí, al leer una tablatura
+     ancha se irían de lado también los comentarios y el pie. */
+  #vBody { flex:0 1 auto; min-width:0; overflow-y:auto; overflow-x:hidden;
+           padding:16px 18px 60px;
+           font-family:var(--vv-font-mono); font-size:var(--fs,18px);
+           /* Hueco de la barra reservado siempre. Sin esto, una canción larga
+              tiene barra y una corta no, y la hoja se desplaza unos píxeles al
+              cambiar de una a otra: el mismo baile que se quería quitar. */
+           scrollbar-gutter:stable; }
+  /* La columna de lectura mide siempre lo mismo, la cante quien la cante.
+     Lo que se centra en la ventana es el CONJUNTO (mandos + hoja + vídeo),
+     que es cosa de #vMain; dentro de la columna, el texto empieza a la
+     izquierda y se queda ahí. */
+  #vSheet { width:var(--vv-sheet); max-width:100%; flex:0 0 auto; }
   .ln { white-space:pre; line-height:1.35; margin:0; }
   .tab { white-space:pre; line-height:1.35; color:var(--vv-text-muted); }
   .chord { color:var(--vv-accent); font-weight:600; }
@@ -329,300 +357,10 @@ export const WEB_HTML = `<!doctype html>
   .posRow .grp { display:flex; gap:4px; align-items:center; }
   .posRow .pills button { padding:4px 8px; min-width:30px; font-size:12px; }
   .hidden { display:none !important; }
-</style>
-</head>
-<body>
+`;
 
-<header>
-  <a class="brand" href="/" aria-label="Vivace">
-    <svg width="30" height="30" viewBox="0 0 48 48" aria-hidden="true">
-      <rect x="18" y="6" width="12" height="30" fill="none" stroke="var(--vv-accent)" stroke-width="2.4"></rect>
-      <g fill="currentColor">
-        <circle cx="12" cy="14" r="2.4"></circle><circle cx="12" cy="22" r="2.4"></circle><circle cx="12" cy="30" r="2.4"></circle>
-        <circle cx="36" cy="14" r="2.4"></circle><circle cx="36" cy="22" r="2.4"></circle><circle cx="36" cy="30" r="2.4"></circle>
-      </g>
-      <rect x="18" y="38" width="12" height="3.4" fill="var(--vv-accent)"></rect>
-    </svg>
-    <span>
-      <h1>vivace</h1>
-      <span class="kicker">Practice room</span>
-    </span>
-  </a>
-  <span class="grow"></span>
-  <span id="who" class="hidden" style="font-size:13px;color:var(--vv-text-muted)"></span>
-  <button id="loginBtn">Entrar</button>
-  <button id="logoutBtn" class="hidden">Salir</button>
-</header>
-
-<main>
-  <!-- acceso -->
-  <section id="authView" class="hidden">
-    <div class="stack">
-      <h2 id="authTitle" style="margin:0">Entrar en Vivace</h2>
-      <label>Email<input type="email" id="email" autocomplete="email"></label>
-      <label id="nameWrap" class="hidden">Nombre<input type="text" id="name" autocomplete="name"></label>
-      <label>Contraseña <small>(mínimo 8 caracteres)</small>
-        <input type="password" id="password" autocomplete="current-password"></label>
-      <div class="msg" id="authMsg"></div>
-      <button class="primary" id="authSubmit">Entrar</button>
-      <button class="ghost" id="authSwitch">Crear una cuenta</button>
-    </div>
-  </section>
-
-  <!-- listados -->
-  <section id="listView">
-    <div class="tabs">
-      <button id="tabPublic" aria-selected="true">Catálogo</button>
-      <button id="tabMine" aria-selected="false" class="hidden">Mis partituras</button>
-      <button id="tabProposals" aria-selected="false" class="hidden">Propuestas</button>
-      <button id="tabChords" aria-selected="false" class="hidden" title="Diccionario global, visible para todo el mundo">Acordes</button>
-      <button id="tabUsers" aria-selected="false" class="hidden">Usuarios</button>
-      <span class="grow"></span>
-      <button id="newBtn" class="hidden">+ Nueva</button>
-    </div>
-    <div class="filtros">
-      <input type="text" id="search" placeholder="Buscar por título o artista…">
-      <select id="genreFilter" title="Categoría musical">
-        <option value="">Todas las categorías</option>
-      </select>
-      <select id="sortSel" title="Orden del listado">
-        <option value="title">Título (A–Z)</option>
-        <option value="recent">Más recientes primero</option>
-        <option value="old">Más antiguas primero</option>
-      </select>
-    </div>
-    <div id="list" class="grid"></div>
-    <div id="listEmpty" class="empty hidden"></div>
-  </section>
-
-  <!-- editor -->
-  <section id="editView" class="hidden">
-    <div class="editor">
-      <div class="editHead">
-        <label>Título<input type="text" id="eTitle"></label>
-        <label>Artista<input type="text" id="eArtist"></label>
-        <label>Categoría <small>estilo musical</small>
-          <input type="text" id="eGenre" list="genreList" placeholder="Rock, bolero, folk…">
-          <datalist id="genreList"></datalist></label>
-        <label id="eLockedWrap" class="row" style="gap:8px;align-items:center">
-          <input type="checkbox" id="eLocked" style="width:auto">
-          <span>Bloqueada <small>pide confirmación antes de editarla</small></span>
-        </label>
-        <label id="eVisibilityWrap">Visibilidad
-          <select id="eVisibility">
-            <option value="private">Privada (solo yo)</option>
-            <option value="public">Pública (cualquiera puede verla)</option>
-          </select>
-        </label>
-      </div>
-      <div class="editHead" style="grid-template-columns:1fr" id="eVersionHead">
-        <label>Nombre de la versión <small>«Acústica», «En Do», «Tablatura»…</small>
-          <input type="text" id="eVersionName" placeholder="Acústica"></label>
-        <label id="eNoteWrap">Mensaje para quien la revise <small>opcional</small>
-          <input type="text" id="eNote" placeholder="Qué cambia y por qué"></label>
-      </div>
-      <div class="editHead" style="grid-template-columns:1fr">
-        <label>URL de la partitura original <small>opcional</small>
-          <input type="url" id="eSource" placeholder="https://…"></label>
-        <label>Vídeo de YouTube <small>opcional; se ve junto a la partitura</small>
-          <input type="text" id="eTube" placeholder="https://youtu.be/…"></label>
-        <div class="row">
-          <button id="eTubeSearch" title="Abre la búsqueda en otra pestaña">Buscar en YouTube</button>
-          <span id="eTubeMsg" class="nota"></span>
-        </div>
-        <div>
-          <div class="vv-kicker" style="margin-bottom:6px">Capo</div>
-          <div class="pills" id="eCapoPills"></div>
-        </div>
-      </div>
-      <div id="editSplit">
-        <div class="pane">
-          <div class="hd">Partitura <small>acordes entre llaves: {Am}</small>
-            <span class="grow"></span>
-            <button id="eDetect" title="Marca las líneas que solo llevan acordes">♪ Detectar acordes</button>
-          </div>
-          <textarea id="eContent" spellcheck="false"
-                    placeholder="#title: Título&#10;#artist: Autor&#10;---&#10;{Am} Primera línea"></textarea>
-        </div>
-        <div class="pane">
-          <div class="hd">Vista previa <small>tal cual se verá</small></div>
-          <div id="ePreview"></div>
-        </div>
-      </div>
-      <div id="editAviso" class="aviso hidden"></div>
-      <div class="msg" id="editMsg"></div>
-      <div class="row">
-        <button class="primary" id="saveBtn">Guardar</button>
-        <button id="proposeBtn" class="hidden" title="Un editor la revisará antes de publicarla">Proponer publicación</button>
-        <button id="cancelEdit">Cancelar</button>
-        <span class="grow"></span>
-        <button id="deleteBtn" class="hidden" style="color:var(--vv-danger)">Eliminar</button>
-      </div>
-    </div>
-  </section>
-  <!-- propuestas: cola de revisión para editores, historial para el resto -->
-  <section id="proposalsView" class="hidden">
-    <div class="row" style="margin-bottom:12px">
-      <select id="propStatus" style="flex:0 1 220px;width:auto">
-        <option value="pending">Pendientes</option>
-        <option value="approved">Aprobadas</option>
-        <option value="rejected">Rechazadas</option>
-        <option value="all">Todas</option>
-      </select>
-      <label id="propMineWrap" class="row hidden" style="gap:6px">
-        <input type="checkbox" id="propMine" style="width:auto"> Solo las mías</label>
-      <span class="grow"></span>
-      <span id="propCount" class="vv-kicker"></span>
-    </div>
-    <div class="msg" id="propMsg"></div>
-    <div id="propList"></div>
-    <div id="propEmpty" class="empty hidden"></div>
-  </section>
-
-  <!-- usuarios y roles (solo administración) -->
-  <section id="usersView" class="hidden">
-    <div class="aviso">
-      El <b>editor</b> gestiona el catálogo: edita y despublica partituras públicas,
-      resuelve propuestas y mantiene el diccionario de acordes. El <b>usuario</b> crea
-      partituras suyas y propone publicarlas o aportar versiones.
-    </div>
-    <div class="msg" id="usersMsg"></div>
-    <div id="usersList"></div>
-  </section>
-
-  <!-- diccionario global de acordes (solo administración) -->
-  <section id="chordsView" class="hidden">
-    <div class="row" style="margin-bottom:12px">
-      <input type="text" id="chordSearch" placeholder="Buscar acorde…" style="flex:1;min-width:160px">
-      <button id="chordNew">+ Nuevo acorde</button>
-      <button id="chordSeed" title="Añade los acordes que falten sin tocar los que ya has definido">Importar diccionario base</button>
-    </div>
-    <div class="row" style="margin-bottom:10px">
-      <span id="chordCount" class="vv-kicker"></span>
-      <span class="grow"></span>
-      <span id="chordSaved" class="vv-kicker"></span>
-    </div>
-    <div class="msg" id="chordMsg"></div>
-    <div id="chordList" class="chordGrid"></div>
-    <div id="chordEmpty" class="empty hidden"></div>
-  </section>
-</main>
-
-<div id="chordHover"></div>
-
-<!-- contenido de una propuesta, tal y como quedaría -->
-<div id="propModal" class="modal hidden">
-  <div class="modalBox">
-    <div class="row">
-      <h3 id="pmTitle"></h3>
-      <span class="grow"></span>
-      <button id="pmClose">Cerrar</button>
-    </div>
-    <div id="pmMeta" class="meta"></div>
-    <div id="pmBody" style="font-family:var(--vv-font-mono);font-size:15px;overflow:auto"></div>
-  </div>
-</div>
-
-<!-- diagramas del acorde que se está mirando (cualquiera) -->
-<div id="chordModal" class="modal hidden">
-  <div class="modalBox" style="max-width:620px">
-    <div class="row">
-      <h3 id="cmName"></h3>
-      <span class="grow"></span>
-      <button id="cmClose">Cerrar</button>
-    </div>
-    <div id="cmBody" class="chordGrid"></div>
-    <div id="cmEmpty" class="empty hidden"></div>
-  </div>
-</div>
-
-<!-- edición de un acorde (solo administración) -->
-<div id="chordEditor" class="modal hidden">
-  <div class="modalBox">
-    <div class="row">
-      <label style="flex:1">Nombre <small>tal cual se escribe entre llaves</small>
-        <input type="text" id="chName" placeholder="Am7"></label>
-      <button id="chClose">Cerrar</button>
-    </div>
-    <div class="vv-kicker">Posiciones — trastes de la 6ª cuerda (Mi grave) a la 1ª; -1 no suena, 0 al aire</div>
-    <div id="chPositions"></div>
-    <div class="msg" id="chMsg"></div>
-    <div class="row">
-      <button id="chAddPos">+ Posición</button>
-      <span class="grow"></span>
-      <button id="chDelete" style="color:var(--vv-danger)">Eliminar acorde</button>
-      <button class="primary" id="chSave">Guardar</button>
-    </div>
-  </div>
-</div>
-
-<!-- visor a pantalla completa -->
-<div id="viewer">
-  <div id="vHead">
-    <div class="lado">
-      <button id="vClose" class="ghost">‹ Volver</button>
-    </div>
-    <div class="vMeta">
-      <div class="titulo">
-        <span id="vArtist"></span>
-        <span id="vSep" class="hidden">–</span>
-        <span id="vTitle"></span>
-      </div>
-      <span id="vCapo" class="hidden"></span>
-    </div>
-    <div class="lado der">
-      <a id="vSource" class="hidden" href="#" target="_blank" rel="noopener noreferrer"
-         title="Abrir la partitura original en otra pestaña">Original ↗</a>
-      <button id="vEdit" class="hidden">Editar</button>
-    </div>
-  </div>
-  <div id="vChordBar" class="chordBar hidden"></div>
-  <div id="vMain">
-    <div id="vSide">
-      <div id="vCtrl">
-      <div class="row">
-        <button id="vPlay" title="Desplazamiento automático">▶ Scroll</button>
-        <input type="range" id="vSpeed" min="5" max="300" value="40" style="min-width:60px">
-        <label id="vSpeedVal">40 px/s</label>
-      </div>
-      <div class="row">
-        <label>Tono</label>
-        <button id="vDown">–</button>
-        <label id="vTone" style="min-width:2.5em;text-align:center">±0</label>
-        <button id="vUp">+</button>
-        <button id="vFlat">♭</button>
-      </div>
-      <div class="row">
-        <label>Letra</label>
-        <button id="vFontDown">A-</button>
-        <button id="vFontUp">A+</button>
-        <span class="grow"></span>
-        <button id="vChords" title="Diagramas de los acordes de esta partitura">♦ Acordes</button>
-      </div>
-      <div class="row">
-        <button id="vMetro" title="Metrónomo">♩ Metrónomo</button>
-        <span id="vBeats" class="row" style="gap:4px"></span>
-      </div>
-      <div class="row">
-        <label>BPM</label>
-        <input type="range" id="vBpm" min="40" max="200" value="100" style="min-width:70px">
-        <label id="vBpmVal">100</label>
-        </div>
-      </div>
-      <div id="vVersionPanel">
-        <div class="hd">Versiones</div>
-        <div id="vVersions"></div>
-        <div id="vVersionActions" class="row" style="gap:6px"></div>
-      </div>
-    </div>
-    <div id="vBody"><div id="vSheet"></div><div id="vComments"></div></div>
-    <div id="vTube"><div class="marco"></div></div>
-  </div>
-</div>
-
-<script src="/static/vivace.js"></script>
-<script>
-var token = localStorage.getItem("vivace_token") || "";
+/** JavaScript de la aplicación, servido en /static/vivace-app.js. */
+export const WEB_APP_JS = `var token = localStorage.getItem("vivace_token") || "";
 var user = null;
 var tab = "public";
 var songs = [];
@@ -643,10 +381,77 @@ var proposals = [];
 var genres = [];               // categorías con partituras publicadas
 var sortBy = "title";
 var genreBy = "";
+var listOffset = 0;            // desplazamiento del listado que se está viendo
+var listHasMore = false;       // queda más detrás en el servidor
+var playlists = [];            // listas (carpetas) del usuario
+var playlistBy = "";           // filtro de lista activo en "Mis partituras"
+var favOnly = false;           // ver solo las favoritas
 var chordDict = null;          // diccionario global, cacheado tras la primera carga
 var chordBarOn = false;
 var editingChord = null;       // nombre que se está editando, "" si es nuevo
 var chordPositions = [];       // posiciones del acorde en edición
+
+/** Cuántas partituras se piden de golpe. */
+var PAGINA = 60;
+
+/* ---------- diálogos accesibles ---------- */
+/*
+ * Los modales no eran modales para nadie que no viera la pantalla: sin
+ * role/aria-modal no se anunciaban, el foco se quedaba detrás y el tabulador
+ * paseaba por la página de debajo. Esto lo arregla sin cambiar el aspecto.
+ */
+var focoPrevio = null;
+
+function trapFoco(caja, e) {
+  if (e.key !== "Tab") return;
+  var focos = caja.querySelectorAll(
+    'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+  );
+  if (!focos.length) return;
+  var primero = focos[0], ultimo = focos[focos.length - 1];
+  if (e.shiftKey && document.activeElement === primero) { e.preventDefault(); ultimo.focus(); }
+  else if (!e.shiftKey && document.activeElement === ultimo) { e.preventDefault(); primero.focus(); }
+}
+
+function abrirDialogo(caja) {
+  focoPrevio = document.activeElement;
+  caja.classList.remove("hidden");
+  var primero = caja.querySelector("input, button, select, textarea, a[href]");
+  if (primero) primero.focus();
+  caja.__trap = function (e) { trapFoco(caja, e); };
+  caja.addEventListener("keydown", caja.__trap);
+}
+
+function cerrarDialogo(caja) {
+  caja.classList.add("hidden");
+  if (caja.__trap) { caja.removeEventListener("keydown", caja.__trap); caja.__trap = null; }
+  // Devolver el foco a donde estaba: si no, se cae al principio de la página.
+  if (focoPrevio && focoPrevio.focus) focoPrevio.focus();
+  focoPrevio = null;
+}
+
+/* ---------- tema ---------- */
+/*
+ * Los tokens de color ya contemplaban [data-theme=light], pero nadie ponía
+ * nunca ese atributo: el modo claro existía en el CSS y era inalcanzable.
+ * Aquí se fija y se recuerda; sin elección guardada manda el sistema.
+ */
+function applyTheme(modo) {
+  if (modo === "light" || modo === "dark") document.documentElement.setAttribute("data-theme", modo);
+  else document.documentElement.removeAttribute("data-theme");
+}
+function currentTheme() {
+  try { return localStorage.getItem("vivace_theme") || ""; } catch (e) { return ""; }
+}
+function toggleTheme() {
+  var actual = currentTheme();
+  var oscuroAhora = actual
+    ? actual === "dark"
+    : window.matchMedia("(prefers-color-scheme: dark)").matches;
+  var siguiente = oscuroAhora ? "light" : "dark";
+  try { localStorage.setItem("vivace_theme", siguiente); } catch (e) {}
+  applyTheme(siguiente);
+}
 
 /* ---------- API ---------- */
 function api(method, path, body) {
@@ -678,11 +483,117 @@ function setSession(tok, u) {
   tabChords.classList.toggle("hidden", !esEditor());
   tabProposals.classList.toggle("hidden", !user);
   tabUsers.classList.toggle("hidden", !esAdmin());
+  tabTrash.classList.toggle("hidden", !user);
+  tabAdmin.classList.toggle("hidden", !esEditor());
   newBtn.classList.toggle("hidden", !user);
   if (!user && tab === "mine") tab = "public";
   if (!esEditor() && tab === "chords") tab = "public";
   if (!user && tab === "proposals") tab = "public";
   if (!esAdmin() && tab === "users") tab = "public";
+  if (!user && tab === "trash") tab = "public";
+  if (!esEditor() && tab === "admin") tab = "public";
+  if (user) {
+    loadPlaylists();
+  } else {
+    // Al salir no puede quedar rastro de la cuenta anterior en los filtros.
+    playlists = [];
+    playlistBy = "";
+    favOnly = false;
+    favFilter.setAttribute("aria-pressed", "false");
+    renderPlaylistControls();
+  }
+}
+
+/* ---------- listas (carpetas) ---------- */
+/*
+ * Las carpetas existían solo en el móvil, escondidas dentro del texto de la
+ * partitura como una cabecera "#playlist:". Ahora son datos de la API y la web
+ * puede enseñarlas, crearlas y mover partituras entre ellas.
+ */
+function loadPlaylists() {
+  return api("GET", "/api/playlists").then(function (d) {
+    playlists = d.playlists || [];
+    renderPlaylistControls();
+  }).catch(function (e) {
+    playlists = [];
+    renderPlaylistControls();
+    aviso(listEmpty, "No se han podido cargar las listas: " + e.message);
+  });
+}
+
+function renderPlaylistControls() {
+  // Filtro del listado.
+  playlistFilter.innerHTML = "";
+  [{ id: "", name: "Todas" }, { id: "none", name: "Sin lista" }]
+    .concat(playlists)
+    .forEach(function (p) {
+      var o = document.createElement("option");
+      o.value = p.id; o.textContent = p.name;
+      playlistFilter.appendChild(o);
+    });
+  playlistFilter.value = playlistBy;
+
+  // Selector del editor.
+  ePlaylist.innerHTML = "";
+  [{ id: "", name: "Sin lista" }].concat(playlists).forEach(function (p) {
+    var o = document.createElement("option");
+    o.value = p.id; o.textContent = p.name;
+    ePlaylist.appendChild(o);
+  });
+
+  // Chips de acceso rápido.
+  listasChips.innerHTML = "";
+  playlists.forEach(function (p) {
+    var b = document.createElement("button");
+    b.className = "chip";
+    b.textContent = p.name;
+    b.setAttribute("aria-pressed", playlistBy === p.id);
+    b.onclick = function () {
+      playlistBy = playlistBy === p.id ? "" : p.id;
+      playlistFilter.value = playlistBy;
+      renderPlaylistControls();
+      renderList();
+    };
+    listasChips.appendChild(b);
+  });
+  var haySeleccion = !!playlistBy && playlistBy !== "none";
+  renameListBtn.classList.toggle("hidden", !haySeleccion);
+  deleteListBtn.classList.toggle("hidden", !haySeleccion);
+}
+
+function crearLista() {
+  var nombre = prompt("Nombre de la lista");
+  if (!nombre || !nombre.trim()) return;
+  api("POST", "/api/playlists", { name: nombre.trim() })
+    .then(loadPlaylists)
+    .catch(function (e) { aviso(listEmpty, e.message); });
+}
+
+function renombrarLista() {
+  var lista = playlists.filter(function (p) { return p.id === playlistBy; })[0];
+  if (!lista) return;
+  var nombre = prompt("Nuevo nombre", lista.name);
+  if (!nombre || !nombre.trim()) return;
+  api("PUT", "/api/playlists/" + lista.id, { name: nombre.trim() })
+    .then(loadPlaylists)
+    .catch(function (e) { aviso(listEmpty, e.message); });
+}
+
+function borrarLista() {
+  var lista = playlists.filter(function (p) { return p.id === playlistBy; })[0];
+  if (!lista) return;
+  // Igual que en la app: borrar la carpeta NO borra las partituras.
+  if (!confirm("Se borrará la lista «" + lista.name + "». Sus partituras no se borran: pasan a «Sin lista». ¿Continuar?")) return;
+  api("DELETE", "/api/playlists/" + lista.id).then(function () {
+    playlistBy = "";
+    return loadPlaylists();
+  }).then(refresh).catch(function (e) { aviso(listEmpty, e.message); });
+}
+
+/** Aviso corto en un hueco de la página (sin alert(), que bloquea). */
+function aviso(nodo, texto) {
+  nodo.textContent = texto;
+  nodo.classList.remove("hidden");
 }
 
 function restoreSession() {
@@ -709,6 +620,7 @@ function submitAuth() {
     password.value = "";
     showAuth(false);
     tab = "mine";
+    listOffset = 0;
     refresh();
   }).catch(function (e) { authMsg.textContent = e.message; });
 }
@@ -721,7 +633,8 @@ function submitAuth() {
 function showView(vista) {
   var vistas = {
     list: listView, auth: authView, edit: editView,
-    chords: chordsView, proposals: proposalsView, users: usersView
+    chords: chordsView, proposals: proposalsView, users: usersView,
+    admin: adminView
   };
   Object.keys(vistas).forEach(function (nombre) {
     vistas[nombre].classList.toggle("hidden", nombre !== vista);
@@ -792,7 +705,11 @@ function loadGenres() {
     genres = d.genres || [];
     if (tab !== "mine") renderGenreOptions(genres);
     renderGenreDatalist(genresOf(songs));
-  }).catch(function () { /* sin categorías el filtro se queda vacío, no pasa nada */ });
+  }).catch(function (e) {
+    // El filtro se queda vacío, que es tolerable; pero que se sepa por qué.
+    renderGenreOptions([]);
+    console.warn("No se han podido cargar las categorías:", e.message);
+  });
 }
 
 function refresh() {
@@ -801,19 +718,35 @@ function refresh() {
   tabChords.setAttribute("aria-selected", tab === "chords");
   tabProposals.setAttribute("aria-selected", tab === "proposals");
   tabUsers.setAttribute("aria-selected", tab === "users");
+  tabTrash.setAttribute("aria-selected", tab === "trash");
+  tabAdmin.setAttribute("aria-selected", tab === "admin");
   if (tab === "chords") { showChords(); return; }
   if (tab === "proposals") { showProposals(); return; }
   if (tab === "users") { showUsers(); return; }
+  if (tab === "admin") { showView("admin"); return; }
   showView("list");
+  // Listas y favoritos solo tienen sentido sobre lo propio.
+  var propio = tab === "mine";
+  listasBar.classList.toggle("hidden", !propio);
+  playlistFilterWrap.classList.toggle("hidden", !propio);
+  favFilter.classList.toggle("hidden", !propio);
   // El catálogo puede ser enorme: género y orden los resuelve SQL. "Mis
   // partituras" son pocas y se ordenan aquí mismo, sin ida y vuelta.
-  var path = tab === "mine"
-    ? "/api/songs"
+  // Los listados vienen por páginas: sin tope, una cuenta grande se traía
+  // el catálogo entero en cada visita.
+  var pag = "limit=" + PAGINA + "&offset=" + listOffset;
+  var path = tab === "trash"
+    ? "/api/songs?trash=1&" + pag
+    : tab === "mine"
+    ? "/api/songs?" + pag
     : "/api/songs/public?sort=" + encodeURIComponent(sortBy) +
-      (genreBy ? "&genre=" + encodeURIComponent(genreBy) : "");
+      (genreBy ? "&genre=" + encodeURIComponent(genreBy) : "") + "&" + pag;
   api("GET", path).then(function (d) {
-    songs = d.songs || [];
-    if (tab === "mine") songs = sortMine(songs);
+    // Al pedir "más" se añade; al cambiar de pestaña o filtro se empieza de cero.
+    songs = listOffset ? songs.concat(d.songs || []) : (d.songs || []);
+    listHasMore = !!d.hasMore;
+    moreBtn.classList.toggle("hidden", !listHasMore);
+    if (tab === "mine" || tab === "trash") songs = sortMine(songs);
     // El filtro ofrece lo que hay delante: en "Mis partituras", tus categorías
     // (también las de las privadas, que el catálogo público no conoce).
     var propias = genresOf(songs);
@@ -838,8 +771,12 @@ function sortMine(lista) {
 
 function renderList(error) {
   var q = search.value.trim().toLowerCase();
+  var propio = tab === "mine";
   var shown = songs.filter(function (s) {
-    if (tab === "mine" && genreBy && (s.genre || "").toLowerCase() !== genreBy.toLowerCase()) return false;
+    if (propio && genreBy && (s.genre || "").toLowerCase() !== genreBy.toLowerCase()) return false;
+    if (propio && favOnly && !s.favorite) return false;
+    if (propio && playlistBy === "none" && s.playlistId) return false;
+    if (propio && playlistBy && playlistBy !== "none" && s.playlistId !== playlistBy) return false;
     if (!q) return true;
     return ((s.title || "") + " " + (s.artist || "")).toLowerCase().indexOf(q) >= 0;
   });
@@ -862,21 +799,244 @@ function renderList(error) {
       g.textContent = s.genre;
       card.appendChild(g);
     }
-    if (tab === "mine") {
+    if (propio) {
       var b = document.createElement("span");
       b.className = "badge";
       b.textContent = s.visibility === "public" ? "Pública" : "Privada";
       card.appendChild(b);
+      var lista = playlists.filter(function (p) { return p.id === s.playlistId; })[0];
+      if (lista) {
+        var lb = document.createElement("span");
+        lb.className = "badge";
+        lb.textContent = lista.name;
+        card.appendChild(lb);
+      }
+      // La estrella va dentro de la tarjeta, que es un <button>: se marca como
+      // control aparte y se corta la propagación para no abrir el visor.
+      var star = document.createElement("span");
+      star.className = "fav";
+      star.setAttribute("role", "button");
+      star.setAttribute("tabindex", "0");
+      star.setAttribute("aria-pressed", !!s.favorite);
+      star.setAttribute("aria-label", s.favorite ? "Quitar de favoritas" : "Marcar como favorita");
+      star.textContent = s.favorite ? "★" : "☆";
+      var alternar = function (ev) {
+        ev.stopPropagation();
+        ev.preventDefault();
+        toggleFavorite(s);
+      };
+      star.onclick = alternar;
+      star.onkeydown = function (ev) {
+        if (ev.key === "Enter" || ev.key === " ") alternar(ev);
+      };
+      card.insertBefore(star, card.firstChild);
     }
-    card.onclick = function () { openSong(s.id); };
+    if (tab === "trash") {
+      var acc = document.createElement("span");
+      acc.className = "acciones";
+      var rest = document.createElement("span");
+      rest.className = "chip";
+      rest.setAttribute("role", "button");
+      rest.setAttribute("tabindex", "0");
+      rest.textContent = "Restaurar";
+      rest.onclick = function (ev) { ev.stopPropagation(); restaurar(s); };
+      var borrar = document.createElement("span");
+      borrar.className = "chip";
+      borrar.setAttribute("role", "button");
+      borrar.setAttribute("tabindex", "0");
+      borrar.textContent = "Borrar del todo";
+      borrar.onclick = function (ev) { ev.stopPropagation(); borrarDelTodo(s); };
+      acc.appendChild(rest); acc.appendChild(borrar);
+      card.appendChild(acc);
+    }
+    card.onclick = function () { if (tab !== "trash") openSong(s.id); };
     list.appendChild(card);
   });
   var msg = error ? error
     : shown.length ? ""
-    : (tab === "mine" ? "Todavía no tienes partituras. Crea la primera con «+ Nueva»."
-                      : "Aún no hay partituras publicadas.");
+    : tab === "trash" ? "La papelera está vacía."
+    : (propio ? "Todavía no tienes partituras. Crea la primera con «+ Nueva»."
+              : "Aún no hay partituras publicadas.");
   listEmpty.textContent = msg;
   listEmpty.classList.toggle("hidden", !msg);
+}
+
+/* ---------- favoritos y papelera ---------- */
+
+function toggleFavorite(s) {
+  api("PUT", "/api/songs/" + s.id + "/favorite", { favorite: !s.favorite })
+    .then(function (d) {
+      s.favorite = !!(d.song && d.song.favorite);
+      renderList();
+    })
+    .catch(function (e) { aviso(listEmpty, e.message); });
+}
+
+function restaurar(s) {
+  api("POST", "/api/songs/" + s.id + "/restore")
+    .then(refresh)
+    .catch(function (e) { aviso(listEmpty, e.message); });
+}
+
+function borrarDelTodo(s) {
+  // Este sí es irreversible, y es el único sitio donde puede ocurrir.
+  if (!confirm("Se borrará «" + (s.title || "sin título") + "» para siempre. Esto no se puede deshacer. ¿Continuar?")) return;
+  api("DELETE", "/api/songs/" + s.id + "?hard=1")
+    .then(refresh)
+    .catch(function (e) { aviso(listEmpty, e.message); });
+}
+
+/* ---------- impresión ---------- */
+/*
+ * Imprime lo que se está viendo: con el tono transpuesto y la cejilla puestos,
+ * no el texto original. Se abre una ventana con estilos propios de papel
+ * (tinta oscura sobre blanco) en vez de imprimir la interfaz oscura.
+ * Portado del panel /admin, que era el único sitio que sabía imprimir.
+ */
+function printViewer() {
+  if (!current) return;
+  var w = window.open("", "_blank");
+  if (!w) { alert("El navegador ha bloqueado la ventana de impresión."); return; }
+  // current.body ya es lo que se está leyendo: el Original o la versión
+  // elegida. La cejilla se saca del propio rótulo, que es quien la sabe.
+  var lineas = vRenderSong(vTransposeBody(current.body || "", semis, flats));
+  var capo = Number((vCapo.textContent || "").replace(/\D+/g, "")) || 0;
+  var doc = '<!doctype html><meta charset="utf-8"><title>' +
+    vEsc(current.song.title || "Partitura") + '</title>' +
+    '<style>body{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;' +
+    'padding:20px;color:#111;background:#fff;}' +
+    'h1{font-size:18px;margin:0;}h2{font-size:13px;color:#555;margin:2px 0 10px;font-weight:normal;}' +
+    '.chord{color:#1558d6;font-weight:bold;}.ln{white-space:pre;margin:0;line-height:1.35;}' +
+    '.tab{white-space:pre;color:#666;line-height:1.35;}' +
+    '.capo{display:inline-block;border:1px solid #888;border-radius:4px;padding:1px 6px;' +
+    'margin-bottom:10px;font-size:12px;}</style>' +
+    '<h1>' + vEsc(current.song.title || "") + '</h1>' +
+    (current.song.artist ? '<h2>' + vEsc(current.song.artist) + '</h2>' : '') +
+    (capo > 0 ? '<div class="capo">Capo ' + capo + '</div>' : '') +
+    '<div>' + lineas + '</div>';
+  w.document.write(doc);
+  w.document.close();
+  w.focus();
+  setTimeout(function () { w.print(); }, 250);
+}
+
+/* ---------- administración del catálogo ---------- */
+/*
+ * Lo que sobrevive del panel /admin, ya retirado: copia de seguridad en ZIP,
+ * repaso de vídeos y categorías automáticas. Ahora todo pasa por la sesión y
+ * por el modelo de permisos, en vez de por un token compartido que se saltaba
+ * las dos cosas.
+ */
+
+function nombreFichero(s) {
+  var base = (s.title || "sin-titulo").replace(/[\\/:*?"<>|]+/g, "-").slice(0, 80);
+  return base + "-" + s.id.slice(0, 8) + ".txt";
+}
+
+function backupZip() {
+  aviso(adminMsg, "Preparando copia…");
+  api("GET", "/api/songs").then(function (d) {
+    var lista = d.songs || [];
+    if (!lista.length) { aviso(adminMsg, "No hay partituras que guardar."); return; }
+    var enc = new TextEncoder();
+    var entradas = [];
+    // Una petición por partitura: es una operación manual y puntual, y así no
+    // hace falta un endpoint nuevo que vuelque todo el catálogo de golpe.
+    var cadena = lista.reduce(function (previa, s) {
+      return previa.then(function () {
+        return api("GET", "/api/songs/" + s.id).then(function (det) {
+          entradas.push({ name: nombreFichero(s), data: enc.encode(det.content || "") });
+          aviso(adminMsg, "Preparando copia… " + entradas.length + "/" + lista.length);
+        });
+      });
+    }, Promise.resolve());
+    return cadena.then(function () {
+      var d2 = new Date();
+      var p2 = function (n) { return String(n).padStart(2, "0"); };
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(vBuildZip(entradas));
+      a.download = "vivace-" + d2.getFullYear() + p2(d2.getMonth() + 1) + p2(d2.getDate()) +
+                   "-" + p2(d2.getHours()) + p2(d2.getMinutes()) + ".zip";
+      a.click();
+      URL.revokeObjectURL(a.href);
+      aviso(adminMsg, "Copia de " + entradas.length + " partituras ✓");
+    });
+  }).catch(function (e) { aviso(adminMsg, "Error en la copia: " + e.message); });
+}
+
+function restoreZip(file) {
+  aviso(adminMsg, "Leyendo ZIP…");
+  file.arrayBuffer()
+    .then(vReadZip)
+    .then(function (entradas) {
+      var textos = entradas.filter(function (e) { return /\.txt$/i.test(e.name); });
+      if (!textos.length) { aviso(adminMsg, "El ZIP no trae partituras."); return; }
+      if (!confirm("Se crearán " + textos.length + " partituras a partir del ZIP. ¿Continuar?")) {
+        aviso(adminMsg, "");
+        return;
+      }
+      var ok = 0, fallos = 0;
+      return textos.reduce(function (previa, e) {
+        return previa.then(function () {
+          var cab = vParseSong(e.text).head || {};
+          return api("POST", "/api/songs", {
+            title: cab.title || e.name.replace(/\.txt$/i, ""),
+            artist: cab.artist || "",
+            genre: cab.genre || "",
+            capo: Number(cab.capo) || 0,
+            sourceUrl: cab.url || "",
+            content: e.text
+          }).then(function () { ok++; }, function () { fallos++; })
+            .then(function () {
+              aviso(adminMsg, "Restaurando… " + (ok + fallos) + "/" + textos.length);
+            });
+        });
+      }, Promise.resolve()).then(function () {
+        aviso(adminMsg, "Restauradas " + ok + (fallos ? ", fallidas " + fallos : "") + " ✓");
+        refresh();
+      });
+    })
+    .catch(function (e) { aviso(adminMsg, "No se ha podido leer el ZIP: " + e.message); });
+}
+
+function listarSinVideo() {
+  noVideoList.textContent = "Buscando…";
+  api("GET", "/api/songs/without-video").then(function (d) {
+    var lista = d.songs || [];
+    noVideoList.innerHTML = "";
+    if (!lista.length) { noVideoList.textContent = "Todas tienen vídeo."; return; }
+    lista.forEach(function (s) {
+      var fila = document.createElement("div");
+      fila.className = "row";
+      var t = document.createElement("span");
+      t.style.flex = "1";
+      t.textContent = (s.artist ? s.artist + " – " : "") + (s.title || "(sin título)");
+      var buscar = document.createElement("a");
+      buscar.href = s.search || "#";
+      buscar.target = "_blank";
+      buscar.rel = "noopener noreferrer";
+      buscar.textContent = "Buscar en YouTube ↗";
+      fila.appendChild(t); fila.appendChild(buscar);
+      noVideoList.appendChild(fila);
+    });
+  }).catch(function (e) { noVideoList.textContent = e.message; });
+}
+
+function categoriasAuto(aplicar) {
+  aviso(genresMsg, aplicar ? "Aplicando…" : "Calculando…");
+  api("POST", "/api/genres/auto", { dryRun: !aplicar }).then(function (d) {
+    var cuenta = d.tally || {};
+    var resumen = Object.keys(cuenta).map(function (g) { return g + ": " + cuenta[g]; }).join(" · ");
+    var cuantas = aplicar ? d.updated : d.wouldUpdate;
+    var cola = d.done ? "" : " (quedan más; repite para seguir)";
+    aviso(
+      genresMsg,
+      (aplicar ? "Aplicadas " : "Se cambiarían ") + cuantas + " de " + d.scanned +
+      (resumen ? " · " + resumen : "") + cola
+    );
+    genresApplyBtn.classList.toggle("hidden", aplicar || !cuantas);
+    if (aplicar) { loadGenres(); refresh(); }
+  }).catch(function (e) { aviso(genresMsg, e.message); });
 }
 
 /* ---------- visor ---------- */
@@ -898,8 +1058,12 @@ function openSong(id) {
     vSource.classList.toggle("hidden", !valida);
     vEdit.classList.toggle("hidden", !(user && (user.id === d.song.ownerId || user.role === "admin")));
     renderViewer();
-    vBody.scrollTop = 0;
     viewer.classList.add("on");
+    // El scroll se reinicia DESPUÉS de mostrar el visor. Mientras está en
+    // display:none no tiene caja, así que asignarle scrollTop no hace nada y el
+    // navegador restaura la posición anterior al mostrarlo: al abrir la segunda
+    // partitura se entraba por el final de la primera.
+    vBody.scrollTop = 0;
     document.documentElement.classList.add("conVisor");
     document.body.classList.add("conVisor");
     renderTube();
@@ -1022,13 +1186,31 @@ function renderTube() {
  * cejilla, tablatura… El contenido propio de la partitura es el "Original" y
  * las demás cuelgan de él, igual que en la app.
  */
+/*
+ * Las piezas secundarias del visor se cargaban tragándose el error: si el
+ * servidor fallaba, la sección se quedaba vacía y era indistinguible de "no hay
+ * nada". Ahora se pinta lo que haya Y se dice que falló, sin bloquear la
+ * lectura de la partitura, que es lo que de verdad importa.
+ */
 function loadVersions(songId) {
   versions = [];
   currentVersion = null;
   api("GET", "/api/songs/" + songId + "/versions").then(function (d) {
     versions = d.versions || [];
     renderVersionBar();
-  }).catch(function () { renderVersionBar(); });
+  }).catch(function (e) {
+    renderVersionBar();
+    falloSecundario(vVersions, "No se han podido cargar las versiones: " + e.message);
+  });
+}
+
+/** Nota de error al final de una sección, sin robar el sitio a lo que sí cargó. */
+function falloSecundario(caja, texto) {
+  var n = document.createElement("div");
+  n.className = "msg";
+  n.setAttribute("role", "status");
+  n.textContent = texto;
+  caja.appendChild(n);
 }
 
 /**
@@ -1164,7 +1346,10 @@ function loadComments(songId) {
   api("GET", "/api/songs/" + songId + "/comments").then(function (d) {
     comments = d.comments || [];
     renderComments();
-  }).catch(function () { renderComments(); });
+  }).catch(function (e) {
+    renderComments();
+    falloSecundario(vComments, "No se han podido cargar los comentarios: " + e.message);
+  });
 }
 
 function renderComments() {
@@ -1474,7 +1659,7 @@ function openProposal(p) {
                          (p.capo ? " · capo " + p.capo : "");
     var parsed = vParseSong(d.content || "");
     pmBody.innerHTML = '<div class="sheet">' + vRenderSong(parsed.body || d.content || "") + '</div>';
-    propModal.classList.remove("hidden");
+    abrirDialogo(propModal);
   }).catch(function (e) { propMsg.textContent = e.message; });
 }
 
@@ -1612,7 +1797,7 @@ function openChordModal(nombre) {
       ? ""
       : "Este acorde no está en el diccionario global todavía.";
     cmEmpty.classList.toggle("hidden", !!posiciones.length);
-    chordModal.classList.remove("hidden");
+    abrirDialogo(chordModal);
   });
 }
 
@@ -1663,7 +1848,7 @@ function openChordEditor(nombre) {
   chMsg.textContent = "";
   chDelete.classList.toggle("hidden", !editingChord);
   renderChordPositions();
-  chordEditor.classList.remove("hidden");
+  abrirDialogo(chordEditor);
 }
 
 /** Una fila por posición: seis trastes, traste base, cejillas y el dibujo al lado. */
@@ -1773,7 +1958,7 @@ function saveChord() {
   if (editingChord && editingChord !== nombre) delete siguiente[editingChord];
   siguiente[nombre] = { positions: chordPositions };
   saveChordDict(siguiente, "Guardado " + nombre).then(function () {
-    chordEditor.classList.add("hidden");
+    cerrarDialogo(chordEditor);
   }).catch(function (e) { chMsg.textContent = e.message; });
 }
 
@@ -1783,7 +1968,7 @@ function deleteChord() {
   var siguiente = {};
   Object.keys(chordDict).forEach(function (k) { if (k !== editingChord) siguiente[k] = chordDict[k]; });
   saveChordDict(siguiente, "Eliminado " + editingChord).then(function () {
-    chordEditor.classList.add("hidden");
+    cerrarDialogo(chordEditor);
   }).catch(function (e) { chMsg.textContent = e.message; });
 }
 
@@ -1871,6 +2056,7 @@ function applyEditorMode() {
   eTitle.parentNode.classList.toggle("hidden", esVersion);
   eArtist.parentNode.classList.toggle("hidden", esVersion);
   eGenre.parentNode.classList.toggle("hidden", esVersion);
+  ePlaylistWrap.classList.toggle("hidden", esVersion);
   eVisibilityWrap.classList.toggle("hidden", esVersion || !esEditor());
   eLockedWrap.classList.toggle("hidden", esVersion);
   deleteBtn.classList.toggle("hidden", esVersion || !editingId);
@@ -1902,6 +2088,9 @@ function newSong() {
   eLocked.checked = false;
   editorMode = "song"; editingVersionId = null;
   eVisibility.value = "private";
+  // Si se está mirando una lista concreta, la nueva nace ahí: es lo que espera
+  // quien acaba de pulsar "+ Nueva" dentro de esa carpeta.
+  ePlaylist.value = (playlistBy && playlistBy !== "none") ? playlistBy : "";
   renderEditorPreview();
   applyEditorMode();
   showEdit(true);
@@ -1923,6 +2112,7 @@ function editCurrent() {
   eTubeMsg.textContent = "";
   eLocked.checked = !!current.song.locked;
   eVisibility.value = current.song.visibility || "private";
+  ePlaylist.value = current.song.playlistId || "";
   eContent.value = current.content || "";
   renderEditorPreview();
   closeViewer();
@@ -1941,6 +2131,7 @@ function saveSong() {
     locked: eLocked.checked,
     sourceUrl: eSource.value.trim(),
     visibility: eVisibility.value,
+    playlistId: ePlaylist.value || null,
     content: eContent.value
   };
   var req = editingId ? api("PUT", "/api/songs/" + editingId, payload)
@@ -1948,6 +2139,7 @@ function saveSong() {
   req.then(function () {
     showEdit(false);
     tab = "mine";
+    listOffset = 0;
     loadGenres();          // la categoría puede ser nueva
     refresh();
   }).catch(function (e) { editMsg.textContent = e.message; });
@@ -1983,6 +2175,7 @@ function sendVersionProposal() {
     editorMode = "song";
     showEdit(false);
     tab = "proposals";
+    listOffset = 0;
     refresh();
   }).catch(function (e) { editMsg.textContent = e.message; });
 }
@@ -1996,6 +2189,7 @@ function proposePublish() {
     .then(function () {
       showEdit(false);
       tab = "proposals";
+      listOffset = 0;
       refresh();
     }).catch(function (e) { editMsg.textContent = e.message; });
 }
@@ -2011,9 +2205,18 @@ function deleteSong() {
 }
 
 /* ---------- eventos ---------- */
+/**
+ * El campo de contraseña cambia de papel según el modo. Con
+ * "current-password" fijo, al registrarse el gestor intentaba rellenar una
+ * contraseña que no existe en vez de ofrecer generar una nueva.
+ */
+function ajustarAutocomplete() {
+  password.setAttribute("autocomplete", registering ? "new-password" : "current-password");
+}
+
 loginBtn.onclick = function () { registering = false; authTitle.textContent = "Entrar en Vivace";
   authSubmit.textContent = "Entrar"; authSwitch.textContent = "Crear una cuenta";
-  nameWrap.classList.add("hidden"); showAuth(true); };
+  nameWrap.classList.add("hidden"); ajustarAutocomplete(); showAuth(true); };
 logoutBtn.onclick = function () {
   closeViewer();
   current = null;
@@ -2023,6 +2226,7 @@ logoutBtn.onclick = function () {
   chordDict = null;              // el diccionario se recarga con la sesión nueva
   setSession("", null);
   tab = "public";
+  listOffset = 0;
   refresh();
 };
 authSwitch.onclick = function () {
@@ -2031,15 +2235,54 @@ authSwitch.onclick = function () {
   authSubmit.textContent = registering ? "Crear cuenta" : "Entrar";
   authSwitch.textContent = registering ? "Ya tengo cuenta" : "Crear una cuenta";
   nameWrap.classList.toggle("hidden", !registering);
+  ajustarAutocomplete();
   authMsg.textContent = "";
 };
 authSubmit.onclick = submitAuth;
 password.addEventListener("keydown", function (e) { if (e.key === "Enter") submitAuth(); });
 
-tabPublic.onclick = function () { tab = "public"; refresh(); };
-tabMine.onclick = function () { tab = "mine"; refresh(); };
+/** Cambiar de pestaña o de filtro empieza el listado desde el principio. */
+function irA(pestana) {
+  tab = pestana;
+  listOffset = 0;
+  refresh();
+}
+
+tabPublic.onclick = function () { irA("public"); };
+tabMine.onclick = function () { irA("mine"); };
+tabTrash.onclick = function () { irA("trash"); };
+tabAdmin.onclick = function () { irA("admin"); };
+moreBtn.onclick = function () { listOffset += PAGINA; refresh(); };
 search.oninput = function () { renderList(); };
-tabChords.onclick = function () { tab = "chords"; refresh(); };
+tabChords.onclick = function () { irA("chords"); };
+
+themeBtn.onclick = toggleTheme;
+
+playlistFilter.onchange = function () {
+  playlistBy = playlistFilter.value;
+  renderPlaylistControls();
+  renderList();
+};
+favFilter.onclick = function () {
+  favOnly = !favOnly;
+  favFilter.setAttribute("aria-pressed", favOnly);
+  renderList();
+};
+vPrint.onclick = printViewer;
+
+backupBtn.onclick = backupZip;
+restoreBtn.onclick = function () { restoreFile.click(); };
+restoreFile.onchange = function () {
+  if (restoreFile.files && restoreFile.files[0]) restoreZip(restoreFile.files[0]);
+  restoreFile.value = "";
+};
+noVideoBtn.onclick = listarSinVideo;
+genresDryBtn.onclick = function () { categoriasAuto(false); };
+genresApplyBtn.onclick = function () { categoriasAuto(true); };
+
+newListBtn.onclick = crearLista;
+renameListBtn.onclick = renombrarLista;
+deleteListBtn.onclick = borrarLista;
 vChords.onclick = toggleChordBar;
 /**
  * Globo con las digitaciones al pasar por encima de un acorde. El clic sigue
@@ -2091,26 +2334,26 @@ vBody.onclick = function (e) {
   hideChordHover();
   openChordModal(destino.textContent.trim());
 };
-cmClose.onclick = function () { chordModal.classList.add("hidden"); };
+cmClose.onclick = function () { cerrarDialogo(chordModal); };
 document.addEventListener("keydown", function (e) {
   if (e.key === "Escape" && !chordModal.classList.contains("hidden")) {
-    chordModal.classList.add("hidden");
+    cerrarDialogo(chordModal);
   }
 });
-chordModal.onclick = function (e) { if (e.target === chordModal) chordModal.classList.add("hidden"); };
-tabProposals.onclick = function () { tab = "proposals"; refresh(); };
-tabUsers.onclick = function () { tab = "users"; refresh(); };
+chordModal.onclick = function (e) { if (e.target === chordModal) cerrarDialogo(chordModal); };
+tabProposals.onclick = function () { irA("proposals"); };
+tabUsers.onclick = function () { irA("users"); };
 propStatus.onchange = loadProposals;
 propMine.onchange = loadProposals;
-pmClose.onclick = function () { propModal.classList.add("hidden"); };
-propModal.onclick = function (e) { if (e.target === propModal) propModal.classList.add("hidden"); };
+pmClose.onclick = function () { cerrarDialogo(propModal); };
+propModal.onclick = function (e) { if (e.target === propModal) cerrarDialogo(propModal); };
 proposeBtn.onclick = proposePublish;
-genreFilter.onchange = function () { genreBy = genreFilter.value; refresh(); };
-sortSel.onchange = function () { sortBy = sortSel.value; refresh(); };
+genreFilter.onchange = function () { genreBy = genreFilter.value; listOffset = 0; refresh(); };
+sortSel.onchange = function () { sortBy = sortSel.value; listOffset = 0; refresh(); };
 chordSearch.oninput = renderChordList;
 chordNew.onclick = function () { openChordEditor(""); };
 chordSeed.onclick = seedChords;
-chClose.onclick = function () { chordEditor.classList.add("hidden"); };
+chClose.onclick = function () { cerrarDialogo(chordEditor); };
 chAddPos.onclick = function () {
   chordPositions.push({ frets: [-1, -1, -1, -1, -1, -1], fingers: [0, 0, 0, 0, 0, 0], baseFret: 1, barres: [] });
   renderChordPositions();
@@ -2152,13 +2395,388 @@ document.addEventListener("keydown", function (e) {
   if (e.key === "Escape" && viewer.classList.contains("on")) closeViewer();
 });
 
+applyTheme(currentTheme());
 renderBeats(0);
 loadGenres();
 restoreSession().then(function () {
   if (user) tab = "mine";
   refresh();
 });
+`;
+
+export const WEB_HTML = `<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vivace</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#0F1113" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#F6F4EF" media="(prefers-color-scheme: light)">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script>
+  /* El tema elegido se aplica ANTES de pintar: si se hiciera al final del
+     <body>, la página aparecería un instante con el tema contrario. */
+  try {
+    var vvTema = localStorage.getItem("vivace_theme");
+    if (vvTema === "light" || vvTema === "dark") document.documentElement.setAttribute("data-theme", vvTema);
+  } catch (e) {}
 </script>
+<link rel="stylesheet" href="/static/vivace.css">
+</head>
+<body>
+
+<header>
+  <a class="brand" href="/" aria-label="Vivace">
+    <svg width="30" height="30" viewBox="0 0 48 48" aria-hidden="true">
+      <rect x="18" y="6" width="12" height="30" fill="none" stroke="var(--vv-accent)" stroke-width="2.4"></rect>
+      <g fill="currentColor">
+        <circle cx="12" cy="14" r="2.4"></circle><circle cx="12" cy="22" r="2.4"></circle><circle cx="12" cy="30" r="2.4"></circle>
+        <circle cx="36" cy="14" r="2.4"></circle><circle cx="36" cy="22" r="2.4"></circle><circle cx="36" cy="30" r="2.4"></circle>
+      </g>
+      <rect x="18" y="38" width="12" height="3.4" fill="var(--vv-accent)"></rect>
+    </svg>
+    <span>
+      <h1>vivace</h1>
+      <span class="kicker">Practice room</span>
+    </span>
+  </a>
+  <span class="grow"></span>
+  <span id="who" class="hidden" style="font-size:13px;color:var(--vv-text-muted)"></span>
+  <button id="themeBtn" title="Cambiar entre claro y oscuro" aria-label="Cambiar tema">🌓</button>
+  <button id="loginBtn">Entrar</button>
+  <button id="logoutBtn" class="hidden">Salir</button>
+</header>
+
+<main>
+  <!-- acceso -->
+  <section id="authView" class="hidden">
+    <div class="stack">
+      <h2 id="authTitle" style="margin:0">Entrar en Vivace</h2>
+      <label>Email<input type="email" id="email" autocomplete="email"></label>
+      <label id="nameWrap" class="hidden">Nombre<input type="text" id="name" autocomplete="name"></label>
+      <label>Contraseña <small>(mínimo 8 caracteres)</small>
+        <input type="password" id="password" minlength="8" autocomplete="current-password"></label>
+      <div class="msg" id="authMsg"></div>
+      <button class="primary" id="authSubmit">Entrar</button>
+      <button class="ghost" id="authSwitch">Crear una cuenta</button>
+    </div>
+  </section>
+
+  <!-- listados -->
+  <section id="listView">
+    <div class="tabs">
+      <button id="tabPublic" aria-selected="true">Catálogo</button>
+      <button id="tabMine" aria-selected="false" class="hidden">Mis partituras</button>
+      <button id="tabProposals" aria-selected="false" class="hidden">Propuestas</button>
+      <button id="tabChords" aria-selected="false" class="hidden" title="Diccionario global, visible para todo el mundo">Acordes</button>
+      <button id="tabUsers" aria-selected="false" class="hidden">Usuarios</button>
+      <button id="tabTrash" aria-selected="false" class="hidden" title="Partituras borradas">Papelera</button>
+      <button id="tabAdmin" aria-selected="false" class="hidden" title="Herramientas del catálogo">Administración</button>
+      <span class="grow"></span>
+      <button id="newBtn" class="hidden">+ Nueva</button>
+    </div>
+    <div class="filtros">
+      <label class="filtro" for="search">Buscar
+        <input type="text" id="search" placeholder="Título o artista…"></label>
+      <label class="filtro" for="genreFilter">Categoría
+        <select id="genreFilter">
+          <option value="">Todas</option>
+        </select></label>
+      <label class="filtro" for="sortSel">Orden
+        <select id="sortSel">
+          <option value="title">Título (A–Z)</option>
+          <option value="recent">Más recientes primero</option>
+          <option value="old">Más antiguas primero</option>
+        </select></label>
+      <label class="filtro hidden" id="playlistFilterWrap" for="playlistFilter">Lista
+        <select id="playlistFilter">
+          <option value="">Todas</option>
+        </select></label>
+      <button id="favFilter" class="hidden" aria-pressed="false" title="Ver solo las favoritas">★ Favoritas</button>
+    </div>
+    <div id="listasBar" class="listas hidden">
+      <span class="etiqueta">Listas</span>
+      <span id="listasChips" class="chips"></span>
+      <button id="newListBtn" class="ghost">+ Nueva lista</button>
+      <button id="renameListBtn" class="ghost hidden">Renombrar</button>
+      <button id="deleteListBtn" class="ghost hidden">Borrar lista</button>
+    </div>
+    <div id="list" class="grid"></div>
+    <div id="listEmpty" class="empty hidden"></div>
+    <div class="row" style="margin-top:14px">
+      <button id="moreBtn" class="hidden">Cargar más</button>
+    </div>
+  </section>
+
+  <!-- administración del catálogo (editor/admin) -->
+  <section id="adminView" class="hidden">
+    <h2 style="margin:0 0 14px">Administración</h2>
+    <div class="adminTool">
+      <h3>Copia de seguridad</h3>
+      <p>Descarga un ZIP con el texto de todas tus partituras, una por fichero.
+         Restaurar vuelve a subirlas: las que ya existan con el mismo título se
+         sobrescriben.</p>
+      <div class="acciones">
+        <button id="backupBtn">Descargar ZIP</button>
+        <button id="restoreBtn">Restaurar desde ZIP</button>
+        <input type="file" id="restoreFile" accept=".zip" class="hidden">
+      </div>
+      <div class="msg" id="adminMsg"></div>
+    </div>
+    <div class="adminTool">
+      <h3>Sin vídeo</h3>
+      <p>Partituras publicadas a las que aún no se les ha puesto un enlace de YouTube.</p>
+      <button id="noVideoBtn">Listar</button>
+      <div id="noVideoList" class="stack" style="margin-top:10px"></div>
+    </div>
+    <div class="adminTool">
+      <h3>Categorías automáticas</h3>
+      <p>Propone una categoría para las partituras que no tienen ninguna.
+         Primero enseña el recuento; no escribe nada hasta confirmar.</p>
+      <div class="acciones">
+        <button id="genresDryBtn">Ver propuesta</button>
+        <button id="genresApplyBtn" class="hidden">Aplicar</button>
+      </div>
+      <div class="msg" id="genresMsg"></div>
+    </div>
+  </section>
+
+  <!-- editor -->
+  <section id="editView" class="hidden">
+    <div class="editor">
+      <div class="editHead">
+        <label>Título<input type="text" id="eTitle"></label>
+        <label>Artista<input type="text" id="eArtist"></label>
+        <label>Categoría <small>estilo musical</small>
+          <input type="text" id="eGenre" list="genreList" placeholder="Rock, bolero, folk…">
+          <datalist id="genreList"></datalist></label>
+        <label id="ePlaylistWrap">Lista
+          <select id="ePlaylist">
+            <option value="">Sin lista</option>
+          </select></label>
+        <label id="eLockedWrap" class="row" style="gap:8px;align-items:center">
+          <input type="checkbox" id="eLocked" style="width:auto">
+          <span>Bloqueada <small>pide confirmación antes de editarla</small></span>
+        </label>
+        <label id="eVisibilityWrap">Visibilidad
+          <select id="eVisibility">
+            <option value="private">Privada (solo yo)</option>
+            <option value="public">Pública (cualquiera puede verla)</option>
+          </select>
+        </label>
+      </div>
+      <div class="editHead" style="grid-template-columns:1fr" id="eVersionHead">
+        <label>Nombre de la versión <small>«Acústica», «En Do», «Tablatura»…</small>
+          <input type="text" id="eVersionName" placeholder="Acústica"></label>
+        <label id="eNoteWrap">Mensaje para quien la revise <small>opcional</small>
+          <input type="text" id="eNote" placeholder="Qué cambia y por qué"></label>
+      </div>
+      <div class="editHead" style="grid-template-columns:1fr">
+        <label>URL de la partitura original <small>opcional</small>
+          <input type="url" id="eSource" placeholder="https://…"></label>
+        <label>Vídeo de YouTube <small>opcional; se ve junto a la partitura</small>
+          <input type="text" id="eTube" placeholder="https://youtu.be/…"></label>
+        <div class="row">
+          <button id="eTubeSearch" title="Abre la búsqueda en otra pestaña">Buscar en YouTube</button>
+          <span id="eTubeMsg" class="nota"></span>
+        </div>
+        <div>
+          <div class="vv-kicker" style="margin-bottom:6px">Capo</div>
+          <div class="pills" id="eCapoPills"></div>
+        </div>
+      </div>
+      <div id="editSplit">
+        <div class="pane">
+          <div class="hd">Partitura <small>acordes entre llaves: {Am}</small>
+            <span class="grow"></span>
+            <button id="eDetect" title="Marca las líneas que solo llevan acordes">♪ Detectar acordes</button>
+          </div>
+          <textarea id="eContent" spellcheck="false"
+                    placeholder="#title: Título&#10;#artist: Autor&#10;---&#10;{Am} Primera línea"></textarea>
+        </div>
+        <div class="pane">
+          <div class="hd">Vista previa <small>tal cual se verá</small></div>
+          <div id="ePreview"></div>
+        </div>
+      </div>
+      <div id="editAviso" class="aviso hidden"></div>
+      <div class="msg" id="editMsg"></div>
+      <div class="row">
+        <button class="primary" id="saveBtn">Guardar</button>
+        <button id="proposeBtn" class="hidden" title="Un editor la revisará antes de publicarla">Proponer publicación</button>
+        <button id="cancelEdit">Cancelar</button>
+        <span class="grow"></span>
+        <button id="deleteBtn" class="hidden" style="color:var(--vv-danger)">Eliminar</button>
+      </div>
+    </div>
+  </section>
+  <!-- propuestas: cola de revisión para editores, historial para el resto -->
+  <section id="proposalsView" class="hidden">
+    <div class="row" style="margin-bottom:12px">
+      <select id="propStatus" style="flex:0 1 220px;width:auto">
+        <option value="pending">Pendientes</option>
+        <option value="approved">Aprobadas</option>
+        <option value="rejected">Rechazadas</option>
+        <option value="all">Todas</option>
+      </select>
+      <label id="propMineWrap" class="row hidden" style="gap:6px">
+        <input type="checkbox" id="propMine" style="width:auto"> Solo las mías</label>
+      <span class="grow"></span>
+      <span id="propCount" class="vv-kicker"></span>
+    </div>
+    <div class="msg" id="propMsg"></div>
+    <div id="propList"></div>
+    <div id="propEmpty" class="empty hidden"></div>
+  </section>
+
+  <!-- usuarios y roles (solo administración) -->
+  <section id="usersView" class="hidden">
+    <div class="aviso">
+      El <b>editor</b> gestiona el catálogo: edita y despublica partituras públicas,
+      resuelve propuestas y mantiene el diccionario de acordes. El <b>usuario</b> crea
+      partituras suyas y propone publicarlas o aportar versiones.
+    </div>
+    <div class="msg" id="usersMsg"></div>
+    <div id="usersList"></div>
+  </section>
+
+  <!-- diccionario global de acordes (solo administración) -->
+  <section id="chordsView" class="hidden">
+    <div class="row" style="margin-bottom:12px">
+      <input type="text" id="chordSearch" placeholder="Buscar acorde…" style="flex:1;min-width:160px">
+      <button id="chordNew">+ Nuevo acorde</button>
+      <button id="chordSeed" title="Añade los acordes que falten sin tocar los que ya has definido">Importar diccionario base</button>
+    </div>
+    <div class="row" style="margin-bottom:10px">
+      <span id="chordCount" class="vv-kicker"></span>
+      <span class="grow"></span>
+      <span id="chordSaved" class="vv-kicker"></span>
+    </div>
+    <div class="msg" id="chordMsg"></div>
+    <div id="chordList" class="chordGrid"></div>
+    <div id="chordEmpty" class="empty hidden"></div>
+  </section>
+</main>
+
+<div id="chordHover"></div>
+
+<!-- contenido de una propuesta, tal y como quedaría -->
+<div id="propModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="pmTitle">
+  <div class="modalBox">
+    <div class="row">
+      <h3 id="pmTitle"></h3>
+      <span class="grow"></span>
+      <button id="pmClose">Cerrar</button>
+    </div>
+    <div id="pmMeta" class="meta"></div>
+    <div id="pmBody" style="font-family:var(--vv-font-mono);font-size:15px;overflow:auto"></div>
+  </div>
+</div>
+
+<!-- diagramas del acorde que se está mirando (cualquiera) -->
+<div id="chordModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="cmName">
+  <div class="modalBox" style="max-width:620px">
+    <div class="row">
+      <h3 id="cmName"></h3>
+      <span class="grow"></span>
+      <button id="cmClose">Cerrar</button>
+    </div>
+    <div id="cmBody" class="chordGrid"></div>
+    <div id="cmEmpty" class="empty hidden"></div>
+  </div>
+</div>
+
+<!-- edición de un acorde (solo administración) -->
+<div id="chordEditor" class="modal hidden" role="dialog" aria-modal="true" aria-label="Editar acorde">
+  <div class="modalBox">
+    <div class="row">
+      <label style="flex:1">Nombre <small>tal cual se escribe entre llaves</small>
+        <input type="text" id="chName" placeholder="Am7"></label>
+      <button id="chClose">Cerrar</button>
+    </div>
+    <div class="vv-kicker">Posiciones — trastes de la 6ª cuerda (Mi grave) a la 1ª; -1 no suena, 0 al aire</div>
+    <div id="chPositions"></div>
+    <div class="msg" id="chMsg"></div>
+    <div class="row">
+      <button id="chAddPos">+ Posición</button>
+      <span class="grow"></span>
+      <button id="chDelete" style="color:var(--vv-danger)">Eliminar acorde</button>
+      <button class="primary" id="chSave">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- visor a pantalla completa -->
+<div id="viewer" role="dialog" aria-modal="true" aria-labelledby="vTitle">
+  <div id="vHead">
+    <div class="lado">
+      <button id="vClose" class="ghost">‹ Volver</button>
+    </div>
+    <div class="vMeta">
+      <div class="titulo">
+        <span id="vArtist"></span>
+        <span id="vSep" class="hidden">–</span>
+        <span id="vTitle"></span>
+      </div>
+      <span id="vCapo" class="hidden"></span>
+    </div>
+    <div class="lado der">
+      <a id="vSource" class="hidden" href="#" target="_blank" rel="noopener noreferrer"
+         title="Abrir la partitura original en otra pestaña">Original ↗</a>
+      <button id="vPrint" title="Imprimir o guardar en PDF">🖨 Imprimir</button>
+      <button id="vEdit" class="hidden">Editar</button>
+    </div>
+  </div>
+  <div id="vChordBar" class="chordBar hidden"></div>
+  <div id="vMain">
+    <div id="vSide">
+      <div id="vCtrl">
+      <div class="row">
+        <button id="vPlay" title="Desplazamiento automático">▶ Scroll</button>
+        <input type="range" id="vSpeed" min="5" max="300" value="40" style="min-width:60px">
+        <label id="vSpeedVal">40 px/s</label>
+      </div>
+      <div class="row">
+        <label>Tono</label>
+        <button id="vDown">–</button>
+        <label id="vTone" style="min-width:2.5em;text-align:center">±0</label>
+        <button id="vUp">+</button>
+        <button id="vFlat">♭</button>
+      </div>
+      <div class="row">
+        <label>Letra</label>
+        <button id="vFontDown">A-</button>
+        <button id="vFontUp">A+</button>
+        <span class="grow"></span>
+        <button id="vChords" title="Diagramas de los acordes de esta partitura">♦ Acordes</button>
+      </div>
+      <div class="row">
+        <button id="vMetro" title="Metrónomo">♩ Metrónomo</button>
+        <span id="vBeats" class="row" style="gap:4px"></span>
+      </div>
+      <div class="row">
+        <label>BPM</label>
+        <input type="range" id="vBpm" min="40" max="200" value="100" style="min-width:70px">
+        <label id="vBpmVal">100</label>
+        </div>
+      </div>
+      <div id="vVersionPanel">
+        <div class="hd">Versiones</div>
+        <div id="vVersions"></div>
+        <div id="vVersionActions" class="row" style="gap:6px"></div>
+      </div>
+    </div>
+    <div id="vBody"><div id="vSheet"></div><div id="vComments"></div></div>
+    <div id="vTube"><div class="marco"></div></div>
+  </div>
+</div>
+
+<script src="/static/vivace.js" defer></script>
+<script src="/static/vivace-app.js" defer></script>
+
 </body>
 </html>`;
 

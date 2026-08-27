@@ -11,6 +11,14 @@ import kotlinx.serialization.Serializable
 data class Playlist(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
+    /** Id de la lista en la API de Vivace; null = aún no subida. */
+    @ColumnInfo(name = "remote_id") val remoteId: String? = null,
+    @ColumnInfo(name = "position") val position: Int = 0,
+    /** Hay cambios locales sin subir. */
+    val dirty: Boolean = true,
+    /** Borrado lógico: se propaga al servidor y luego se purga. */
+    @ColumnInfo(name = "deleted_at") val deletedAt: Long = 0,
+    @ColumnInfo(name = "updated_at") val updatedAt: Long = System.currentTimeMillis(),
     @ColumnInfo(name = "created_at") val createdAt: Long = System.currentTimeMillis()
 )
 
@@ -24,7 +32,13 @@ data class Playlist(
     )],
     // remote_key único: una clave del bucket no puede apuntar a dos canciones
     // (en SQLite los NULL no colisionan, así que las locales no se ven afectadas).
-    indices = [Index("playlist_id"), Index(value = ["remote_key"], unique = true)]
+    // `dirty` y `deleted_at` se filtran en cada pasada de sincronización y al
+    // pintar la papelera: con la sincronización automática dejan de ser
+    // consultas ocasionales.
+    indices = [
+        Index("playlist_id"), Index(value = ["remote_key"], unique = true),
+        Index("dirty"), Index("deleted_at")
+    ]
 )
 data class Song(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -45,6 +59,13 @@ data class Song(
     val visibility: String = "private",
     @ColumnInfo(name = "remote_etag") val remoteEtag: String? = null,
     @ColumnInfo(name = "remote_updated_at") val remoteUpdatedAt: Long = 0,
+    /**
+     * Revisión que el SERVIDOR tenía la última vez que se sincronizó. Viaja de
+     * vuelta como `baseRev` al subir: si no coincide con la del servidor es que
+     * alguien más la tocó y hay conflicto. `updated_at` no vale para esto,
+     * porque dos relojes distintos no se pueden comparar.
+     */
+    @ColumnInfo(name = "remote_rev") val remoteRev: Int = 0,
     val dirty: Boolean = false,
     /** Bloqueo anti-edición accidental. Solo se fija/quita desde el Worker;
      * en el dispositivo viaja vía la cabecera #locked y se respeta (confirmar
@@ -80,7 +101,32 @@ data class SongVersion(
     /** URL de la web de origen de esta versión concreta (botón "Link"). */
     @ColumnInfo(name = "source_url") val sourceUrl: String = "",
     @ColumnInfo(name = "position") val position: Int = 0,
+    /** Id de la versión en la API; null = aún no subida. */
+    @ColumnInfo(name = "remote_id") val remoteId: String? = null,
+    val dirty: Boolean = true,
+    /** Borrado lógico: sin esto, borrar una versión aquí no llegaba al servidor. */
+    @ColumnInfo(name = "deleted_at") val deletedAt: Long = 0,
     @ColumnInfo(name = "updated_at") val updatedAt: Long = System.currentTimeMillis()
+)
+
+/**
+ * Cola de borrados pendientes de comunicar al servidor.
+ *
+ * Hace falta porque un borrado definitivo se lleva la fila: sin dejar rastro,
+ * la partitura seguía viva en el servidor y **volvía a bajarse como nueva** en
+ * la siguiente sincronización. Aquí queda la lápida hasta que el servidor la
+ * confirma.
+ */
+@Entity(tableName = "pending_deletes", indices = [Index(value = ["remote_id"], unique = true)])
+data class PendingDelete(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    /** Id remoto de lo que hay que borrar. */
+    @ColumnInfo(name = "remote_id") val remoteId: String,
+    /** "song", "version" o "playlist". */
+    val kind: String,
+    /** true = borrado definitivo (se va la fila y el objeto); false = papelera. */
+    val purge: Boolean = false,
+    @ColumnInfo(name = "created_at") val createdAt: Long = System.currentTimeMillis()
 )
 
 /**

@@ -47,13 +47,37 @@ export async function findSongByKey(db, r2Key) {
   return db.prepare("SELECT * FROM songs WHERE r2_key = ?").bind(r2Key).first();
 }
 
-/** Partituras del usuario (activas), más recientes primero. */
-export async function listOwnSongs(db, ownerId) {
+/**
+ * Tamaño de página de los listados. Ninguno estaba acotado: una cuenta con
+ * miles de partituras devolvía la colección entera en cada llamada.
+ * Se pide una fila de más para saber si queda algo detrás sin contar el total.
+ */
+export const PAGE_SIZE = 100;
+export const PAGE_MAX = 500;
+
+export function clampPage({ limit, offset } = {}) {
+  const n = Number(limit);
+  const o = Number(offset);
+  return {
+    limit: Number.isFinite(n) && n > 0 ? Math.min(Math.floor(n), PAGE_MAX) : PAGE_SIZE,
+    offset: Number.isFinite(o) && o > 0 ? Math.floor(o) : 0
+  };
+}
+
+/** Corta la fila sobrante y dice si había más. */
+function paginar(filas, limit) {
+  const hasMore = filas.length > limit;
+  return { items: hasMore ? filas.slice(0, limit) : filas, hasMore };
+}
+
+/** Partituras del usuario (activas), por título. */
+export async function listOwnSongs(db, ownerId, pagina = {}) {
+  const { limit, offset } = clampPage(pagina);
   const { results } = await db.prepare(
     `SELECT * FROM songs WHERE owner_id = ? AND deleted_at = 0
-     ORDER BY title COLLATE NOCASE ASC`
-  ).bind(ownerId).all();
-  return results || [];
+     ORDER BY title COLLATE NOCASE ASC LIMIT ? OFFSET ?`
+  ).bind(ownerId, limit + 1, offset).all();
+  return paginar(results || [], limit);
 }
 
 /**
@@ -78,17 +102,19 @@ export function isValidSort(sort) {
  * Catálogo público. [ownerId] lo acota a un dueño; [genre] a una categoría
  * (comparada sin distinguir mayúsculas) y [sort] elige el orden.
  */
-export async function listPublicSongs(db, ownerId = null, { genre = "", sort = "title" } = {}) {
+export async function listPublicSongs(db, ownerId = null, opciones = {}) {
+  const { genre = "", sort = "title" } = opciones;
   const orden = ORDENES[sort] || ORDENES.title;
   const condiciones = ["s.visibility = 'public'", "s.deleted_at = 0"];
   const valores = [];
   if (ownerId) { condiciones.push("s.owner_id = ?"); valores.push(ownerId); }
   if (genre) { condiciones.push("LOWER(s.genre) = ?"); valores.push(String(genre).toLowerCase()); }
+  const { limit, offset } = clampPage(opciones);
   const sql = `SELECT s.*, u.name AS owner_name FROM songs s JOIN users u ON u.id = s.owner_id
-     WHERE ${condiciones.join(" AND ")} ORDER BY ${orden}`;
-  const stmt = valores.length ? db.prepare(sql).bind(...valores) : db.prepare(sql);
-  const { results } = await stmt.all();
-  return results || [];
+     WHERE ${condiciones.join(" AND ")} ORDER BY ${orden} LIMIT ? OFFSET ?`;
+  valores.push(limit + 1, offset);
+  const { results } = await db.prepare(sql).bind(...valores).all();
+  return paginar(results || [], limit);
 }
 
 /** Categorías con al menos una partitura publicada, para poblar el filtro. */
@@ -127,13 +153,15 @@ export async function insertSongs(db, songs) {
   const now = Date.now();
   const stmt = db.prepare(
     `INSERT INTO songs (id, owner_id, r2_key, title, artist, genre, capo, source_url,
-                        locked, visibility, created_at, updated_at, deleted_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`
+                        locked, visibility, created_at, updated_at, deleted_at,
+                        favorite, playlist_id, rev)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 1)`
   );
   await db.batch(songs.map((song) => stmt.bind(
     song.id || uuid(), song.owner_id, song.r2_key, song.title || "", song.artist || "",
     song.genre || "", song.capo || 0, song.source_url || "", song.locked ? 1 : 0,
-    song.visibility || "private", song.created_at || now, now
+    song.visibility || "private", song.created_at || now, now,
+    song.favorite ? 1 : 0, song.playlist_id || null
   )));
   return songs.length;
 }
@@ -143,33 +171,84 @@ export async function insertSong(db, song) {
   const id = song.id || uuid();
   await db.prepare(
     `INSERT INTO songs (id, owner_id, r2_key, title, artist, genre, capo, source_url,
-                        locked, visibility, created_at, updated_at, deleted_at, youtube_url)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`
+                        locked, visibility, created_at, updated_at, deleted_at, youtube_url,
+                        favorite, position, playlist_id, rev)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, 1)`
   ).bind(
     id, song.owner_id, song.r2_key, song.title || "", song.artist || "", song.genre || "",
     song.capo || 0, song.source_url || "", song.locked ? 1 : 0,
-    song.visibility || "private", song.created_at || now, now, song.youtube_url || ""
+    song.visibility || "private", song.created_at || now, now, song.youtube_url || "",
+    song.favorite ? 1 : 0, song.position || 0, song.playlist_id || null
   ).run();
   return findSongById(db, id);
 }
 
-export async function updateSongMeta(db, id, meta) {
-  await db.prepare(
+/**
+ * Sentencia de actualización de metadatos, sin ejecutar. Se expone aparte para
+ * poder meterla en un `db.batch()` junto con otra escritura y que las dos vayan
+ * o no vayan (aprobar una propuesta son dos cambios que no pueden quedar a
+ * medias).
+ */
+export function stmtUpdateSongMeta(db, id, meta) {
+  return db.prepare(
     `UPDATE songs SET title = ?, artist = ?, genre = ?, capo = ?, source_url = ?,
-                      locked = ?, visibility = ?, youtube_url = ?, updated_at = ?
+                      locked = ?, visibility = ?, youtube_url = ?,
+                      favorite = ?, position = ?, playlist_id = ?,
+                      rev = rev + 1, updated_at = ?
      WHERE id = ?`
   ).bind(
     meta.title || "", meta.artist || "", meta.genre || "", meta.capo || 0,
     meta.source_url || "", meta.locked ? 1 : 0, meta.visibility || "private",
-    meta.youtube_url || "", Date.now(), id
-  ).run();
+    meta.youtube_url || "", meta.favorite ? 1 : 0, meta.position || 0,
+    meta.playlist_id || null, Date.now(), id
+  );
+}
+
+export async function updateSongMeta(db, id, meta) {
+  await stmtUpdateSongMeta(db, id, meta).run();
   return findSongById(db, id);
 }
 
-/** Borrado lógico (papelera); el objeto de R2 se conserva. */
+/**
+ * Borrado lógico (papelera); el objeto de R2 se conserva.
+ * Sube `rev` y `updated_at` a propósito: así la lápida sale en el feed de
+ * cambios como una modificación más y los otros dispositivos se enteran.
+ */
 export async function softDeleteSong(db, id) {
-  await db.prepare("UPDATE songs SET deleted_at = ?, updated_at = ? WHERE id = ?")
-    .bind(Date.now(), Date.now(), id).run();
+  const now = Date.now();
+  await db.prepare("UPDATE songs SET deleted_at = ?, updated_at = ?, rev = rev + 1 WHERE id = ?")
+    .bind(now, now, id).run();
+}
+
+/** Saca una partitura de la papelera. */
+export async function restoreSong(db, id) {
+  const now = Date.now();
+  await db.prepare("UPDATE songs SET deleted_at = 0, updated_at = ?, rev = rev + 1 WHERE id = ?")
+    .bind(now, id).run();
+  return findSongById(db, id);
+}
+
+/** Papelera del usuario, lo borrado primero. */
+export async function listTrashedSongs(db, ownerId, pagina = {}) {
+  const { limit, offset } = clampPage(pagina);
+  const { results } = await db.prepare(
+    "SELECT * FROM songs WHERE owner_id = ? AND deleted_at > 0 ORDER BY deleted_at DESC LIMIT ? OFFSET ?"
+  ).bind(ownerId, limit + 1, offset).all();
+  return paginar(results || [], limit);
+}
+
+/** Borrado definitivo: la fila desaparece. El objeto de R2 lo borra quien llama. */
+export async function hardDeleteSong(db, id) {
+  await db.prepare("DELETE FROM songs WHERE id = ?").bind(id).run();
+}
+
+/** Marca/desmarca favorito sin tocar el resto de la ficha. */
+export async function setSongFavorite(db, id, favorite) {
+  const now = Date.now();
+  await db.prepare(
+    "UPDATE songs SET favorite = ?, updated_at = ?, rev = rev + 1 WHERE id = ?"
+  ).bind(favorite ? 1 : 0, now, id).run();
+  return findSongById(db, id);
 }
 
 /**
@@ -193,6 +272,15 @@ export function publicSong(song, includeKey = false) {
     youtubeUrl: song.youtube_url || "",
     locked: !!song.locked,
     visibility: song.visibility,
+    favorite: !!song.favorite,
+    position: song.position || 0,
+    playlistId: song.playlist_id || null,
+    // `rev` lo lleva el servidor: el cliente lo devuelve como `baseRev` al
+    // subir y así se detecta que alguien más tocó la partitura mientras tanto.
+    rev: song.rev || 1,
+    // Se expone `deletedAt` para que el feed de cambios pueda mandar lápidas:
+    // sin esto, un borrado en el servidor era invisible para la app.
+    deletedAt: song.deleted_at || 0,
     createdAt: song.created_at,
     updatedAt: song.updated_at
   };
@@ -211,6 +299,8 @@ export function publicVersion(version) {
     position: version.position,
     authorId: version.author_id,
     authorName: version.author_name || undefined,
+    rev: version.rev || 1,
+    deletedAt: version.deleted_at || 0,
     createdAt: version.created_at,
     updatedAt: version.updated_at
   };
@@ -230,19 +320,24 @@ export async function findVersionById(db, id) {
   return db.prepare("SELECT * FROM song_versions WHERE id = ? AND deleted_at = 0").bind(id).first();
 }
 
-export async function insertVersion(db, version) {
+/** Sentencia de alta de versión con la posición ya resuelta (ver stmtUpdateSongMeta). */
+export function stmtInsertVersion(db, version, id, position) {
   const now = Date.now();
-  const id = version.id || uuid();
-  // La posición por defecto manda la nueva al final, que es donde se espera.
-  const siguiente = version.position != null ? version.position : await nextVersionPosition(db, version.song_id);
-  await db.prepare(
+  return db.prepare(
     `INSERT INTO song_versions (id, song_id, name, r2_key, capo, source_url, position,
                                 author_id, created_at, updated_at, deleted_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`
   ).bind(
     id, version.song_id, version.name || "", version.r2_key, version.capo || 0,
-    version.source_url || "", siguiente, version.author_id, now, now
-  ).run();
+    version.source_url || "", position, version.author_id, now, now
+  );
+}
+
+export async function insertVersion(db, version) {
+  const id = version.id || uuid();
+  // La posición por defecto manda la nueva al final, que es donde se espera.
+  const siguiente = version.position != null ? version.position : await nextVersionPosition(db, version.song_id);
+  await stmtInsertVersion(db, version, id, siguiente).run();
   return findVersionById(db, id);
 }
 
@@ -255,7 +350,8 @@ async function nextVersionPosition(db, songId) {
 
 export async function updateVersionMeta(db, id, meta) {
   await db.prepare(
-    `UPDATE song_versions SET name = ?, capo = ?, source_url = ?, position = ?, updated_at = ?
+    `UPDATE song_versions SET name = ?, capo = ?, source_url = ?, position = ?,
+                              rev = rev + 1, updated_at = ?
      WHERE id = ?`
   ).bind(
     meta.name || "", meta.capo || 0, meta.source_url || "", meta.position || 0, Date.now(), id
@@ -263,10 +359,124 @@ export async function updateVersionMeta(db, id, meta) {
   return findVersionById(db, id);
 }
 
-/** Borrado lógico, igual que las partituras: nada desaparece de golpe. */
+/**
+ * Borrado lógico, igual que las partituras: nada desaparece de golpe.
+ * Sube `rev` para que la lápida salga en el feed de cambios.
+ */
 export async function softDeleteVersion(db, id) {
-  await db.prepare("UPDATE song_versions SET deleted_at = ?, updated_at = ? WHERE id = ?")
-    .bind(Date.now(), Date.now(), id).run();
+  const now = Date.now();
+  await db.prepare(
+    "UPDATE song_versions SET deleted_at = ?, updated_at = ?, rev = rev + 1 WHERE id = ?"
+  ).bind(now, now, id).run();
+}
+
+/** Versión por id sin filtrar la papelera (el sync necesita ver las lápidas). */
+export async function findVersionAnyState(db, id) {
+  return db.prepare("SELECT * FROM song_versions WHERE id = ?").bind(id).first();
+}
+
+/* ------------------------------ listas ------------------------------ */
+
+export async function findPlaylistById(db, id) {
+  return db.prepare("SELECT * FROM playlists WHERE id = ?").bind(id).first();
+}
+
+export async function listPlaylists(db, ownerId) {
+  const { results } = await db.prepare(
+    `SELECT * FROM playlists WHERE owner_id = ? AND deleted_at = 0
+     ORDER BY position ASC, name COLLATE NOCASE ASC`
+  ).bind(ownerId).all();
+  return results || [];
+}
+
+/** Busca por nombre entre las vivas: el backfill casa `#playlist:` con esto. */
+export async function findPlaylistByName(db, ownerId, name) {
+  return db.prepare(
+    "SELECT * FROM playlists WHERE owner_id = ? AND name = ? AND deleted_at = 0"
+  ).bind(ownerId, name).first();
+}
+
+export async function insertPlaylist(db, playlist) {
+  const now = Date.now();
+  const id = playlist.id || uuid();
+  await db.prepare(
+    `INSERT INTO playlists (id, owner_id, name, position, created_at, updated_at, deleted_at)
+     VALUES (?, ?, ?, ?, ?, ?, 0)`
+  ).bind(
+    id, playlist.owner_id, playlist.name || "", playlist.position || 0,
+    playlist.created_at || now, now
+  ).run();
+  return findPlaylistById(db, id);
+}
+
+export async function updatePlaylist(db, id, { name, position }) {
+  await db.prepare(
+    "UPDATE playlists SET name = ?, position = ?, updated_at = ? WHERE id = ?"
+  ).bind(name || "", position || 0, Date.now(), id).run();
+  return findPlaylistById(db, id);
+}
+
+/**
+ * Borra la lista, no sus partituras: pasan a "Sin lista".
+ * Es la misma regla que en la app (borrar una carpeta nunca borra canciones), y
+ * va en un solo batch para que no quede a medias.
+ */
+export async function softDeletePlaylist(db, id) {
+  const now = Date.now();
+  await db.batch([
+    db.prepare("UPDATE playlists SET deleted_at = ?, updated_at = ? WHERE id = ?")
+      .bind(now, now, id),
+    db.prepare(
+      "UPDATE songs SET playlist_id = NULL, updated_at = ?, rev = rev + 1 WHERE playlist_id = ?"
+    ).bind(now, id)
+  ]);
+}
+
+export function publicPlaylist(playlist) {
+  if (!playlist) return null;
+  return {
+    id: playlist.id,
+    name: playlist.name,
+    position: playlist.position || 0,
+    deletedAt: playlist.deleted_at || 0,
+    createdAt: playlist.created_at,
+    updatedAt: playlist.updated_at
+  };
+}
+
+/* --------------------------- feed de cambios --------------------------- */
+//
+// Las tres consultas siguen el mismo patrón: todo lo que cambió DESPUÉS de
+// (updated_at, id), lápidas incluidas, ordenado por esa misma pareja para que
+// el cursor sea estable aunque varias filas compartan milisegundo.
+
+export async function changedPlaylists(db, ownerId, since, cursorId, limit) {
+  const { results } = await db.prepare(
+    `SELECT * FROM playlists
+     WHERE owner_id = ? AND (updated_at > ? OR (updated_at = ? AND id > ?))
+     ORDER BY updated_at ASC, id ASC LIMIT ?`
+  ).bind(ownerId, since, since, cursorId || "", limit).all();
+  return results || [];
+}
+
+export async function changedSongs(db, ownerId, since, cursorId, limit) {
+  const { results } = await db.prepare(
+    `SELECT * FROM songs
+     WHERE owner_id = ? AND (updated_at > ? OR (updated_at = ? AND id > ?))
+     ORDER BY updated_at ASC, id ASC LIMIT ?`
+  ).bind(ownerId, since, since, cursorId || "", limit).all();
+  return results || [];
+}
+
+/** Versiones de las partituras del usuario (el JOIN limita a lo suyo). */
+export async function changedVersions(db, ownerId, since, cursorId, limit) {
+  const { results } = await db.prepare(
+    `SELECT v.* FROM song_versions v
+     JOIN songs s ON s.id = v.song_id
+     WHERE s.owner_id = ? AND (v.updated_at > ? OR (v.updated_at = ? AND v.id > ?))
+     ORDER BY v.updated_at ASC, v.id ASC LIMIT ?`
+  ).bind(ownerId, since, since, cursorId || "", limit).all();
+  return results || [];
 }
 
 /* ---------------------------- propuestas ---------------------------- */
@@ -335,11 +545,20 @@ export async function listProposals(db, { status = "pending", authorId = null } 
   return results || [];
 }
 
-export async function resolveProposal(db, id, { status, reviewerId, reviewNote }) {
-  await db.prepare(
+export function stmtResolveProposal(db, id, { status, reviewerId, reviewNote }) {
+  return db.prepare(
     "UPDATE proposals SET status = ?, reviewer_id = ?, review_note = ?, resolved_at = ? WHERE id = ?"
-  ).bind(status, reviewerId || null, reviewNote || "", Date.now(), id).run();
+  ).bind(status, reviewerId || null, reviewNote || "", Date.now(), id);
+}
+
+export async function resolveProposal(db, id, { status, reviewerId, reviewNote }) {
+  await stmtResolveProposal(db, id, { status, reviewerId, reviewNote }).run();
   return findProposalById(db, id);
+}
+
+/** La siguiente posición libre de una versión (pública para el batch de aprobar). */
+export async function nextVersionPositionFor(db, songId) {
+  return nextVersionPosition(db, songId);
 }
 
 /** Cuántas propuestas esperan revisión: el aviso del equipo editorial. */
@@ -350,11 +569,12 @@ export async function countPendingProposals(db) {
 
 /* ------------------------------ usuarios ------------------------------ */
 
-export async function listUsers(db) {
+export async function listUsers(db, pagina = {}) {
+  const { limit, offset } = clampPage(pagina);
   const { results } = await db.prepare(
-    "SELECT id, email, name, role, created_at FROM users ORDER BY created_at ASC"
-  ).all();
-  return results || [];
+    "SELECT id, email, name, role, created_at FROM users ORDER BY created_at ASC LIMIT ? OFFSET ?"
+  ).bind(limit + 1, offset).all();
+  return paginar(results || [], limit);
 }
 
 export async function updateUserRole(db, id, role) {
@@ -376,14 +596,15 @@ export function publicComment(comment) {
   };
 }
 
-export async function listComments(db, songId) {
+export async function listComments(db, songId, pagina = {}) {
+  const { limit, offset } = clampPage(pagina);
   const { results } = await db.prepare(
     `SELECT c.*, u.name AS author_name FROM comments c
      LEFT JOIN users u ON u.id = c.author_id
      WHERE c.song_id = ? AND c.deleted_at = 0
-     ORDER BY c.created_at ASC`
-  ).bind(songId).all();
-  return results || [];
+     ORDER BY c.created_at ASC LIMIT ? OFFSET ?`
+  ).bind(songId, limit + 1, offset).all();
+  return paginar(results || [], limit);
 }
 
 export async function findCommentById(db, id) {
@@ -468,7 +689,9 @@ export async function listSongsAfter(db, cursor = "", limit = 200) {
 /** Asigna categorías en un solo lote: una subpetición para todas. */
 export async function setGenres(db, parejas) {
   if (!parejas.length) return 0;
-  const stmt = db.prepare("UPDATE songs SET genre = ?, updated_at = ? WHERE id = ?");
+  // `rev` también sube: si no, el cambio de categoría llegaría al feed pero el
+  // cliente lo daría por "ya lo tengo" y no lo aplicaría nunca.
+  const stmt = db.prepare("UPDATE songs SET genre = ?, updated_at = ?, rev = rev + 1 WHERE id = ?");
   const ahora = Date.now();
   await db.batch(parejas.map((p) => stmt.bind(p.genre, ahora, p.id)));
   return parejas.length;
@@ -482,4 +705,16 @@ export async function listSongsWithoutVideo(db, limit = 500) {
      ORDER BY artist COLLATE NOCASE ASC, title COLLATE NOCASE ASC LIMIT ?`
   ).bind(limit).all();
   return results || [];
+}
+
+/**
+ * Coloca una partitura en su carpeta y/o la marca favorita, sin tocar el resto.
+ * Lo usa el backfill: las partituras indexadas antes de que existieran estas
+ * columnas llevaban el dato escondido en el texto (`#playlist:`, `#favorite:`).
+ */
+export async function setSongPlacement(db, id, { favorite, playlist_id }) {
+  const now = Date.now();
+  await db.prepare(
+    "UPDATE songs SET favorite = ?, playlist_id = ?, updated_at = ?, rev = rev + 1 WHERE id = ?"
+  ).bind(favorite ? 1 : 0, playlist_id || null, now, id).run();
 }

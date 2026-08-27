@@ -257,8 +257,7 @@ fun SongViewScreen(
                                     content = if (semitones == 0 && !useFlats) activeContent
                                     else ChordTransposer.transposeContent(activeContent, semitones, useFlats),
                                     capo = activeCapo
-                                ),
-                                playlistName = null
+                                )
                             )
                             val send = Intent(Intent.ACTION_SEND).apply {
                                 type = "text/plain"

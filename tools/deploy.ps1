@@ -12,7 +12,7 @@
                        Cloudflare. Es idempotente: lo que ya esta, se deja.
       2. -InitBackend  Puesta en marcha del backend, solo la primera vez: crea
                        el bucket de R2, la base D1, aplica schema.sql y pide los
-                       secretos AUTH_SECRET y SYNC_TOKEN.
+                       el secreto AUTH_SECRET.
       3. -Worker/-App  Despliegue: publica el Worker y/o compila el APK de
                        release y lo sube a R2 con su latest.json.
 
@@ -35,6 +35,12 @@
 
 .PARAMETER All
     Equivale a -Setup -Worker -App.
+
+.PARAMETER Backfill
+    Junto con -PublishCatalog, rescata la carpeta y el favorito de las
+    cabeceras "#playlist:"/"#favorite:" que la app antigua escondia dentro del
+    texto, y los pasa a las columnas nuevas. Cuesta una lectura de R2 por
+    partitura ya indexada, por eso es opcional.
 
 .PARAMETER PublishCatalog
     Indexa en la base de datos las partituras que ya estaban en R2 antes del
@@ -121,6 +127,7 @@ param(
     [switch]$App,
     [switch]$All,
     [switch]$PublishCatalog,
+    [switch]$Backfill,
     [ValidateSet("public", "private")][string]$CatalogVisibility = "public",
     [switch]$ListUsers,
     [switch]$PromoteAdmin,
@@ -415,6 +422,10 @@ function Get-BucketName {
 function Invoke-ApplySchema {
     Write-Step "Aplicar el esquema a la base de produccion"
     Write-Note "Solo crea lo que falte (tablas e indices). No borra ni reescribe datos."
+    # El resultado se deja en una variable de script y NO se devuelve: la salida
+    # de wrangler cae en la tuberia de la funcion, asi que un `return $true`
+    # llegaria mezclado con ella y quien lo comprobara acertaria por casualidad.
+    $script:EsquemaAplicado = $false
     if (-not (Confirm-Step "Aplicar schema.sql sobre la base 'vivace'?")) {
         Write-Note "Cancelado."
         return
@@ -422,21 +433,39 @@ function Invoke-ApplySchema {
     Invoke-Tool -Exe "npx.cmd" -WorkDir $WorkerDir -Arguments @(
         "wrangler", "d1", "execute", "vivace", "--remote", "--file=schema.sql")
 
-    # migrations.sql lleva los ALTER TABLE. SQLite no tiene "ADD COLUMN IF NOT
-    # EXISTS", asi que al repetirlo falla con "duplicate column name": eso es
-    # justo lo que se espera cuando ya estaba aplicado, y no es un error.
+    # migrations.sql lleva los ALTER TABLE, y SQLite no tiene "ADD COLUMN IF NOT
+    # EXISTS". Van UNA A UNA a proposito: si se le pasa el fichero entero, en
+    # cuanto un ALTER falla —y el primero falla siempre, porque su columna ya
+    # esta desde la tanda anterior— D1 aborta el fichero completo y los de abajo
+    # no llegan a ejecutarse. Con el fichero entero, "duplicate column name" era
+    # indistinguible de "ya estaba todo aplicado" y el despliegue seguia dejando
+    # la base a medias con el codigo nuevo ya publicado.
     Write-Info "Cambios sobre tablas existentes (migrations.sql)..."
-    Push-Location $WorkerDir
-    try {
-        & npx.cmd wrangler d1 execute vivace --remote --file=migrations.sql
-        $codigo = $LASTEXITCODE
-    } finally {
-        Pop-Location
+    $sql = Get-Content (Join-Path $WorkerDir "migrations.sql") -Raw
+    $sentencias = ($sql -replace '(?m)--.*$', '') -split ';' |
+        ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" }
+    $aplicadas = 0
+    $existentes = 0
+    foreach ($sentencia in $sentencias) {
+        Push-Location $WorkerDir
+        try {
+            $salida = & npx.cmd wrangler d1 execute vivace --remote --yes --command $sentencia 2>&1
+            $codigo = $LASTEXITCODE
+        } finally {
+            Pop-Location
+        }
+        if ($codigo -eq 0) {
+            $aplicadas++
+            Write-Info ("  aplicada: {0}" -f $sentencia.Substring(0, [Math]::Min(70, $sentencia.Length)))
+        } elseif ($salida -match "duplicate column name") {
+            $existentes++
+        } else {
+            $salida | ForEach-Object { Write-Host $_ }
+            Fail "Fallo una migracion por algo que NO es 'duplicate column name': $sentencia"
+        }
     }
-    if ($codigo -ne 0) {
-        Write-Note "Alguna migracion no se aplico. Si el motivo es 'duplicate column name',"
-        Write-Note "ya estaba puesta y no hay nada que hacer; cualquier otro motivo, miralo."
-    }
+    Write-Ok ("migrations.sql: {0} nueva(s), {1} ya estaba(n)" -f $aplicadas, $existentes)
+    $script:EsquemaAplicado = $true
     Write-Ok "Esquema al dia"
 }
 
@@ -467,8 +496,10 @@ function Invoke-InitBackend {
     Write-Note "Ahora los dos secretos. No se guardan en el repositorio ni se muestran por pantalla."
     Write-Note "AUTH_SECRET firma las sesiones (JWT): una cadena larga y aleatoria."
     Invoke-Tool -Exe "npx.cmd" -WorkDir $WorkerDir -Arguments @("wrangler", "secret", "put", "AUTH_SECRET")
-    Write-Note "SYNC_TOKEN es el token heredado que usan /admin y las rutas antiguas."
-    Invoke-Tool -Exe "npx.cmd" -WorkDir $WorkerDir -Arguments @("wrangler", "secret", "put", "SYNC_TOKEN")
+    Invoke-Tool -Exe "npx.cmd" -WorkDir $WorkerDir -Arguments @(
+        "wrangler", "d1", "execute", "vivace", "--remote", "--file=migrations.sql")
+    # SYNC_TOKEN ya no se pide: las rutas de token compartido y el panel /admin
+    # se retiraron porque se saltaban el modelo de permisos por completo.
     Write-Ok "Backend preparado. El primer usuario que se registre sera el administrador."
 }
 
@@ -484,9 +515,19 @@ function Publish-Worker {
     if (-not $SkipTests) {
         Invoke-Tool -Exe "npm.cmd" -Arguments @("test") -WorkDir $WorkerDir
     }
-    if (-not (Confirm-Step "Publicar el Worker (web, API y panel) en Cloudflare?")) {
+    if (-not (Confirm-Step "Publicar el Worker (web y API) en Cloudflare?")) {
         Write-Note "Despliegue del Worker cancelado."
         return
+    }
+
+    # EL ORDEN IMPORTA: primero la base y luego el codigo. La API nueva cuenta
+    # con columnas que la base vieja no tiene (rev, favorite, position,
+    # playlist_id); si se publicara antes, la web daria errores hasta que
+    # llegase el ALTER. Va aqui dentro, y no como paso suelto, porque asi no se
+    # puede saltar por combinar mal los parametros (-All no incluia -ApplySchema).
+    Invoke-ApplySchema
+    if (-not $script:EsquemaAplicado) {
+        Fail "Sin el esquema al dia no se publica: el codigo nuevo necesita las columnas nuevas."
     }
     $salida = Invoke-Tool -Exe "npx.cmd" -Arguments @("wrangler", "deploy") -WorkDir $WorkerDir -Capture
     $salida | ForEach-Object { Write-Host $_ }
@@ -826,6 +867,7 @@ function Invoke-PublishCatalog {
     do {
         $tanda++
         $uri = "$base/admin/migrate?visibility=$CatalogVisibility"
+        if ($Backfill) { $uri = $uri + "&backfill=1" }
         if (-not [string]::IsNullOrWhiteSpace($cursor)) {
             $uri = $uri + "&cursor=" + [Uri]::EscapeDataString($cursor)
         }
@@ -857,6 +899,7 @@ function Invoke-PublishCatalog {
 
 # --------------------------------------------------------------------- main --
 
+# -All no incluye -ApplySchema porque Publish-Worker ya lo aplica el mismo.
 if ($All) { $Setup = $true; $Worker = $true; $App = $true }
 if (-not ($Setup -or $InitBackend -or $Worker -or $App -or $PublishCatalog -or $ListUsers -or
           $PromoteAdmin -or $ApplySchema -or $Categorize)) {
@@ -864,6 +907,7 @@ if (-not ($Setup -or $InitBackend -or $Worker -or $App -or $PublishCatalog -or $
 }
 
 $script:BaseUrlResuelta = $BaseUrl.TrimEnd("/")
+$script:EsquemaAplicado = $false
 
 Write-Host "Vivace - entorno y despliegue" -ForegroundColor White
 Write-Host "Repositorio: $Root" -ForegroundColor DarkGray
@@ -891,7 +935,7 @@ if ($Setup -or $InitBackend -or $Worker -or $App) {
     }
 }
 if ($InitBackend) { Invoke-InitBackend }
-if ($ApplySchema) { Invoke-ApplySchema }
+if ($ApplySchema -and -not $Worker) { Invoke-ApplySchema }
 if ($Worker) { Publish-Worker }
 if ($App) { Publish-App }
 if ($ListUsers -and -not $PromoteAdmin) { Show-Users }

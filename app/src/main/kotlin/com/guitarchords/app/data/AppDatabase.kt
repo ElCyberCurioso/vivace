@@ -11,17 +11,20 @@ import com.guitarchords.app.training.TrainingArea
 @Database(
     entities = [
         Playlist::class, Song::class, SongVersion::class, CustomChord::class,
+        PendingDelete::class,
         TrainingProfile::class, AreaProgress::class, ExerciseResult::class,
         AchievementUnlock::class
     ],
-    version = 16,
-    exportSchema = false
+    version = 17,
+    // El esquema se exporta a app/schemas/ (ver ksp {} en build.gradle.kts).
+    exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun playlistDao(): PlaylistDao
     abstract fun songDao(): SongDao
     abstract fun songVersionDao(): SongVersionDao
     abstract fun customChordDao(): CustomChordDao
+    abstract fun pendingDeleteDao(): PendingDeleteDao
     abstract fun trainingDao(): TrainingDao
 
     companion object {
@@ -256,6 +259,53 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_16_17 = object : Migration(16, 17) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Sincronización automática: carpetas, versiones y borrados dejan
+                // de ser cosa solo local.
+                //
+                // Las listas y versiones que ya existan nacen `dirty = 1` para
+                // que la primera sincronización las suba: hasta ahora nunca
+                // habían salido del dispositivo.
+                db.execSQL("ALTER TABLE playlists ADD COLUMN remote_id TEXT")
+                db.execSQL("ALTER TABLE playlists ADD COLUMN position INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE playlists ADD COLUMN dirty INTEGER NOT NULL DEFAULT 1")
+                db.execSQL("ALTER TABLE playlists ADD COLUMN deleted_at INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE playlists ADD COLUMN updated_at INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("UPDATE playlists SET updated_at = created_at")
+
+                db.execSQL("ALTER TABLE song_versions ADD COLUMN remote_id TEXT")
+                db.execSQL("ALTER TABLE song_versions ADD COLUMN dirty INTEGER NOT NULL DEFAULT 1")
+                db.execSQL("ALTER TABLE song_versions ADD COLUMN deleted_at INTEGER NOT NULL DEFAULT 0")
+
+                // Revisión del servidor. 0 = "no la sé": la primera subida va sin
+                // `baseRev` y el servidor no la trata como conflicto.
+                db.execSQL("ALTER TABLE songs ADD COLUMN remote_rev INTEGER NOT NULL DEFAULT 0")
+
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS pending_deletes (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        remote_id TEXT NOT NULL,
+                        kind TEXT NOT NULL,
+                        purge INTEGER NOT NULL DEFAULT 0,
+                        created_at INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS index_pending_deletes_remote_id ON pending_deletes(remote_id)"
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_songs_dirty ON songs(dirty)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_songs_deleted_at ON songs(deleted_at)")
+
+                // Favoritos y carpetas ya no viajan escondidos en el texto: para
+                // que la primera sincronización los suba como campos, todo lo que
+                // esté enlazado con una cuenta se marca pendiente.
+                db.execSQL("UPDATE songs SET dirty = 1 WHERE remote_id IS NOT NULL AND deleted_at = 0")
+            }
+        }
+
         /**
          * Filas semilla del entrenamiento (perfil único + una fila por área),
          * para que el código nunca encuentre un perfil inexistente. Se invoca
@@ -292,7 +342,8 @@ abstract class AppDatabase : RoomDatabase() {
                         MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7,
                         MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10,
                         MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13,
-                        MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16
+                        MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16,
+                        MIGRATION_16_17
                     )
                     .addCallback(object : Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) {

@@ -42,15 +42,22 @@ object SongTextFormat {
         val content: String
     )
 
-    fun encode(song: Song, playlistName: String?): String = buildString {
+    /**
+     * Serializa la partitura para el bucket.
+     *
+     * Ya NO se escriben `#favorite:` ni `#playlist:`: el favorito y la carpeta
+     * son campos de la API desde que la base los conoce. Se dejaban ahí porque
+     * el servidor no tenía dónde guardarlos, y el efecto era que la web no podía
+     * enseñarlos y que cualquier edición desde el navegador podía perderlos.
+     * [decode] los sigue leyendo para los ficheros antiguos que aún los llevan.
+     */
+    fun encode(song: Song): String = buildString {
         append("#title: ").append(song.title).append('\n')
         if (song.artist.isNotBlank()) append("#artist: ").append(song.artist).append('\n')
         if (song.genre.isNotBlank()) append("#genre: ").append(song.genre).append('\n')
         if (song.capo > 0) append("#capo: ").append(song.capo).append('\n')
-        if (song.favorite) append("#favorite: true\n")
         if (song.locked) append("#locked: true\n")
         if (song.sourceUrl.isNotBlank()) append("#url: ").append(song.sourceUrl).append('\n')
-        if (!playlistName.isNullOrBlank()) append("#playlist: ").append(playlistName).append('\n')
         append("---\n")
         append(song.content)
     }

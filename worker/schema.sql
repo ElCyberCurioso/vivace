@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
   email_lower   TEXT NOT NULL UNIQUE,       -- para buscar sin distinguir mayúsculas
   name          TEXT NOT NULL DEFAULT '',
   password_hash TEXT NOT NULL,              -- pbkdf2$<iteraciones>$<salt>$<hash>
-  role          TEXT NOT NULL DEFAULT 'user', -- 'user' | 'admin'
+  role          TEXT NOT NULL DEFAULT 'user', -- 'user' | 'editor' | 'admin'
   created_at    INTEGER NOT NULL
 );
 
@@ -113,3 +113,35 @@ CREATE TABLE IF NOT EXISTS ratings (
   PRIMARY KEY (song_id, version_id, user_id)
 );
 CREATE INDEX IF NOT EXISTS idx_ratings_song ON ratings(song_id, version_id);
+
+-- ---------------------------------------------------------------------------
+-- Listas (carpetas) del usuario · cuarta tanda
+--
+-- Hasta ahora la carpeta y el favorito viajaban ESCONDIDOS dentro del texto de
+-- la partitura, como cabeceras `#playlist:` y `#favorite:`. La base no los
+-- conocía, así que la web no podía tener carpetas ni favoritos por mucho que
+-- la app sí. Pasan a ser datos de verdad.
+CREATE TABLE IF NOT EXISTS playlists (
+  id         TEXT PRIMARY KEY,
+  owner_id   TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name       TEXT NOT NULL,
+  position   INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  deleted_at INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_playlists_owner   ON playlists(owner_id, deleted_at);
+CREATE INDEX IF NOT EXISTS idx_playlists_updated ON playlists(owner_id, updated_at, id);
+
+-- Freno a la fuerza bruta en /auth/login y /auth/register. Una fila por
+-- (email + IP) con su ventana; ver src/limits.js.
+CREATE TABLE IF NOT EXISTS auth_attempts (
+  key          TEXT PRIMARY KEY,
+  count        INTEGER NOT NULL DEFAULT 0,
+  window_start INTEGER NOT NULL
+);
+
+-- Índices del feed de cambios (GET /api/sync/changes): se recorre por
+-- (updated_at, id), que es también el cursor.
+CREATE INDEX IF NOT EXISTS idx_songs_owner_updated   ON songs(owner_id, updated_at, id);
+CREATE INDEX IF NOT EXISTS idx_versions_song_updated ON song_versions(song_id, updated_at, id);

@@ -28,12 +28,14 @@ import {
   insertSong, insertVersion, isValidSort, listOwnSongs, listProposals,
   listPublicGenres, listPublicSongs, listUsers, listVersions, publicProposal,
   publicSong, publicUser, publicVersion, resolveProposal, softDeleteSong,
-  softDeleteVersion, updateSongMeta, updateUserRole, updateVersionMeta, uuid
+  softDeleteVersion, updateSongMeta, updateUserRole, updateVersionMeta, uuid,
+  nextVersionPositionFor, stmtInsertVersion, stmtResolveProposal, stmtUpdateSongMeta,
+  hardDeleteSong, listTrashedSongs, restoreSong, setSongFavorite, findPlaylistById
 } from "./db.js";
 import {
   canAddVersion, canComment, canDeleteComment, canRate,
   canEdit, canEditChords, canManageRoles, canPropose, canReview,
-  canSetVisibility, canView, canWithdrawProposal, editDenialReason, isEditor,
+  canManageTrashed, canSetVisibility, canView, canWithdrawProposal, editDenialReason, isEditor,
   isValidRole, isValidVisibility
 } from "./permissions.js";
 import {
@@ -42,6 +44,11 @@ import {
 import { CHORD_SEED } from "./chords-seed.js";
 import { FALLBACK_GENRE, guessGenre } from "./genres.js";
 import { isValidYoutube, youtubeSearch } from "./youtube.js";
+import { handleSync } from "./sync.js";
+import {
+  MAX_CHORDS_BLOB, checkContent, checkField, checkSongFields, clearRate,
+  rateKey, rateLimit
+} from "./limits.js";
 
 const json = (data, cors, status = 200) =>
   new Response(JSON.stringify(data), {
@@ -51,8 +58,29 @@ const json = (data, cors, status = 200) =>
 
 const fail = (message, cors, status) => json({ error: message }, cors, status);
 
-/** Secreto de firma: AUTH_SECRET, o el token de sync como respaldo. */
-const authSecret = (env) => env.AUTH_SECRET || env.SYNC_TOKEN || "";
+/**
+ * Comprueba que la lista sea de quien dice. Devuelve el id, o null si no viene
+ * ninguna. Lanza si no existe o es de otra persona: mover una partitura a la
+ * carpeta de otro no es un error menor que se pueda ignorar en silencio.
+ */
+async function playlistOwnedBy(env, user, playlistId) {
+  if (playlistId === undefined || playlistId === null || playlistId === "") return null;
+  const lista = await findPlaylistById(env.DB, String(playlistId));
+  if (!lista || lista.deleted_at || lista.owner_id !== user.id) {
+    throw new Error("esa lista no existe");
+  }
+  return lista.id;
+}
+
+/**
+ * Secreto de firma de las sesiones. SOLO `AUTH_SECRET`.
+ *
+ * Antes caía a `SYNC_TOKEN` si faltaba, y ese token lo llevaba cada instalación
+ * antigua de la app: quien lo tuviera podía firmarse un JWT con el `sub` de
+ * cualquiera, administrador incluido. Ahora, si no está configurado, la API no
+ * autentica a nadie y `handleApi` responde 503 explicando por qué.
+ */
+const authSecret = (env) => env.AUTH_SECRET || "";
 
 /** Usuario autenticado a partir del JWT, o null si no hay sesión válida. */
 export async function currentUser(request, env) {
@@ -78,7 +106,15 @@ async function register(request, env, cors) {
   const problem = validateCredentials(body.email, body.password);
   if (problem) return fail(problem, cors, 400);
 
+  const problemaNombre = checkField(body.name, "el nombre");
+  if (problemaNombre) return fail(problemaNombre, cors, 400);
+
   const email = normalizeEmail(body.email);
+  const clave = rateKey("register", email, request);
+  const freno = await rateLimit(env.DB, clave);
+  if (!freno.ok) {
+    return fail(`demasiados intentos; prueba en ${freno.retryAfter} s`, cors, 429);
+  }
   if (await findUserByEmail(env.DB, email)) {
     return fail("ese email ya está registrado", cors, 409);
   }
@@ -90,6 +126,7 @@ async function register(request, env, cors) {
     passwordHash: await hashPassword(body.password),
     role
   });
+  await clearRate(env.DB, clave);
   const token = await signToken({ sub: user.id, role: user.role }, authSecret(env));
   return json({ token, user: publicUser(user) }, cors, 201);
 }
@@ -97,11 +134,19 @@ async function register(request, env, cors) {
 async function login(request, env, cors) {
   const body = await readJson(request);
   if (!body) return fail("cuerpo JSON no válido", cors, 400);
+  const clave = rateKey("login", body.email, request);
+  const freno = await rateLimit(env.DB, clave);
+  if (!freno.ok) {
+    return fail(`demasiados intentos; prueba en ${freno.retryAfter} s`, cors, 429);
+  }
   const user = await findUserByEmail(env.DB, normalizeEmail(body.email));
   // Mismo mensaje para email inexistente y contraseña mala: no se filtra
   // qué correos están registrados.
   const ok = user && await verifyPassword(String(body.password || ""), user.password_hash);
   if (!ok) return fail("credenciales incorrectas", cors, 401);
+  // Entrar bien borra el contador: el freno es para quien prueba a ciegas, no
+  // para el dueño de la cuenta que se equivocó un par de veces.
+  await clearRate(env.DB, clave);
   const token = await signToken({ sub: user.id, role: user.role }, authSecret(env));
   return json({ token, user: publicUser(user) }, cors);
 }
@@ -117,14 +162,26 @@ async function createSong(request, env, cors, user) {
   if (!body) return fail("cuerpo JSON no válido", cors, 400);
   // Publicar es un acto editorial: quien sube una partitura la crea privada y,
   // si quiere que salga en el catálogo, lo propone (POST .../proposals).
+  // Validar ANTES de tocar R2: si el enlace de YouTube era inválido se escribía
+  // el objeto igualmente y quedaba huérfano, sin fila en D1 que lo apuntara.
+  const problema = checkSongFields(body);
+  if (problema) return fail(problema, cors, 400);
+  if (!isValidYoutube(body.youtubeUrl)) return fail("el enlace de YouTube no es válido", cors, 400);
+
   const pedida = isValidVisibility(body.visibility) ? body.visibility : "private";
   const visibility = canSetVisibility(user) ? pedida : "private";
+  let playlistId;
+  try {
+    playlistId = await playlistOwnedBy(env, user, body.playlistId);
+  } catch (e) {
+    return fail(String(e.message), cors, 400);
+  }
   const r2Key = `${SONG_PREFIX}${uuid()}.txt`;
   await env.BUCKET.put(r2Key, String(body.content || ""), {
     httpMetadata: { contentType: "text/plain; charset=utf-8" }
   });
-  if (!isValidYoutube(body.youtubeUrl)) return fail("el enlace de YouTube no es válido", cors, 400);
   const song = await insertSong(env.DB, {
+    playlist_id: playlistId,
     owner_id: user.id, r2_key: r2Key,
     title: body.title, artist: body.artist, genre: body.genre,
     capo: Number(body.capo) || 0, source_url: body.sourceUrl,
@@ -149,6 +206,11 @@ async function updateSong(request, env, cors, user, id) {
 
   const body = await readJson(request);
   if (!body) return fail("cuerpo JSON no válido", cors, 400);
+  const problema = checkSongFields(body);
+  if (problema) return fail(problema, cors, 400);
+  if (body.youtubeUrl !== undefined && !isValidYoutube(body.youtubeUrl)) {
+    return fail("el enlace de YouTube no es válido", cors, 400);
+  }
   if (typeof body.content === "string") {
     await env.BUCKET.put(song.r2_key, body.content, {
       httpMetadata: { contentType: "text/plain; charset=utf-8" }
@@ -158,8 +220,13 @@ async function updateSong(request, env, cors, user, id) {
   // ignora en silencio, no se rechaza la edición entera.
   const pedida = isValidVisibility(body.visibility) ? body.visibility : song.visibility;
   const visibility = canSetVisibility(user) ? pedida : song.visibility;
-  if (body.youtubeUrl !== undefined && !isValidYoutube(body.youtubeUrl)) {
-    return fail("el enlace de YouTube no es válido", cors, 400);
+  let playlistId = song.playlist_id;
+  if (body.playlistId !== undefined) {
+    try {
+      playlistId = await playlistOwnedBy(env, user, body.playlistId);
+    } catch (e) {
+      return fail(String(e.message), cors, 400);
+    }
   }
   const updated = await updateSongMeta(env.DB, id, {
     youtube_url: body.youtubeUrl !== undefined
@@ -170,6 +237,11 @@ async function updateSong(request, env, cors, user, id) {
     capo: body.capo ?? song.capo,
     source_url: body.sourceUrl ?? song.source_url,
     locked: body.locked ?? !!song.locked,
+    // El favorito y el orden no viajan en esta ruta: tienen la suya
+    // (PUT .../favorite) y no deben perderse por editar el texto.
+    favorite: !!song.favorite,
+    position: song.position,
+    playlist_id: playlistId,
     visibility
   });
   return json({ song: publicSong(updated, true) }, cors);
@@ -200,13 +272,22 @@ async function catalogOwnerId(env, url) {
   return admin?.id || null;
 }
 
+/** ?limit= y ?offset= de la URL, ya acotados por clampPage. */
+function paginaDe(url) {
+  return {
+    limit: url.searchParams.get("limit"),
+    offset: url.searchParams.get("offset")
+  };
+}
+
 async function publicCatalog(env, cors, url) {
   const genre = url.searchParams.get("genre") || "";
   const sortPedido = url.searchParams.get("sort") || "title";
   const sort = isValidSort(sortPedido) ? sortPedido : "title";
   const ownerId = await catalogOwnerId(env, url);
-  const songs = await listPublicSongs(env.DB, ownerId, { genre, sort });
-  return json({ songs: songs.map(publicSong), sort, genre }, cors);
+  const pagina = paginaDe(url);
+  const { items, hasMore } = await listPublicSongs(env.DB, ownerId, { genre, sort, ...pagina });
+  return json({ songs: items.map(publicSong), sort, genre, hasMore, offset: pagina.offset }, cors);
 }
 
 /* ---------------------------- versiones ---------------------------- */
@@ -214,6 +295,8 @@ async function publicCatalog(env, cors, url) {
 async function createVersion(request, env, cors, user, song) {
   const body = await readJson(request);
   if (!body) return fail("cuerpo JSON no válido", cors, 400);
+  const problema = checkSongFields(body);
+  if (problema) return fail(problema, cors, 400);
   const r2Key = `${SONG_PREFIX}${uuid()}.txt`;
   await env.BUCKET.put(r2Key, String(body.content || ""), {
     httpMetadata: { contentType: "text/plain; charset=utf-8" }
@@ -229,6 +312,8 @@ async function createVersion(request, env, cors, user, song) {
 async function updateVersion(request, env, cors, version) {
   const body = await readJson(request);
   if (!body) return fail("cuerpo JSON no válido", cors, 400);
+  const problema = checkSongFields(body);
+  if (problema) return fail(problema, cors, 400);
   if (typeof body.content === "string") {
     await env.BUCKET.put(version.r2_key, body.content, {
       httpMetadata: { contentType: "text/plain; charset=utf-8" }
@@ -296,6 +381,8 @@ async function rateVersion(request, env, cors, user, song) {
 async function createProposal(request, env, cors, user, song) {
   const body = await readJson(request);
   if (!body) return fail("cuerpo JSON no válido", cors, 400);
+  const problema = checkSongFields(body);
+  if (problema) return fail(problema, cors, 400);
   const kind = body.kind === "version" ? "version" : "publish";
   if (!canPropose(user, song, kind)) {
     return fail(kind === "publish"
@@ -330,25 +417,38 @@ async function approveProposal(request, env, cors, user, proposal) {
   const song = await findSongById(env.DB, proposal.song_id);
   if (!song || song.deleted_at) return fail("la partitura ya no existe", cors, 404);
 
-  if (proposal.kind === "publish") {
-    await updateSongMeta(env.DB, song.id, {
-      title: song.title, artist: song.artist, genre: song.genre, capo: song.capo,
-      source_url: song.source_url, youtube_url: song.youtube_url,
-      locked: !!song.locked, visibility: "public"
-    });
-  } else {
-    await insertVersion(env.DB, {
-      song_id: song.id,
-      name: proposal.name || "Versión propuesta",
-      r2_key: proposal.r2_key,
-      capo: proposal.capo,
-      source_url: proposal.source_url,
-      author_id: proposal.author_id      // el crédito es de quien la propuso
-    });
-  }
-  const resuelta = await resolveProposal(env.DB, proposal.id, {
-    status: "approved", reviewerId: user.id, reviewNote: String(body.note || "")
-  });
+  // El efecto y el "resuelta" van en el MISMO batch: si se aplicaban por
+  // separado y fallaba el segundo, la propuesta seguía pendiente con el cambio
+  // ya hecho, y volver a aprobarla duplicaba la versión.
+  const efecto = proposal.kind === "publish"
+    ? stmtUpdateSongMeta(env.DB, song.id, {
+        // Se reenvía la ficha ENTERA: la sentencia escribe todas las columnas,
+        // así que omitir favorito, orden o carpeta los pondría a cero.
+        title: song.title, artist: song.artist, genre: song.genre, capo: song.capo,
+        source_url: song.source_url, youtube_url: song.youtube_url,
+        locked: !!song.locked, favorite: !!song.favorite, position: song.position,
+        playlist_id: song.playlist_id, visibility: "public"
+      })
+    : stmtInsertVersion(
+        env.DB,
+        {
+          song_id: song.id,
+          name: proposal.name || "Versión propuesta",
+          r2_key: proposal.r2_key,
+          capo: proposal.capo,
+          source_url: proposal.source_url,
+          author_id: proposal.author_id    // el crédito es de quien la propuso
+        },
+        uuid(),
+        await nextVersionPositionFor(env.DB, song.id)
+      );
+  await env.DB.batch([
+    efecto,
+    stmtResolveProposal(env.DB, proposal.id, {
+      status: "approved", reviewerId: user.id, reviewNote: String(body.note || "")
+    })
+  ]);
+  const resuelta = await findProposalById(env.DB, proposal.id);
   return json({ proposal: publicProposal(resuelta) }, cors);
 }
 
@@ -360,6 +460,22 @@ export async function handleApi(request, env, url, cors) {
   const path = url.pathname;
   if (!path.startsWith("/auth/") && !path.startsWith("/api/")) return null;
   if (!env.DB) return fail("la base de datos no está configurada", cors, 503);
+  // Sin secreto propio no se firma ni se verifica nada: antes caía a
+  // SYNC_TOKEN, que iba en todas las apps antiguas, y con ese token se podía
+  // firmar un JWT con el `sub` de cualquiera.
+  //
+  // El 503 se reserva para las peticiones que DE VERDAD necesitan sesión: las
+  // que traen un token y las que emiten uno. Una lectura pública y anónima no
+  // depende del secreto, y a quien llama sin token le sigue tocando un 401
+  // ("inicia sesión"), que es la respuesta correcta aunque el servidor esté mal
+  // configurado.
+  const emiteSesion = path === "/auth/login" || path === "/auth/register";
+  if (!authSecret(env) && (emiteSesion || bearerToken(request))) {
+    return fail(
+      "el servidor no está configurado: falta el secreto AUTH_SECRET " +
+      "(npx wrangler secret put AUTH_SECRET)", cors, 503
+    );
+  }
 
   const method = request.method;
 
@@ -371,6 +487,11 @@ export async function handleApi(request, env, url, cors) {
 
   const user = await currentUser(request, env);
 
+  // Sincronización por lotes y listas (carpetas). Va aquí para que las rutas
+  // /api/sync/* y /api/playlists* no caigan en el resto del enrutado.
+  const sincronizacion = await handleSync(request, env, url, cors, user);
+  if (sincronizacion) return sincronizacion;
+
   if (path === "/auth/me" && method === "GET") {
     if (!user) return fail("sin sesión", cors, 401);
     return json({ user: publicUser(user) }, cors);
@@ -378,8 +499,14 @@ export async function handleApi(request, env, url, cors) {
 
   if (path === "/api/songs" && method === "GET") {
     if (!user) return fail("inicia sesión", cors, 401);
-    const songs = await listOwnSongs(env.DB, user.id);
-    return json({ songs: songs.map((s) => publicSong(s, true)) }, cors);
+    // ?trash=1 enseña la papelera. El borrado lógico ya existía en la base,
+    // pero no había forma de llegar a él desde la web: borrar era definitivo
+    // para quien lo hacía aunque la fila siguiera ahí.
+    const pagina = paginaDe(url);
+    const { items, hasMore } = url.searchParams.get("trash") === "1"
+      ? await listTrashedSongs(env.DB, user.id, pagina)
+      : await listOwnSongs(env.DB, user.id, pagina);
+    return json({ songs: items.map((s) => publicSong(s, true)), hasMore }, cors);
   }
 
   // Diccionario global de acordes: lo lee cualquiera (los diagramas son parte
@@ -431,6 +558,16 @@ export async function handleApi(request, env, url, cors) {
     }
     if (method === "PUT") {
       const raw = await request.text();
+      // Antes se guardaba en crudo: cualquiera podía dejar ahí lo que quisiera,
+      // del tamaño que quisiera. Ahora se mide y se comprueba que sea JSON.
+      if (new TextEncoder().encode(raw).length > MAX_CHORDS_BLOB) {
+        return fail("el diccionario personal pasa del máximo (1 MB)", cors, 413);
+      }
+      try {
+        JSON.parse(raw);
+      } catch (e) {
+        return fail("el diccionario personal no es JSON válido", cors, 400);
+      }
       await env.BUCKET.put(key, raw, {
         httpMetadata: { contentType: "application/json; charset=utf-8" }
       });
@@ -533,8 +670,8 @@ export async function handleApi(request, env, url, cors) {
     const song = await findSongById(env.DB, comentariosDe[1]);
     if (!canView(user, song)) return fail("no encontrada", cors, 404);
     if (method === "GET") {
-      const comments = await listComments(env.DB, song.id);
-      return json({ comments: comments.map(publicComment) }, cors);
+      const { items, hasMore } = await listComments(env.DB, song.id, paginaDe(url));
+      return json({ comments: items.map(publicComment), hasMore }, cors);
     }
     if (method === "POST") {
       if (!canComment(user, song)) return fail("inicia sesión para comentar", cors, 401);
@@ -630,7 +767,8 @@ export async function handleApi(request, env, url, cors) {
   // Usuarios y roles: solo administración.
   if (path === "/api/users" && method === "GET") {
     if (!canManageRoles(user)) return fail("solo el administrador", cors, 403);
-    return json({ users: (await listUsers(env.DB)).map(publicUser) }, cors);
+    const { items, hasMore } = await listUsers(env.DB, paginaDe(url));
+    return json({ users: items.map(publicUser), hasMore }, cors);
   }
   const rolDe = path.match(/^\/api\/users\/([A-Za-z0-9-]+)\/role$/);
   if (rolDe && method === "PUT") {
@@ -643,12 +781,52 @@ export async function handleApi(request, env, url, cors) {
     return json({ user: publicUser(actualizado) }, cors);
   }
 
+  // Favorito suelto: un solo campo, sin reenviar toda la ficha.
+  const favoritaDe = path.match(/^\/api\/songs\/([A-Za-z0-9-]+)\/favorite$/);
+  if (favoritaDe && method === "PUT") {
+    if (!user) return fail("inicia sesión", cors, 401);
+    const song = await findSongById(env.DB, favoritaDe[1]);
+    // El favorito es de quien la tiene: un editor manda sobre el catálogo, no
+    // sobre las marcas personales de otro, así que aquí solo vale el dueño.
+    if (!song || song.deleted_at || song.owner_id !== user.id) {
+      return fail("no encontrada", cors, 404);
+    }
+    const body = await readJson(request) || {};
+    const guardada = await setSongFavorite(env.DB, song.id, !!body.favorite);
+    return json({ song: publicSong(guardada, true) }, cors);
+  }
+
+  // Sacar de la papelera.
+  const restaurar = path.match(/^\/api\/songs\/([A-Za-z0-9-]+)\/restore$/);
+  if (restaurar && method === "POST") {
+    if (!user) return fail("inicia sesión", cors, 401);
+    const song = await findSongById(env.DB, restaurar[1]);
+    if (!canManageTrashed(user, song)) return fail("no encontrada", cors, 404);
+    const viva = await restoreSong(env.DB, song.id);
+    return json({ song: publicSong(viva, true) }, cors);
+  }
+
   const match = path.match(/^\/api\/songs\/([A-Za-z0-9-]+)$/);
   if (match) {
     const id = match[1];
     if (method === "GET") return getSong(env, cors, user, id);      // público si lo es
     if (method === "PUT") return updateSong(request, env, cors, user, id);
-    if (method === "DELETE") return deleteSong(env, cors, user, id);
+    if (method === "DELETE") {
+      // ?hard=1 borra de verdad, y solo desde la papelera: el borrado
+      // definitivo nunca es un clic accidental sobre una partitura viva.
+      if (url.searchParams.get("hard") === "1") {
+        if (!user) return fail("inicia sesión", cors, 401);
+        const song = await findSongById(env.DB, id);
+        if (!canManageTrashed(user, song)) return fail("no encontrada", cors, 404);
+        if (!song.deleted_at) {
+          return fail("primero hay que mandarla a la papelera", cors, 409);
+        }
+        if (song.r2_key) await env.BUCKET.delete(song.r2_key);
+        await hardDeleteSong(env.DB, id);
+        return json({ id, purged: true }, cors);
+      }
+      return deleteSong(env, cors, user, id);
+    }
   }
 
   return fail("ruta no encontrada", cors, 404);

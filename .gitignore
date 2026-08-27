@@ -63,4 +63,7 @@ __pycache__/
 worker/credentials.txt
 worker/.dev.vars
 worker/.wrangler/
+# También en la raíz: según desde dónde se lance, wrangler deja aquí su caché
+# (incluida la cuenta de Cloudflare).
+.wrangler/
 worker/node_modules/

@@ -79,6 +79,20 @@ export const canManageRoles = (user) => isAdmin(user);
  * El candado (`locked`) no bloquea en el servidor: la app y la web piden
  * confirmación al usuario. Aquí solo se comprueban propiedad y rol.
  */
+/**
+ * Quién puede operar sobre algo que YA está en la papelera: restaurarlo o
+ * borrarlo del todo. No vale `canEdit`, que da por inexistente lo borrado
+ * (correcto para editar, pero deja sin dueño justo las dos operaciones que solo
+ * tienen sentido sobre una fila borrada).
+ *
+ * La papelera es personal: un editor manda sobre el catálogo, no sobre lo que
+ * otra persona tiró a la basura. Por eso aquí solo el dueño y el admin.
+ */
+export function canManageTrashed(user, song) {
+  if (!song || !user) return false;
+  return isAdmin(user) || isOwner(user, song);
+}
+
 export function editDenialReason(user, song) {
   if (!song || song.deleted_at) return "not_found";
   if (!user) return "unauthorized";

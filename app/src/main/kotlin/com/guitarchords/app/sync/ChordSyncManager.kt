@@ -52,12 +52,25 @@ class ChordSyncManager(
 
         val client = VivaceClient(base, token)
 
-        // 1) Descargar el blob de la cuenta (vacío la primera vez).
-        val remote: List<ChordRecord> = runCatching {
+        // 1) Descargar el blob de la cuenta.
+        //
+        // "Aún no existe" y "no he podido leerlo" NO son lo mismo. Tratar un
+        // fallo de red como blob vacío hacía que el push de después subiera solo
+        // lo de este dispositivo y BORRARA del servidor los acordes de los
+        // demás. Cuando todavía no hay blob la API responde 200 con la lista
+        // vacía, así que el caso legítimo llega por el camino bueno: cualquier
+        // excepción aquí es un fallo de verdad y se aborta sin escribir nada.
+        val remote: List<ChordRecord> = try {
             json.decodeFromString<ChordBundle>(client.getChords()).chords
-        }.getOrDefault(emptyList())
+        } catch (e: Exception) {
+            return@withLock Outcome(0, false)
+        }
 
-        // 2) Estado local (incluye tombstones).
+        // 2) Estado local (incluye tombstones). Se anota QUÉ estaba sucio antes
+        //    de tocar nada: al final solo se limpia eso, no todo. Si no, una
+        //    edición hecha durante la sincronización se daba por subida sin
+        //    haberlo estado y se perdía.
+        val sucios = dao.allForSync().filter { it.dirty }.map { it.uuid }.toSet()
         val local = dao.allForSync().map { it.toRecord() }
 
         // 3) Fusionar.
@@ -74,8 +87,8 @@ class ChordSyncManager(
             pushed = true
         }
 
-        // Tras un sync correcto no quedan cambios locales sin subir.
-        dao.clearDirtyAll()
+        // Solo se limpia lo que estaba sucio al empezar (ver arriba).
+        if (sucios.isNotEmpty()) dao.clearDirtyFor(sucios)
         prefs.chordsLastSync = System.currentTimeMillis()
 
         // 6) Refrescar la caché para que los diagramas se actualicen en vivo.

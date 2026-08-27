@@ -14,6 +14,14 @@ function fakeDb(estado) {
   const escrituras = [];
   const db = {
     escrituras,
+    // D1 real ejecuta un batch como una sola transacción; aquí basta con
+    // encadenarlas para que el código bajo prueba siga el mismo camino.
+    async batch(sentencias) {
+      escrituras.push({ tipo: "batch", cuantas: sentencias.length });
+      const salida = [];
+      for (const s of sentencias) salida.push(await s.run());
+      return salida;
+    },
     prepare(sql) {
       const ejecutar = (valores) => {
         if (sql.includes("FROM users WHERE id")) return estado.users[valores[0]] || null;

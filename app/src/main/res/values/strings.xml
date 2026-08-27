@@ -243,7 +243,7 @@
     <string name="update_error">Error: %1$s</string>
     <string name="sync_r2_title">Sincronización R2</string>
     <string name="sync_r2_subtitle">Conecta con tu bucket de Cloudflare R2 para descargar y subir canciones.</string>
-    <string name="sync_intro">Conecta con el contenedor R2 de Cloudflare a través del Worker. Solo se descarga y sube el contenido nuevo o modificado.</string>
+    <string name="sync_intro">Tus partituras se sincronizan solas: los cambios se guardan siempre en el móvil y suben en cuanto hay conexión, aunque cierres la app.</string>
     <string name="sync_worker_url">URL del Worker</string>
     <string name="sync_token">Token de acceso</string>
     <string name="account_email">Email</string>
@@ -261,23 +261,15 @@
     <string name="syncing">Sincronizando…</string>
     <string name="last_sync">Última sincronización: %1$s</string>
     <string name="never">nunca</string>
-    <string name="pending_uploads">Canciones con cambios sin subir: %1$d</string>
+    <string name="pending_uploads">Pendiente de subir: %1$d</string>
     <string name="sync_result">Descargadas: %1$d  ·  Subidas: %2$d</string>
     <string name="sync_conflicts_suffix">  ·  Conflictos: %1$d</string>
     <string name="sync_missing_fields">Indica la URL del servidor y el token</string>
     <string name="sync_error_generic">Error de sincronización</string>
     <string name="sync_conflict_error">Error resolviendo conflictos</string>
     <string name="conflicts_title">%1$d conflicto(s)</string>
-    <string name="conflicts_msg">Estas canciones se han modificado tanto en el dispositivo como en el servidor. Decide en cada una qué versión conservar; las no resueltas quedan en espera hasta el próximo sync:</string>
+    <string name="conflicts_kept_msg">Estas partituras cambiaron a la vez aquí y en el servidor. No se ha perdido nada: se ha quedado la del servidor y tu copia está guardada como una versión más.</string>
     <string name="local_vs_server">local %1$s · servidor %2$s</string>
-    <string name="conflict_local_short">Local</string>
-    <string name="conflict_server_short">Servidor</string>
-    <string name="conflict_later">Más tarde</string>
-    <string name="push_confirm_title">Confirmar subida</string>
-    <string name="push_confirm_msg">Hay %1$d canción(es) con cambios locales. ¿Subirlas al servidor?</string>
-    <string name="push_upload">Subir</string>
-    <string name="push_not_now">Ahora no</string>
-    <string name="push_new_song">nueva</string>
     <string name="chords_sync_title">Acordes personalizados</string>
     <string name="chords_sync_intro">Tus digitaciones se sincronizan automáticamente con el Worker en cuanto hay internet. Puedes forzar la sincronización aquí.</string>
     <string name="chords_last_sync">Última sincronización de acordes: %1$s</string>
@@ -477,4 +469,7 @@
     <string name="ach_first_mic_desc">Valida una escala con el micrófono</string>
     <string name="ach_all_areas_title">Multidisciplinar</string>
     <string name="ach_all_areas_desc">Supera ejercicios en 5 áreas distintas</string>
+    <string name="understood">Entendido</string>
+    <string name="sync_session_expired_title">Sesión caducada</string>
+    <string name="sync_session_expired_msg">La sesión ha caducado y la sincronización se ha parado. Vuelve a entrar: tus cambios siguen guardados en el móvil y subirán en cuanto haya sesión.</string>
 </resources>

@@ -70,6 +70,14 @@ android {
     }
 }
 
+// Room escribe el esquema de cada versión en app/schemas/. Se sube al
+// repositorio a propósito: es la única referencia contra la que comprobar que
+// una migración deja la base igual que una instalación nueva. Sin esto, las
+// 16 migraciones acumuladas no tenían nada con lo que contrastarse.
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 dependencies {
     val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
     implementation(composeBom)
@@ -84,6 +92,10 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
     implementation("androidx.navigation:navigation-compose:2.8.5")
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    // Sincronización en segundo plano: WorkManager guarda la petición en disco,
+    // así que sobrevive a que se cierre la app y al reinicio del móvil. Un
+    // NetworkCallback en el Application, que es lo que había, no.
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
     implementation("sh.calvin.reorderable:reorderable:2.4.2")
 
     implementation("androidx.compose.ui:ui")

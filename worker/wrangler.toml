@@ -16,10 +16,9 @@ binding = "DB"
 database_name = "vivace"
 database_id = "1830ca34-43f6-429a-812d-5156287e90f1"
 
-# Secretos (NO se guardan aquí):
-#   wrangler secret put SYNC_TOKEN    token heredado de la app actual
+# Secreto (NO se guarda aquí). Es OBLIGATORIO: sin él la API responde 503 y no
+# emite ni acepta ninguna sesión.
 #   wrangler secret put AUTH_SECRET   clave para firmar las sesiones (JWT)
-
-# Enlace del botón "Storage" del admin: el bucket en el dashboard de Cloudflare.
-[vars]
-STORAGE_URL = "https://dash.cloudflare.com/b87bc1a8f7e74107a115865b54ddc455/r2/default/buckets/guitarchords"
+#
+# SYNC_TOKEN ya no se usa: las rutas de token compartido y el panel /admin se
+# retiraron porque se saltaban el modelo de permisos.

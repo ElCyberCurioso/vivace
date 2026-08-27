@@ -19,16 +19,37 @@ class SongTextFormatTest {
             sourceUrl = "https://tabs.example.com/wonderwall",
             content = "{Em7}Today is gonna be the day"
         )
-        val text = SongTextFormat.encode(song, "Favoritas")
+        val text = SongTextFormat.encode(song)
         val parsed = SongTextFormat.decode(text)
         assertEquals("Wonderwall", parsed.title)
         assertEquals("Oasis", parsed.artist)
         assertEquals("Rock", parsed.genre)
         assertEquals(2, parsed.capo)
-        assertTrue(parsed.favorite)
-        assertEquals("Favoritas", parsed.playlist)
         assertEquals("https://tabs.example.com/wonderwall", parsed.sourceUrl)
         assertEquals("{Em7}Today is gonna be the day", parsed.content)
+    }
+
+    @Test
+    fun `encode no longer hides playlist or favorite inside the text`() {
+        // Carpeta y favorito son campos de la API: si volvieran a escribirse
+        // aquí, la web seguiría sin poder enseñarlos y una edición desde el
+        // navegador podría perderlos.
+        val text = SongTextFormat.encode(
+            Song(title = "T", favorite = true, content = "cuerpo")
+        )
+        assertTrue("#favorite" !in text)
+        assertTrue("#playlist" !in text)
+    }
+
+    @Test
+    fun `decode still reads the old headers`() {
+        // Los ficheros que ya están en el bucket los llevan; hay que seguir
+        // entendiéndolos para no perder la carpeta al bajarlos.
+        val parsed = SongTextFormat.decode(
+            "#title: T\n#favorite: true\n#playlist: Conciertos\n---\ncuerpo"
+        )
+        assertTrue(parsed.favorite)
+        assertEquals("Conciertos", parsed.playlist)
     }
 
     @Test

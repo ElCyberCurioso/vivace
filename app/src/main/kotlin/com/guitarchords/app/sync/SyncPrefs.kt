@@ -71,9 +71,44 @@ class SyncPrefs(context: Context) {
 
     val isLoggedIn: Boolean get() = authToken.isNotBlank() && baseUrl.isNotBlank()
 
-    /** Cierra la sesión (no borra las partituras del dispositivo). */
+    /**
+     * Cierra la sesión (no borra las partituras del dispositivo).
+     * También olvida los cursores: al volver a entrar —quizá con otra cuenta—
+     * hay que rehacer la foto completa, no seguir por donde iba la anterior.
+     */
     fun clearSession() {
-        sp.edit().remove(KEY_AUTH).remove(KEY_EMAIL).remove(KEY_NAME).apply()
+        sp.edit()
+            .remove(KEY_AUTH).remove(KEY_EMAIL).remove(KEY_NAME).remove(KEY_ROLE)
+            .remove(KEY_CUR_PLAYLISTS).remove(KEY_CUR_SONGS).remove(KEY_CUR_VERSIONS)
+            .apply()
+    }
+
+    /** Rol del usuario ('user' | 'editor' | 'admin'), para saber qué ofrecer. */
+    var userRole: String
+        get() = sp.getString(KEY_ROLE, "user").orEmpty().ifBlank { "user" }
+        set(value) { sp.edit().putString(KEY_ROLE, value).apply() }
+
+    /** Último error de sincronización, para poder avisar sin abrir la pantalla. */
+    var lastSyncError: String
+        get() = sp.getString(KEY_LAST_ERROR, "").orEmpty()
+        set(value) { sp.edit().putString(KEY_LAST_ERROR, value).apply() }
+
+    /**
+     * Cursores del feed de cambios, uno por flujo. Guardarlos es lo que hace que
+     * una sincronización pida solo lo nuevo en vez de el catálogo entero.
+     */
+    fun cursors() = com.guitarchords.app.sync.SyncCursors(
+        playlists = sp.getString(KEY_CUR_PLAYLISTS, "").orEmpty(),
+        songs = sp.getString(KEY_CUR_SONGS, "").orEmpty(),
+        versions = sp.getString(KEY_CUR_VERSIONS, "").orEmpty()
+    )
+
+    fun saveCursors(cursors: com.guitarchords.app.sync.SyncCursors) {
+        sp.edit()
+            .putString(KEY_CUR_PLAYLISTS, cursors.playlists)
+            .putString(KEY_CUR_SONGS, cursors.songs)
+            .putString(KEY_CUR_VERSIONS, cursors.versions)
+            .apply()
     }
 
     /** ETag del último blob de acordes sincronizado (concurrencia optimista). */
@@ -94,5 +129,10 @@ class SyncPrefs(context: Context) {
         const val KEY_AUTH = "auth_token"
         const val KEY_EMAIL = "user_email"
         const val KEY_NAME = "user_name"
+        const val KEY_ROLE = "user_role"
+        const val KEY_LAST_ERROR = "last_sync_error"
+        const val KEY_CUR_PLAYLISTS = "cursor_playlists"
+        const val KEY_CUR_SONGS = "cursor_songs"
+        const val KEY_CUR_VERSIONS = "cursor_versions"
     }
 }

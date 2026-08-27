@@ -10,14 +10,38 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface PlaylistDao {
-    @Query("SELECT * FROM playlists ORDER BY created_at DESC")
+    @Query("SELECT * FROM playlists WHERE deleted_at = 0 ORDER BY position ASC, created_at DESC")
     fun observeAll(): Flow<List<Playlist>>
 
     @Query("SELECT * FROM playlists WHERE id = :id")
     suspend fun getById(id: Long): Playlist?
 
-    @Query("SELECT * FROM playlists WHERE name = :name LIMIT 1")
+    @Query("SELECT * FROM playlists WHERE name = :name AND deleted_at = 0 LIMIT 1")
     suspend fun getByName(name: String): Playlist?
+
+    // ---- sincronización ----
+    @Query("SELECT * FROM playlists WHERE remote_id = :remoteId LIMIT 1")
+    suspend fun getByRemoteId(remoteId: String): Playlist?
+
+    @Query("SELECT * FROM playlists WHERE dirty = 1")
+    suspend fun dirtyPlaylists(): List<Playlist>
+
+    @Query("SELECT COUNT(*) FROM playlists WHERE dirty = 1")
+    suspend fun countDirtyOnce(): Int
+
+    @Query("UPDATE playlists SET remote_id = :remoteId, dirty = 0 WHERE id = :id")
+    suspend fun markSynced(id: Long, remoteId: String)
+
+    /** Papelera lógica: la lista se conserva hasta confirmar el borrado remoto. */
+    @Query("UPDATE playlists SET deleted_at = :ts, dirty = 1, updated_at = :ts WHERE id = :id")
+    suspend fun softDelete(id: Long, ts: Long)
+
+    /** Borrado ya comunicado: deja de estar sucio y lo barre `purgeSyncedDeletions`. */
+    @Query("UPDATE playlists SET dirty = 0 WHERE id = :id")
+    suspend fun markDeletionSynced(id: Long)
+
+    @Query("DELETE FROM playlists WHERE deleted_at > 0 AND dirty = 0")
+    suspend fun purgeSyncedDeletions()
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(playlist: Playlist): Long
@@ -110,19 +134,13 @@ interface SongDao {
     @Query("SELECT COUNT(*) FROM songs WHERE playlist_id IS NULL AND deleted_at = 0")
     fun countUnassigned(): Flow<Int>
 
-    /**
-     * Deliberadamente NO filtra `deleted_at`: una canción en la papelera debe
-     * seguir "ocupando" su clave remota para que el sync no la reimporte como
-     * nueva. Quien decide qué hacer con ella es [com.guitarchords.app.sync.SyncPolicy].
-     */
-    @Query("SELECT * FROM songs WHERE remote_key = :key LIMIT 1")
-    suspend fun getByRemoteKey(key: String): Song?
-
-    /** Canciones activas enlazadas al servidor (para detectar huérfanas). */
-    @Query("SELECT * FROM songs WHERE remote_key IS NOT NULL AND deleted_at = 0")
-    suspend fun songsWithRemoteKey(): List<Song>
-
     // ---- sincronización con cuenta de usuario ----
+    /**
+     * Deliberadamente NO filtra `deleted_at`: una partitura en la papelera tiene
+     * que seguir "ocupando" su identidad remota hasta que el borrado llegue al
+     * servidor; si aquí se escondiera, la siguiente pasada la reimportaría como
+     * nueva. Quien decide qué hacer con ella es [com.guitarchords.app.sync.SyncPlan].
+     */
     @Query("SELECT * FROM songs WHERE remote_id = :remoteId LIMIT 1")
     suspend fun getByRemoteId(remoteId: String): Song?
 
@@ -135,9 +153,20 @@ interface SongDao {
 
     @Query(
         "UPDATE songs SET remote_id = :remoteId, remote_updated_at = :updated, " +
-            "dirty = :dirty WHERE id = :id"
+            "remote_rev = :rev, dirty = :dirty WHERE id = :id"
     )
-    suspend fun markAccountSynced(id: Long, remoteId: String, updated: Long, dirty: Boolean)
+    suspend fun markAccountSynced(id: Long, remoteId: String, updated: Long, rev: Int, dirty: Boolean)
+
+    /**
+     * Marca cambios locales pendientes de subir. Es el único sitio que enciende
+     * `dirty` para los cambios "sueltos" (favorito, carpeta, orden, papelera),
+     * que antes escribían directos en el DAO y por eso NUNCA se sincronizaban.
+     */
+    @Query("UPDATE songs SET dirty = 1, updated_at = :ts WHERE id = :id")
+    suspend fun touch(id: Long, ts: Long)
+
+    @Query("UPDATE songs SET dirty = 1, updated_at = :ts WHERE id IN (:ids)")
+    suspend fun touchAll(ids: Collection<Long>, ts: Long)
 
     @Query("UPDATE songs SET remote_id = NULL, remote_updated_at = 0 WHERE id = :id")
     suspend fun clearAccountLink(id: Long)
@@ -145,34 +174,19 @@ interface SongDao {
     @Query("UPDATE songs SET visibility = :visibility WHERE id = :id")
     suspend fun setVisibility(id: Long, visibility: String)
 
-    /** El objeto ya no existe en el bucket: la canción pasa a ser solo local. */
-    @Query("UPDATE songs SET remote_key = NULL, remote_etag = NULL, remote_updated_at = 0 WHERE id = :id")
-    suspend fun clearRemoteLink(id: Long)
-
-    @Query("SELECT * FROM songs WHERE dirty = 1 AND deleted_at = 0")
+    /**
+     * Todo lo que falta por subir, PAPELERA INCLUIDA: una partitura borrada aquí
+     * tiene que llegar al servidor como borrada. Al filtrar `deleted_at = 0` los
+     * borrados no salían nunca del dispositivo y la partitura volvía a bajarse.
+     */
+    @Query("SELECT * FROM songs WHERE dirty = 1")
     suspend fun dirtySongs(): List<Song>
 
-    @Query("SELECT COUNT(*) FROM songs WHERE dirty = 1 AND deleted_at = 0")
+    @Query("SELECT COUNT(*) FROM songs WHERE dirty = 1")
     fun countDirty(): Flow<Int>
 
-    @Query(
-        "UPDATE songs SET remote_key = :key, remote_etag = :etag, " +
-            "remote_updated_at = :updated, dirty = 0 WHERE id = :id"
-    )
-    suspend fun markSynced(id: Long, key: String, etag: String, updated: Long)
-
-    /** Set only the title (used to pull titles from the Worker without touching content/dirty). */
-    @Query("UPDATE songs SET title = :title WHERE id = :id")
-    suspend fun setTitle(id: Long, title: String)
-
-    @Query("UPDATE songs SET artist = :artist WHERE id = :id")
-    suspend fun setArtist(id: Long, artist: String)
-
-    @Query("UPDATE songs SET capo = :capo WHERE id = :id")
-    suspend fun setCapo(id: Long, capo: Int)
-
-    @Query("UPDATE songs SET source_url = :url WHERE id = :id")
-    suspend fun setSourceUrl(id: Long, url: String)
+    @Query("SELECT COUNT(*) FROM songs WHERE dirty = 1")
+    suspend fun countDirtyOnce(): Int
 
     /** El candado lo manda el Worker; se aplica sin tocar content/dirty. */
     @Query("UPDATE songs SET locked = :locked WHERE id = :id")
@@ -189,9 +203,19 @@ interface SongDao {
     @Query("UPDATE songs SET deleted_at = :ts WHERE id = :id")
     suspend fun setDeletedAt(id: Long, ts: Long)
 
-    /** Purga definitiva de lo que lleva en la papelera más del límite. */
-    @Query("DELETE FROM songs WHERE deleted_at > 0 AND deleted_at < :cutoff")
+    /**
+     * Purga definitiva de lo que lleva en la papelera más del límite.
+     *
+     * Solo purga lo que YA está sincronizado (`dirty = 0`): si se borrara la
+     * fila con el borrado aún sin comunicar, el servidor conservaría la
+     * partitura y la siguiente sincronización la bajaría otra vez como nueva.
+     */
+    @Query("DELETE FROM songs WHERE deleted_at > 0 AND deleted_at < :cutoff AND dirty = 0")
     suspend fun purgeTrashOlderThan(cutoff: Long)
+
+    /** Partituras ya borradas en el servidor: la fila local puede irse. */
+    @Query("DELETE FROM songs WHERE id = :id")
+    suspend fun purgeRow(id: Long)
 }
 
 @Dao
@@ -234,8 +258,13 @@ interface CustomChordDao {
     @Query("UPDATE custom_chords SET deleted_at = :ts, dirty = 1, updated_at = :ts WHERE id = :id")
     suspend fun softDelete(id: Long, ts: Long)
 
-    @Query("UPDATE custom_chords SET dirty = 0 WHERE dirty = 1")
-    suspend fun clearDirtyAll()
+    /**
+     * Limpia la marca SOLO de los uuid dados. Antes se limpiaba todo de golpe,
+     * lo que se llevaba por delante las ediciones hechas mientras corría la
+     * sincronización: quedaban como subidas sin haberse subido.
+     */
+    @Query("UPDATE custom_chords SET dirty = 0 WHERE uuid IN (:uuids)")
+    suspend fun clearDirtyFor(uuids: Collection<String>)
 
     @Query("SELECT COUNT(*) FROM custom_chords WHERE dirty = 1")
     fun countDirty(): Flow<Int>
@@ -243,7 +272,7 @@ interface CustomChordDao {
 
 @Dao
 interface SongVersionDao {
-    @Query("SELECT * FROM song_versions WHERE song_id = :songId ORDER BY position ASC, id ASC")
+    @Query("SELECT * FROM song_versions WHERE song_id = :songId AND deleted_at = 0 ORDER BY position ASC, id ASC")
     fun observeBySong(songId: Long): Flow<List<SongVersion>>
 
     @Query("SELECT * FROM song_versions WHERE id = :id")
@@ -260,4 +289,49 @@ interface SongVersionDao {
 
     @Query("DELETE FROM song_versions WHERE id = :id")
     suspend fun deleteById(id: Long)
+
+    // ---- sincronización ----
+    @Query("SELECT * FROM song_versions WHERE remote_id = :remoteId LIMIT 1")
+    suspend fun getByRemoteId(remoteId: String): SongVersion?
+
+    @Query("SELECT * FROM song_versions WHERE dirty = 1")
+    suspend fun dirtyVersions(): List<SongVersion>
+
+    @Query("SELECT COUNT(*) FROM song_versions WHERE dirty = 1")
+    suspend fun countDirtyOnce(): Int
+
+    @Query("UPDATE song_versions SET remote_id = :remoteId, dirty = 0 WHERE id = :id")
+    suspend fun markSynced(id: Long, remoteId: String)
+
+    /** Borrado lógico: la lápida tiene que llegar al servidor antes de purgar. */
+    @Query("UPDATE song_versions SET deleted_at = :ts, dirty = 1, updated_at = :ts WHERE id = :id")
+    suspend fun softDelete(id: Long, ts: Long)
+
+    @Query("UPDATE song_versions SET dirty = 0 WHERE id = :id")
+    suspend fun markDeletionSynced(id: Long)
+
+    @Query("DELETE FROM song_versions WHERE deleted_at > 0 AND dirty = 0")
+    suspend fun purgeSyncedDeletions()
+}
+
+/**
+ * Cola de borrados pendientes. Ver [PendingDelete]: sin esto, borrar del todo
+ * una partitura ya sincronizada la dejaba viva en el servidor y volvía a bajar.
+ */
+@Dao
+interface PendingDeleteDao {
+    @Query("SELECT * FROM pending_deletes ORDER BY created_at ASC")
+    suspend fun all(): List<PendingDelete>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun enqueue(item: PendingDelete)
+
+    @Query("DELETE FROM pending_deletes WHERE remote_id = :remoteId")
+    suspend fun clear(remoteId: String)
+
+    @Query("SELECT COUNT(*) FROM pending_deletes")
+    fun count(): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM pending_deletes")
+    suspend fun countOnce(): Int
 }

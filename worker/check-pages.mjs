@@ -5,8 +5,7 @@
 // recortar el template literal con una expresión regular: escapes como \" o \n
 // valen una cosa en el fichero y otra en la página, y esa diferencia ya dejó
 // pasar un error a producción.
-import { ADMIN_HTML } from "./src/admin-html.js";
-import { WEB_HTML } from "./src/web-html.js";
+import { WEB_APP_JS, WEB_HTML } from "./src/web-html.js";
 import { CLIENT_JS } from "./src/client-lib.js";
 
 /** Los <script> con cuerpo propio (los que tienen src= no traen código aquí). */
@@ -17,17 +16,9 @@ function scriptsOf(html) {
 
 let failed = 0;
 
-for (const [nombre, html] of [
-  ["admin-html.js", ADMIN_HTML],
-  ["web-html.js", WEB_HTML],
-]) {
-  const scripts = scriptsOf(html);
-  if (!scripts.length) {
-    console.error(`${nombre}: no se encontró ningún <script> embebido`);
-    failed++;
-    continue;
-  }
-  scripts.forEach((code, i) => {
+// Lo que aún va embebido en la página (hoy, solo el arranque del tema).
+for (const [nombre, html] of [["web-html.js", WEB_HTML]]) {
+  scriptsOf(html).forEach((code, i) => {
     try {
       new Function(code);
     } catch (e) {
@@ -35,6 +26,14 @@ for (const [nombre, html] of [
       failed++;
     }
   });
+}
+
+// El grueso de la aplicación, que ahora se sirve aparte en /static/vivace-app.js.
+try {
+  new Function(WEB_APP_JS);
+} catch (e) {
+  console.error(`web-html.js (WEB_APP_JS): ${e.message}`);
+  failed++;
 }
 
 // La librería de cliente se sirve tal cual en /static/vivace.js: mismo riesgo.

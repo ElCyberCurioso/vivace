@@ -1,102 +1,129 @@
 /*
- * GuitarChords R2 sync Worker
- * ===========================
- * Fronts a Cloudflare R2 bucket so the Android app never holds S3 credentials.
+ * Vivace · Worker de Cloudflare
+ * =============================
+ * Una sola pieza hace de web, de API multiusuario y de almacén (D1 + R2).
  *
- * API endpoints (all require  Authorization: Bearer <SYNC_TOKEN>):
- *   GET    /list                -> JSON array: [{ key, etag, size, uploaded, title }]
- *   GET    /object?key=<key>    -> raw text body; headers ETag + X-Uploaded
- *   PUT    /object?key=<key>    -> stores body; returns { key, etag, size, uploaded }
- *   DELETE /object?key=<key>    -> removes object; returns { key, deleted: true }
- *   POST   /delete              -> body { keys: [...] }; bulk delete; returns
- *                                  { deleted: <n>, keys: [...] }
+ *   GET  /                      Web de Vivace (pública)
+ *   GET  /static/*              CSS, JS y favicon (cacheados, con ETag)
+ *   POST /auth/*                Registro y sesión
+ *   *    /api/*                 API multiusuario (ver src/api.js y src/sync.js)
+ *   POST /admin/migrate         Indexa en D1 lo que ya había en R2 (solo admin)
+ *   GET  /update, /update/apk   Auto-actualización de la app (público)
  *
- * The PUT handler parses the song's `#title:` header out of the body and stores
- * it in R2 customMetadata, so /list can show titles without reading every body.
+ * Las rutas heredadas con token compartido (/list, /object, /bodies, /delete) y
+ * el panel /admin se retiraron: se saltaban el modelo de permisos por completo
+ * —con un único token se leía, sobrescribía y borraba el texto de CUALQUIER
+ * partitura, incluidas las privadas de otras cuentas—. Todo pasa ahora por la
+ * sesión del usuario y por `permissions.js`.
  *
- * Admin UI:
- *   GET  /                      -> HTML page to manage files (asks for the token).
- *                                  The page is public; every API call it makes
- *                                  still carries the Bearer token.
- *
- * Deploy:
- *   1. npx wrangler r2 bucket create <bucket_name>   (if it does not exist)
- *   2. npx wrangler secret put SYNC_TOKEN            (choose a long random token)
- *   3. npx wrangler deploy
- *   The printed *.workers.dev URL + the token go into the app's sync screen,
- *   and the same URL opened in a browser shows the admin UI.
+ * Despliegue:
+ *   npx wrangler d1 execute vivace --remote --file=schema.sql
+ *   npx wrangler secret put AUTH_SECRET      (obligatorio; sin él no arranca)
+ *   npx wrangler deploy
  */
 
-import { ADMIN_HTML } from "./admin-html.js";
-import { WEB_HTML, FAVICON_SVG } from "./web-html.js";
+import { WEB_APP_JS, WEB_CSS, WEB_HTML, FAVICON_SVG } from "./web-html.js";
 import { CLIENT_JS } from "./client-lib.js";
 import { handleApi } from "./api.js";
 import { migrateExistingSongs } from "./migrate.js";
 
-const SONG_PREFIX = "songs/";
-// Los acordes personalizados se guardan en un blob bajo este prefijo, fuera del
-// flujo de partituras (no aparecen en /list, que filtra por songs/).
-const CHORDS_PREFIX = "chords/";
-// Binarios de la app (APK + metadatos de versión) para la auto-actualización.
+/** Binarios de la app (APK + metadatos de versión) para la auto-actualización. */
 const APP_PREFIX = "app/";
-const TITLE_RE = /^#([A-Za-z]+):[ \t]?(.*)$/;
 
-/** Claves que el Worker acepta escribir/borrar: partituras, acordes o app. */
-function isAllowedKey(key) {
-  return typeof key === "string" &&
-    (key.startsWith(SONG_PREFIX) || key.startsWith(CHORDS_PREFIX) ||
-     key.startsWith(APP_PREFIX));
+/**
+ * ETag débil calculada una vez por despliegue (FNV-1a + longitud). Los recursos
+ * estáticos van embebidos en el bundle, así que su contenido solo cambia al
+ * desplegar: basta con revalidar contra esto para ahorrar el cuerpo entero.
+ */
+function weakEtag(text) {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return `W/"${(h >>> 0).toString(36)}-${text.length.toString(36)}"`;
+}
+
+const ETAG_WEB = weakEtag(WEB_HTML);
+const ETAG_JS = weakEtag(CLIENT_JS);
+const ETAG_APP = weakEtag(WEB_APP_JS);
+const ETAG_CSS = weakEtag(WEB_CSS);
+const ETAG_ICON = weakEtag(FAVICON_SVG);
+
+/**
+ * Recursos que puede incrustar cualquiera: la portada, la auto-actualización y
+ * las lecturas públicas del catálogo. Solo estos llevan `Origin: *`.
+ */
+function isPublicRead(method, path) {
+  if (method !== "GET") return false;
+  return path === "/update" || path === "/update/apk" ||
+    path === "/api/songs/public" || path === "/api/genres" ||
+    path === "/api/chords/global";
+}
+
+/**
+ * CORS al mínimo necesario. Antes iba `*` en todas las rutas, autenticadas
+ * incluidas; ahora solo las lecturas públicas son abiertas y el resto acepta
+ * únicamente el propio origen del Worker (que es quien sirve la web). La app
+ * Android no manda `Origin`, así que esto no la afecta: CORS es cosa del
+ * navegador.
+ */
+function corsHeaders(request, url, path) {
+  const base = {
+    "Access-Control-Allow-Methods": "GET, PUT, POST, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "Authorization, Content-Type, If-None-Match",
+  };
+  if (isPublicRead(request.method, path)) {
+    return { ...base, "Access-Control-Allow-Origin": "*" };
+  }
+  const origin = request.headers.get("Origin");
+  if (origin && origin === url.origin) {
+    return { ...base, "Access-Control-Allow-Origin": origin, Vary: "Origin" };
+  }
+  return base;
+}
+
+/** Respuesta estática con revalidación: si la ETag coincide, 304 sin cuerpo. */
+function staticResponse(request, body, contentType, etag, maxAge) {
+  const headers = {
+    "Content-Type": contentType,
+    "Cache-Control": `public, max-age=${maxAge}, must-revalidate`,
+    ETag: etag,
+  };
+  if (request.headers.get("If-None-Match") === etag) {
+    return new Response(null, { status: 304, headers });
+  }
+  return new Response(body, { headers });
 }
 
 export default {
   async fetch(request, env) {
-    const cors = {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, PUT, POST, DELETE, OPTIONS",
-      "Access-Control-Allow-Headers": "Authorization, Content-Type",
-    };
+    const url = new URL(request.url);
+    const path = url.pathname;
+    const cors = corsHeaders(request, url, path);
 
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: cors });
     }
 
-    const url = new URL(request.url);
-    const path = url.pathname;
-
     // --- Vivace web (pública): catálogo, visor y edición con sesión propia ---
     if (path === "/" && request.method === "GET") {
-      return new Response(WEB_HTML, {
-        headers: { "Content-Type": "text/html; charset=utf-8" },
-      });
+      return staticResponse(request, WEB_HTML, "text/html; charset=utf-8", ETAG_WEB, 0);
     }
     if (path === "/static/favicon.svg" && request.method === "GET") {
-      return new Response(FAVICON_SVG, {
-        headers: {
-          "Content-Type": "image/svg+xml; charset=utf-8",
-          "Cache-Control": "public, max-age=86400",
-        },
-      });
+      return staticResponse(request, FAVICON_SVG, "image/svg+xml; charset=utf-8", ETAG_ICON, 86400);
     }
     if (path === "/static/vivace.js" && request.method === "GET") {
-      return new Response(CLIENT_JS, {
-        headers: {
-          "Content-Type": "application/javascript; charset=utf-8",
-          "Cache-Control": "public, max-age=300",
-        },
-      });
+      return staticResponse(request, CLIENT_JS, "application/javascript; charset=utf-8", ETAG_JS, 3600);
+    }
+    if (path === "/static/vivace-app.js" && request.method === "GET") {
+      return staticResponse(request, WEB_APP_JS, "application/javascript; charset=utf-8", ETAG_APP, 3600);
+    }
+    if (path === "/static/vivace.css" && request.method === "GET") {
+      return staticResponse(request, WEB_CSS, "text/css; charset=utf-8", ETAG_CSS, 3600);
     }
 
-    // --- Panel de administración (token compartido; ahora en /admin) ---
-    if ((path === "/admin" || path === "/admin/") && request.method === "GET") {
-      // STORAGE_URL ([vars] en wrangler.toml) apunta al bucket en el dashboard
-      // de Cloudflare; si no está definida, el botón Storage no se muestra.
-      const html = ADMIN_HTML.replace("__STORAGE_URL__", env.STORAGE_URL || "");
-      return new Response(html, {
-        headers: { "Content-Type": "text/html; charset=utf-8" },
-      });
-    }
-
-    // --- Auto-actualización (público, sin token): la app consulta la versión
+    // --- Auto-actualización (público, sin sesión): la app consulta la versión
     //     disponible y descarga el APK. Se sube a R2 en app/latest.json y
     //     app/app-release.apk (p. ej. con `wrangler r2 object put`). ---
     if (path === "/update" && request.method === "GET") {
@@ -139,8 +166,11 @@ export default {
       // entero de una vez. Se repite mientras la respuesta traiga done:false.
       const limit = Number(url.searchParams.get("limit")) || undefined;
       const cursor = url.searchParams.get("cursor") || undefined;
+      // Con backfill=1 además rellena carpetas/favoritos leyendo las cabeceras
+      // #playlist:/#favorite: que la app antigua escondía dentro del texto.
+      const backfill = url.searchParams.get("backfill") === "1";
       try {
-        const result = await migrateExistingSongs(env, user.id, visibility, { limit, cursor });
+        const result = await migrateExistingSongs(env, user.id, visibility, { limit, cursor, backfill });
         return json(result, cors);
       } catch (err) {
         // Sin esto la excepcion sale como un 500 sin cuerpo y no hay forma de
@@ -149,194 +179,13 @@ export default {
       }
     }
 
-    // --- Endpoints heredados (token compartido) ---
-    // Siguen vivos para que la app Android actual no deje de sincronizar
-    // mientras se migra al login; se retirarán al completar esa migración.
-    const expected = `Bearer ${env.SYNC_TOKEN}`;
-    if (!env.SYNC_TOKEN || request.headers.get("Authorization") !== expected) {
-      return new Response("Unauthorized", { status: 401, headers: cors });
-    }
-
-    try {
-      if (path === "/list" && request.method === "GET") {
-        return await listObjects(env, cors);
-      }
-      if (path === "/bodies" && request.method === "GET") {
-        return await listBodies(env, cors);
-      }
-      if (path === "/object" && request.method === "GET") {
-        return await getObject(env, url, cors);
-      }
-      if (path === "/object" && request.method === "PUT") {
-        return await putObject(env, url, request, cors);
-      }
-      if (path === "/object" && request.method === "DELETE") {
-        return await deleteObject(env, url, cors);
-      }
-      if (path === "/delete" && request.method === "POST") {
-        return await deleteObjects(env, request, cors);
-      }
-      return new Response("Not found", { status: 404, headers: cors });
-    } catch (err) {
-      return new Response("Error: " + (err && err.message), {
-        status: 500,
-        headers: cors,
-      });
-    }
+    return new Response("Not found", { status: 404, headers: cors });
   },
 };
 
-/** Pull the indexed header values (title/artist/capo/url/locked) out of a song body. */
-function parseHeaders(text) {
-  const lines = text.replace(/\r\n/g, "\n").split("\n");
-  const h = { title: "", artist: "", capo: "", url: "", locked: "" };
-  for (const line of lines) {
-    if (line.trim() === "---") break;
-    const m = TITLE_RE.exec(line);
-    if (!m) break;
-    const k = m[1].toLowerCase();
-    if (k === "title") h.title = m[2].trim();
-    else if (k === "artist") h.artist = m[2].trim();
-    else if (k === "capo") h.capo = m[2].trim();
-    else if (k === "url") h.url = m[2].trim();
-    else if (k === "locked") h.locked = m[2].trim().toLowerCase() === "true" ? "true" : "";
-  }
-  return h;
-}
-
-async function listObjects(env, cors) {
-  const out = [];
-  let cursor = undefined;
-  do {
-    const page = await env.BUCKET.list({
-      prefix: SONG_PREFIX,
-      cursor,
-      include: ["customMetadata"],
-    });
-    for (const o of page.objects) {
-      const cm = o.customMetadata || {};
-      const uploadedMs = o.uploaded ? new Date(o.uploaded).getTime() : 0;
-      out.push({
-        key: o.key,
-        etag: o.httpEtag || o.etag || "",
-        size: o.size || 0,
-        uploaded: uploadedMs,
-        // Ficheros antiguos sin metadata "created": se aproxima con uploaded.
-        created: Number(cm.created) || uploadedMs,
-        title: cm.title || "",
-        artist: cm.artist || "",
-        capo: cm.capo || "",
-        url: cm.url || "",
-        locked: cm.locked || "",
-      });
-    }
-    cursor = page.truncated ? page.cursor : undefined;
-  } while (cursor);
-
-  return json(out, cors);
-}
-
-// Índice de búsqueda por contenido en UNA sola respuesta: { key: cuerpo, ... }.
-// Lo usa el modal "Buscar" para no tener que pedir cada partitura por separado.
-async function listBodies(env, cors) {
-  const out = {};
-  let cursor = undefined;
-  do {
-    const page = await env.BUCKET.list({ prefix: SONG_PREFIX, cursor });
-    for (const o of page.objects) {
-      const obj = await env.BUCKET.get(o.key);
-      if (obj) out[o.key] = await obj.text();
-    }
-    cursor = page.truncated ? page.cursor : undefined;
-  } while (cursor);
-  return json(out, cors);
-}
-
-async function getObject(env, url, cors) {
-  const key = url.searchParams.get("key");
-  if (!key) return new Response("key required", { status: 400, headers: cors });
-
-  const obj = await env.BUCKET.get(key);
-  if (!obj) return new Response("Not found", { status: 404, headers: cors });
-
-  const uploaded = obj.uploaded ? new Date(obj.uploaded).getTime() : Date.now();
-  return new Response(obj.body, {
-    headers: {
-      ...cors,
-      "Content-Type": "text/plain; charset=utf-8",
-      "ETag": obj.httpEtag || "",
-      "X-Uploaded": String(uploaded),
-    },
-  });
-}
-
-async function putObject(env, url, request, cors) {
-  const key = url.searchParams.get("key");
-  if (!isAllowedKey(key)) {
-    return new Response("invalid key", { status: 400, headers: cors });
-  }
-  const body = await request.text();
-  const h = parseHeaders(body);
-  // La fecha de creación se conserva entre ediciones: se hereda de la metadata
-  // existente y solo se fija en el primer PUT del objeto.
-  const existing = await env.BUCKET.head(key);
-  const created =
-    (existing && existing.customMetadata && existing.customMetadata.created) ||
-    String(Date.now());
-  const obj = await env.BUCKET.put(key, body, {
-    httpMetadata: { contentType: "text/plain; charset=utf-8" },
-    customMetadata: {
-      title: h.title, artist: h.artist, capo: h.capo, url: h.url,
-      locked: h.locked, created,
-    },
-  });
-  return json(
-    {
-      key,
-      etag: obj.httpEtag || "",
-      size: obj.size || body.length,
-      uploaded: obj.uploaded ? new Date(obj.uploaded).getTime() : Date.now(),
-      created: Number(created) || 0,
-      title: h.title,
-      artist: h.artist,
-      capo: h.capo,
-      url: h.url,
-      locked: h.locked,
-    },
-    cors
-  );
-}
-
-async function deleteObject(env, url, cors) {
-  const key = url.searchParams.get("key");
-  if (!isAllowedKey(key)) {
-    return new Response("invalid key", { status: 400, headers: cors });
-  }
-  await env.BUCKET.delete(key);
-  return json({ key, deleted: true }, cors);
-}
-
-async function deleteObjects(env, request, cors) {
-  let keys;
-  try {
-    keys = (await request.json()).keys;
-  } catch (e) {
-    return new Response("invalid JSON", { status: 400, headers: cors });
-  }
-  if (!Array.isArray(keys) || keys.length === 0 ||
-      !keys.every(isAllowedKey)) {
-    return new Response("invalid keys", { status: 400, headers: cors });
-  }
-  // R2 admits hasta 1000 claves por llamada; se trocea por si acaso.
-  for (let i = 0; i < keys.length; i += 1000) {
-    await env.BUCKET.delete(keys.slice(i, i + 1000));
-  }
-  return json({ deleted: keys.length, keys }, cors);
-}
-
-function json(data, cors) {
+function json(data, cors, status = 200) {
   return new Response(JSON.stringify(data), {
+    status,
     headers: { ...cors, "Content-Type": "application/json" },
   });
 }
-

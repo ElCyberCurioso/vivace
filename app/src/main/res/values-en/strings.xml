@@ -243,7 +243,7 @@
     <string name="update_error">Error: %1$s</string>
     <string name="sync_r2_title">R2 Sync</string>
     <string name="sync_r2_subtitle">Connect to your Cloudflare R2 bucket to download and upload songs.</string>
-    <string name="sync_intro">Connects to the Cloudflare R2 bucket through the Worker. Only new or modified content is downloaded and uploaded.</string>
+    <string name="sync_intro">Your songs sync on their own: changes are always saved on the device and go up as soon as there is a connection, even if you close the app.</string>
     <string name="sync_worker_url">Worker URL</string>
     <string name="sync_token">Access token</string>
     <string name="account_email">Email</string>
@@ -261,23 +261,15 @@
     <string name="syncing">Syncing…</string>
     <string name="last_sync">Last sync: %1$s</string>
     <string name="never">never</string>
-    <string name="pending_uploads">Songs with unsent changes: %1$d</string>
+    <string name="pending_uploads">Waiting to upload: %1$d</string>
     <string name="sync_result">Downloaded: %1$d  ·  Uploaded: %2$d</string>
     <string name="sync_conflicts_suffix">  ·  Conflicts: %1$d</string>
     <string name="sync_missing_fields">Enter the server URL and the token</string>
     <string name="sync_error_generic">Sync error</string>
     <string name="sync_conflict_error">Error resolving conflicts</string>
     <string name="conflicts_title">%1$d conflict(s)</string>
-    <string name="conflicts_msg">These songs were modified both on the device and on the server. Decide for each one which version to keep; unresolved ones stay on hold until the next sync:</string>
+    <string name="conflicts_kept_msg">These songs changed here and on the server at the same time. Nothing was lost: the server copy won and yours was kept as an extra version.</string>
     <string name="local_vs_server">local %1$s · server %2$s</string>
-    <string name="conflict_local_short">Local</string>
-    <string name="conflict_server_short">Server</string>
-    <string name="conflict_later">Later</string>
-    <string name="push_confirm_title">Confirm upload</string>
-    <string name="push_confirm_msg">%1$d song(s) have local changes. Upload them to the server?</string>
-    <string name="push_upload">Upload</string>
-    <string name="push_not_now">Not now</string>
-    <string name="push_new_song">new</string>
     <string name="chords_sync_title">Custom chords</string>
     <string name="chords_sync_intro">Your fingerings sync automatically with the Worker whenever there is internet. You can force a sync here.</string>
     <string name="chords_last_sync">Last chord sync: %1$s</string>
@@ -477,4 +469,7 @@
     <string name="ach_first_mic_desc">Validate a scale with the microphone</string>
     <string name="ach_all_areas_title">Multidisciplinary</string>
     <string name="ach_all_areas_desc">Pass exercises in 5 different areas</string>
+    <string name="understood">Got it</string>
+    <string name="sync_session_expired_title">Session expired</string>
+    <string name="sync_session_expired_msg">Your session expired and syncing stopped. Sign in again: your changes are still saved on the device and will upload once there is a session.</string>
 </resources>

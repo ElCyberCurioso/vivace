@@ -43,8 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.guitarchords.app.R
-import com.guitarchords.app.sync.PendingUpload
-import com.guitarchords.app.sync.SyncConflict
+import com.guitarchords.app.sync.ResolvedConflict
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -64,7 +63,7 @@ fun SyncScreen(
     val account by vm.account.collectAsStateWithLifecycle()
     val state by vm.state.collectAsStateWithLifecycle()
     val conflicts by vm.conflicts.collectAsStateWithLifecycle()
-    val pendingPush by vm.pendingPush.collectAsStateWithLifecycle()
+    val sessionExpired by vm.sessionExpired.collectAsStateWithLifecycle()
     val lastSync by vm.lastSync.collectAsStateWithLifecycle()
     val pending by vm.pendingUploads.collectAsStateWithLifecycle()
     val chordSyncing by vm.chordSyncing.collectAsStateWithLifecycle()
@@ -297,115 +296,68 @@ fun SyncScreen(
         }
     }
 
-    // Como en git: primero se integran los conflictos, después se confirma el push.
+    // La sincronización va sola. Lo único que queda por contar es lo que el
+    // usuario no puede deducir: que un choque se guardó como versión aparte, y
+    // que la sesión caducó mientras nadie miraba.
     if (conflicts.isNotEmpty() && !running) {
-        ConflictDialog(
-            conflicts = conflicts,
-            onResolve = { c, keepLocal -> vm.resolveOne(c, keepLocal) },
-            onDismiss = { vm.dismissConflicts() }
-        )
-    } else if (pendingPush.isNotEmpty() && !running) {
-        PushConfirmDialog(
-            pending = pendingPush,
-            onConfirm = { vm.confirmPush() },
-            onCancel = { vm.cancelPush() }
-        )
+        ConflictInfoDialog(conflicts = conflicts, onDismiss = { vm.dismissConflicts() })
+    } else if (sessionExpired) {
+        SessionExpiredDialog(onDismiss = { vm.dismissSessionExpired() })
     }
 }
 
+/**
+ * Aviso, no pregunta: al chocar dos ediciones no se pierde ninguna. El servidor
+ * se queda como Original y lo que había aquí pasa a ser una versión más.
+ */
 @Composable
-private fun PushConfirmDialog(
-    pending: List<PendingUpload>,
-    onConfirm: () -> Unit,
-    onCancel: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onCancel,
-        title = { Text(stringResource(R.string.push_confirm_title)) },
-        text = {
-            Column {
-                Text(
-                    stringResource(R.string.push_confirm_msg, pending.size),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Spacer(Modifier.height(8.dp))
-                Column(
-                    Modifier
-                        .heightIn(max = 240.dp)
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    pending.forEach { p ->
-                        Text(
-                            "• " + p.title.ifBlank { stringResource(R.string.untitled) } +
-                                if (p.isNew) "  (" + stringResource(R.string.push_new_song) + ")" else "",
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(vertical = 2.dp)
-                        )
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onConfirm) { Text(stringResource(R.string.push_upload)) }
-        },
-        dismissButton = {
-            TextButton(onClick = onCancel) { Text(stringResource(R.string.push_not_now)) }
-        }
-    )
-}
-
-@Composable
-private fun ConflictDialog(
-    conflicts: List<SyncConflict>,
-    onResolve: (SyncConflict, Boolean) -> Unit,
+private fun ConflictInfoDialog(
+    conflicts: List<ResolvedConflict>,
     onDismiss: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.conflicts_title, conflicts.size)) },
         text = {
-            Column {
+            Column(
+                Modifier
+                    .heightIn(max = 320.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
                 Text(
-                    stringResource(R.string.conflicts_msg),
+                    stringResource(R.string.conflicts_kept_msg),
                     style = MaterialTheme.typography.bodyMedium
                 )
-                Spacer(Modifier.height(8.dp))
-                Column(
-                    Modifier
-                        .heightIn(max = 320.dp)
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    conflicts.forEach { c ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(Modifier.weight(1f)) {
-                                Text(c.title, style = MaterialTheme.typography.bodySmall)
-                                Text(
-                                    stringResource(
-                                        R.string.local_vs_server,
-                                        shortTime(c.localUpdatedAt),
-                                        shortTime(c.remoteUpdatedAt)
-                                    ),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            TextButton(onClick = { onResolve(c, true) }) {
-                                Text(stringResource(R.string.conflict_local_short))
-                            }
-                            TextButton(onClick = { onResolve(c, false) }) {
-                                Text(stringResource(R.string.conflict_server_short))
-                            }
-                        }
-                    }
+                Spacer(Modifier.height(12.dp))
+                conflicts.forEach { c ->
+                    Text(
+                        "• " + c.title.ifBlank { stringResource(R.string.untitled) },
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        "   " + c.versionName,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.height(8.dp))
                 }
             }
         },
-        confirmButton = {},
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.conflict_later)) }
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.understood)) }
+        }
+    )
+}
+
+/** La sesión caducó en segundo plano: nadie estaba mirando cuando pasó. */
+@Composable
+private fun SessionExpiredDialog(onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.sync_session_expired_title)) },
+        text = { Text(stringResource(R.string.sync_session_expired_msg)) },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.understood)) }
         }
     )
 }

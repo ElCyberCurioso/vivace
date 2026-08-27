@@ -14,12 +14,20 @@
  * crece. Cada llamada devuelve un cursor y quien llama repite hasta done.
  */
 
-import { SONG_PREFIX, insertSongs, listSongKeys } from "./db.js";
+import {
+  SONG_PREFIX, findPlaylistByName, findSongByKey, insertPlaylist, insertSongs,
+  listSongKeys, setSongPlacement
+} from "./db.js";
 
 /** Extrae los metadatos de la cabecera `#clave: valor` del propio fichero. */
 function parseHeaders(text) {
   const HEADER = /^#([A-Za-z]+):[ \t]?(.*)$/;
-  const out = { title: "", artist: "", genre: "", capo: 0, url: "", locked: false };
+  const out = {
+    title: "", artist: "", genre: "", capo: 0, url: "", locked: false,
+    // Carpeta y favorito viajaban ESCONDIDOS aquí dentro porque la base no los
+    // conocía. Ahora son columnas, y esto es lo que los rescata.
+    favorite: false, playlist: ""
+  };
   for (const line of text.replace(/\r\n/g, "\n").split("\n")) {
     if (line.trim() === "---") break;
     const m = HEADER.exec(line);
@@ -32,6 +40,8 @@ function parseHeaders(text) {
     else if (key === "capo") out.capo = Number(value) || 0;
     else if (key === "url") out.url = value;
     else if (key === "locked") out.locked = value.toLowerCase() === "true";
+    else if (key === "favorite") out.favorite = value.toLowerCase() === "true";
+    else if (key === "playlist") out.playlist = value;
   }
   return out;
 }
@@ -40,12 +50,30 @@ function parseHeaders(text) {
 export const MIGRATE_BATCH = 40;
 
 /**
+ * Id de la carpeta con ese nombre, creándola si hace falta. Se cachea por
+ * llamada: un catálogo entero suele repetir cuatro o cinco nombres, y sin caché
+ * sería una consulta por partitura.
+ */
+async function playlistIdFor(env, ownerId, nombre, cache) {
+  const limpio = String(nombre || "").trim();
+  if (!limpio) return null;
+  if (cache.has(limpio)) return cache.get(limpio);
+  const existente = await findPlaylistByName(env.DB, ownerId, limpio);
+  const id = existente
+    ? existente.id
+    : (await insertPlaylist(env.DB, { owner_id: ownerId, name: limpio })).id;
+  cache.set(limpio, id);
+  return id;
+}
+
+/**
  * Indexa una tanda de lo que haya en `songs/` y aún no esté registrado.
  *
  * @param visibility con la que se dan de alta las nuevas (`private` por defecto).
  * @param options.limit cuántos objetos mirar en esta llamada.
  * @param options.cursor por dónde seguir; lo devuelve la llamada anterior.
- * @returns { imported, skipped, done, cursor } — repetir mientras `done` sea falso.
+ * @param options.backfill rescata `#playlist:`/`#favorite:` de lo YA indexado.
+ * @returns { imported, skipped, backfilled, done, cursor } — repetir mientras `done` sea falso.
  */
 export async function migrateExistingSongs(env, ownerId, visibility = "private", options = {}) {
   const limit = Math.min(Math.max(Number(options.limit) || MIGRATE_BATCH, 1), 200);
@@ -59,9 +87,31 @@ export async function migrateExistingSongs(env, ownerId, visibility = "private",
   });
 
   const nuevas = [];
+  const cacheListas = new Map();
   let skipped = 0;
+  let backfilled = 0;
   for (const obj of page.objects) {
-    if (known.has(obj.key)) { skipped++; continue; }
+    if (known.has(obj.key)) {
+      skipped++;
+      // Con backfill=1 se vuelve a leer lo ya indexado SOLO para rescatar la
+      // carpeta y el favorito de las cabeceras. Es opcional porque cuesta una
+      // lectura de R2 por partitura ya conocida.
+      if (options.backfill) {
+        const fila = await findSongByKey(env.DB, obj.key);
+        if (fila && fila.owner_id === ownerId && !fila.playlist_id && !fila.favorite) {
+          const guardado = await env.BUCKET.get(obj.key);
+          const cabeceras = parseHeaders(guardado ? await guardado.text() : "");
+          if (cabeceras.playlist || cabeceras.favorite) {
+            await setSongPlacement(env.DB, fila.id, {
+              favorite: cabeceras.favorite,
+              playlist_id: await playlistIdFor(env, ownerId, cabeceras.playlist, cacheListas)
+            });
+            backfilled++;
+          }
+        }
+      }
+      continue;
+    }
     const stored = await env.BUCKET.get(obj.key);
     const text = stored ? await stored.text() : "";
     const meta = parseHeaders(text);
@@ -77,11 +127,13 @@ export async function migrateExistingSongs(env, ownerId, visibility = "private",
       source_url: meta.url || cm.url || "",
       locked: meta.locked,
       visibility,
+      favorite: meta.favorite,
+      playlist_id: await playlistIdFor(env, ownerId, meta.playlist, cacheListas),
       created_at: Number(cm.created) || uploaded
     });
   }
   await insertSongs(env.DB, nuevas);
 
   const cursor = page.truncated ? page.cursor : null;
-  return { imported: nuevas.length, skipped, done: !cursor, cursor };
+  return { imported: nuevas.length, skipped, backfilled, done: !cursor, cursor };
 }
