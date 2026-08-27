@@ -57,3 +57,30 @@ test("una partitura sin cabeceras se queda entera como cuerpo", () => {
   const parsed = lib.vParseSong("{C}solo letra");
   assert.equal(parsed.body, "{C}solo letra");
 });
+
+test("vUrlSegura solo acepta http y https", () => {
+  const vUrlSegura = new Function(CLIENT_JS + "; return vUrlSegura;")();
+  for (const buena of ["http://a.test", "https://a.test/x?y=1", "HTTPS://A.TEST"]) {
+    assert.equal(vUrlSegura(buena), true, buena);
+  }
+  // El caso que importa: esto acababa en el href del enlace "Original ↗", que
+  // ve cualquiera que abra la partitura.
+  for (const mala of ["javascript:alert(1)", "JavaScript:alert(1)", "data:text/html,x",
+                      "//evil.test", "ftp://a.test", "", null, undefined, "   "]) {
+    assert.equal(vUrlSegura(mala), false, String(mala));
+  }
+});
+
+test("ningún regex servido al navegador se ha comido su barra invertida", async () => {
+  // Toda la web va dentro de template literals, donde "\/" se colapsa a "/".
+  // Un regex escrito con una sola barra invertida se convierte en otra cosa —
+  // normalmente en un regex corto seguido de un comentario de línea— y deja de
+  // filtrar sin que nada falle ni avise. Así se rompió la comprobación de
+  // protocolo del enlace "Original", que pasó a aceptar javascript:.
+  const { WEB_APP_JS, WEB_CSS } = await import("../src/web-html.js");
+  const sospechoso = /\/[^/\n]*:\/\/\//;      // p. ej.  /^https?:///i
+  for (const [nombre, texto] of [["CLIENT_JS", CLIENT_JS], ["WEB_APP_JS", WEB_APP_JS], ["WEB_CSS", WEB_CSS]]) {
+    const m = sospechoso.exec(texto);
+    assert.equal(m, null, `${nombre} trae un regex con la barra colapsada: ${m && m[0]}`);
+  }
+});

@@ -861,6 +861,98 @@ function renderList(error) {
   listEmpty.classList.toggle("hidden", !msg);
 }
 
+/* ---------- enlaces a una partitura ---------- */
+/*
+ * La web no cambiaba nunca de URL: no se podía enlazar a una partitura, ni usar
+ * el botón «atrás», ni recargar sin volver al principio. Se resuelve con el
+ * fragmento (#/cancion/<id>) y no con una ruta de verdad porque el Worker solo
+ * sirve la página en «/»: una ruta como /cancion/x daría 404 antes de que el
+ * navegador llegara a ejecutar nada.
+ */
+var RUTA_CANCION = /^#[/]cancion[/]([A-Za-z0-9-]+)$/;
+
+/** Id de partitura que pide la URL actual, o "" si no pide ninguna. */
+function cancionDeLaUrl() {
+  var m = RUTA_CANCION.exec(location.hash || "");
+  return m ? m[1] : "";
+}
+
+function enlaceDeCancion(id) {
+  return location.origin + location.pathname + location.search + "#/cancion/" + id;
+}
+
+/*
+ * Al navegar por la interfaz se escribe la URL, y al navegar por la URL (atrás,
+ * adelante, pegar un enlace) se mueve la interfaz. La bandera aplicandoUrl corta el
+ * bucle: sin él, abrir una partitura desde popstate volvería a empujar estado.
+ */
+var aplicandoUrl = false;
+
+function ponerUrlDeCancion(id, reemplazar) {
+  if (aplicandoUrl) return;
+  var destino = id ? enlaceDeCancion(id) : location.origin + location.pathname + location.search;
+  if (destino === location.href) return;
+  if (reemplazar) history.replaceState({ cancion: id || null }, "", destino);
+  else history.pushState({ cancion: id || null }, "", destino);
+}
+
+/** Lleva la interfaz a donde diga la URL. Se usa al arrancar y en cada popstate. */
+function aplicarUrl() {
+  var id = cancionDeLaUrl();
+  aplicandoUrl = true;
+  try {
+    if (id) {
+      // Ya abierta la que toca: no hay nada que hacer. Hay que mirar TAMBIÉN si
+      // el visor está abierto: current sigue apuntando a la última partitura
+      // después de cerrarlo, así que sin esto «adelante» no la reabría.
+      var yaEstá = viewer.classList.contains("on") &&
+                   current && current.song && current.song.id === id;
+      if (!yaEstá) openSong(id, { desdeUrl: true });
+    } else if (viewer.classList.contains("on")) {
+      closeViewer();
+    }
+  } finally {
+    aplicandoUrl = false;
+  }
+}
+
+window.addEventListener("popstate", aplicarUrl);
+
+/** Comparte el enlace: menú del sistema si lo hay, y si no, al portapapeles. */
+function compartirCancion() {
+  if (!current || !current.song) return;
+  var enlace = enlaceDeCancion(current.song.id);
+  var privada = current.song.visibility !== "public";
+
+  function avisar(texto) {
+    var antes = vShare.textContent;
+    vShare.textContent = texto;
+    setTimeout(function () { vShare.textContent = antes; }, 2200);
+  }
+
+  // Quien reciba el enlace de una privada se encontrará un 404: la API no
+  // enseña lo privado a nadie más. Mejor decirlo al compartir que después.
+  if (privada && !confirm(
+        "Esta partitura es privada: solo tú puedes abrirla.\\n\\n" +
+        "Para que el enlace le sirva a otra persona hay que publicarla " +
+        "(desde el editor, «Proponer publicación»).\\n\\n¿Copiar el enlace igualmente?")) {
+    return;
+  }
+
+  if (navigator.share) {
+    navigator.share({ title: current.song.title || "Partitura", url: enlace })
+      .catch(function () { /* cancelar el menú del sistema no es un error */ });
+    return;
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(enlace)
+      .then(function () { avisar("✓ Enlace copiado"); })
+      .catch(function () { prompt("Copia el enlace:", enlace); });
+    return;
+  }
+  prompt("Copia el enlace:", enlace);
+}
+
 /* ---------- favoritos y papelera ---------- */
 
 function toggleFavorite(s) {
@@ -1040,7 +1132,8 @@ function categoriasAuto(aplicar) {
 }
 
 /* ---------- visor ---------- */
-function openSong(id) {
+function openSong(id, opciones) {
+  var desdeUrl = !!(opciones && opciones.desdeUrl);
   api("GET", "/api/songs/" + id).then(function (d) {
     current = d;
     semis = 0; flats = false;
@@ -1053,7 +1146,7 @@ function openSong(id) {
     setCapo(d.song.capo);
     // Solo http(s): un href con javascript: en la cabecera sería un agujero.
     var origen = String(d.song.sourceUrl || "");
-    var valida = /^https?:\/\//i.test(origen);
+    var valida = vUrlSegura(origen);
     vSource.href = valida ? origen : "#";
     vSource.classList.toggle("hidden", !valida);
     vEdit.classList.toggle("hidden", !(user && (user.id === d.song.ownerId || user.role === "admin")));
@@ -1070,7 +1163,19 @@ function openSong(id) {
     loadVersions(d.song.id);
     loadRatings(d.song.id);
     loadComments(d.song.id);
-  }).catch(function (e) { alert(e.message); });
+    // Al abrirla desde un enlace se REEMPLAZA el estado: si se empujara, el
+    // botón «atrás» devolvería a la misma página en vez de salir de ella.
+    ponerUrlDeCancion(d.song.id, desdeUrl);
+  }).catch(function (e) {
+    if (desdeUrl) {
+      // Llegó por un enlace: el mensaje crudo de la API no dice qué hacer.
+      aviso(listEmpty, "No se ha podido abrir esa partitura: " + e.message +
+        ". Puede ser privada, o haber sido borrada.");
+      ponerUrlDeCancion("", true);
+    } else {
+      alert(e.message);
+    }
+  });
 }
 
 /** Capo de lo que se está mirando; con 0 no se enseña nada. */
@@ -1101,6 +1206,7 @@ function closeViewer() {
   stopScroll();
   if (metro.isRunning()) toggleMetro();
   viewer.classList.remove("on");
+  ponerUrlDeCancion("");
 }
 
 function step(ts) {
@@ -2268,6 +2374,7 @@ favFilter.onclick = function () {
   favFilter.setAttribute("aria-pressed", favOnly);
   renderList();
 };
+vShare.onclick = compartirCancion;
 vPrint.onclick = printViewer;
 
 backupBtn.onclick = backupZip;
@@ -2401,6 +2508,8 @@ loadGenres();
 restoreSession().then(function () {
   if (user) tab = "mine";
   refresh();
+  // Lo último: así una partitura privada propia se abre con la sesión ya puesta.
+  aplicarUrl();
 });
 `;
 
@@ -2726,7 +2835,8 @@ export const WEB_HTML = `<!doctype html>
     <div class="lado der">
       <a id="vSource" class="hidden" href="#" target="_blank" rel="noopener noreferrer"
          title="Abrir la partitura original en otra pestaña">Original ↗</a>
-      <button id="vPrint" title="Imprimir o guardar en PDF">🖨 Imprimir</button>
+      <button id="vShare" title="Copiar el enlace de esta partitura">🔗 Compartir</button>
+      <button id="vPrint" title="Abre el diálogo de impresión; ahí puedes elegir «Guardar como PDF»">🖨 PDF</button>
       <button id="vEdit" class="hidden">Editar</button>
     </div>
   </div>

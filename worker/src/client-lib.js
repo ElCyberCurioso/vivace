@@ -65,6 +65,22 @@ function vParseSong(text) {
   return { head: head, body: lines.slice(i).join("\\n") };
 }
 
+/**
+ * ¿Es seguro meter esta URL en un href? Solo http(s).
+ *
+ * Vive aquí, y no suelto en la página, porque este fichero se sirve tal cual y
+ * los tests lo comprueban. La comprobación equivalente que había en el visor
+ * estaba ROTA sin que se notara: iba escrita dentro de un template literal,
+ * donde la barra invertida se colapsa, y el regex acababa siendo /^https?:/
+ * seguido de un comentario. Aceptaba cualquier cosa, "javascript:" incluido.
+ */
+function vUrlSegura(url) {
+  // Sin barras invertidas a propósito: dentro de un template literal se
+  // colapsan y el regex queda roto (así se rompió la comprobación anterior).
+  var u = String(url || "").trim().toLowerCase();
+  return u.indexOf("http://") === 0 || u.indexOf("https://") === 0;
+}
+
 /* ---------- diagramas de acorde ---------- */
 
 /**
