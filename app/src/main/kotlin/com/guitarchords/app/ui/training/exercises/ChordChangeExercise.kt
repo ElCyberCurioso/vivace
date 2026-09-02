@@ -48,6 +48,7 @@ import com.guitarchords.app.training.ChordChangeSpec
 import kotlinx.coroutines.delay
 import kotlin.math.min
 import kotlin.math.roundToInt
+import com.guitarchords.app.ui.icons.AccordioIcons
 
 private enum class ChangePhase { RUNNING, COUNT }
 
@@ -160,7 +161,7 @@ fun ChordChangeExercise(
                         modifier = Modifier.padding(horizontal = 24.dp)
                     )
                     IconButton(onClick = { count++ }) {
-                        Icon(Icons.Default.Add, stringResource(R.string.count_up))
+                        Icon(AccordioIcons.mas(), stringResource(R.string.count_up))
                     }
                 }
                 Spacer(Modifier.height(16.dp))

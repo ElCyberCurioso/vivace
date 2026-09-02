@@ -22,7 +22,10 @@
  *   npx wrangler deploy
  */
 
-import { WEB_APP_JS, WEB_CSS, WEB_HTML, FAVICON_SVG } from "./web-html.js";
+import {
+  WEB_APP_JS, WEB_CSS, WEB_HTML,
+  FAVICON_SVG, FAVICON_DARK_SVG, PATTERN_SVG, PATTERN_DARK_SVG,
+} from "./web-html.js";
 import { CLIENT_JS } from "./client-lib.js";
 import { handleApi } from "./api.js";
 import { migrateExistingSongs } from "./migrate.js";
@@ -49,6 +52,9 @@ const ETAG_JS = weakEtag(CLIENT_JS);
 const ETAG_APP = weakEtag(WEB_APP_JS);
 const ETAG_CSS = weakEtag(WEB_CSS);
 const ETAG_ICON = weakEtag(FAVICON_SVG);
+const ETAG_ICON_DARK = weakEtag(FAVICON_DARK_SVG);
+const ETAG_PATTERN = weakEtag(PATTERN_SVG);
+const ETAG_PATTERN_DARK = weakEtag(PATTERN_DARK_SVG);
 
 /**
  * Recursos que puede incrustar cualquiera: la portada, la auto-actualización y
@@ -96,8 +102,78 @@ function staticResponse(request, body, contentType, etag, maxAge) {
   return new Response(body, { headers });
 }
 
-export default {
+/**
+ * Desarrollo local: `wrangler dev` sirve en http://localhost, así que ahí no se
+ * puede forzar HTTPS ni mandar HSTS (dejaría el navegador convencido de que
+ * localhost es siempre https y rompería el siguiente proyecto que use el mismo
+ * puerto).
+ */
+function esLocal(hostname) {
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]" ||
+         hostname.endsWith(".localhost");
+}
+
+/**
+ * Una sola dirección buena: HTTPS y sin `www.`.
+ *
+ * - Un dominio propio de Cloudflare atiende también el puerto 80, y ahí la
+ *   petición viaja en claro: cualquiera en la misma red ve el token de sesión
+ *   de la cabecera Authorization. Se corta con un 301 antes de mirar la ruta.
+ * - `www.` va al apex por lo mismo de siempre: la sesión de la web vive en el
+ *   almacenamiento local del navegador, y con dos orígenes entrar por uno o por
+ *   otro daría dos sesiones distintas.
+ *
+ * Se conserva ruta y query. El fragmento (`#/cancion/ID`) no llega al servidor,
+ * pero el navegador lo mantiene al seguir el redirect, así que los enlaces
+ * compartidos siguen valiendo.
+ */
+function canonicalRedirect(request, url) {
+  const enClaro = url.protocol === "http:" && !esLocal(url.hostname);
+  const conWww = url.hostname.startsWith("www.");
+  if (!enClaro && !conWww) return null;
+  const destino = new URL(url);
+  if (enClaro) destino.protocol = "https:";
+  if (conWww) destino.hostname = url.hostname.slice(4);
+  // 301 solo para lecturas: un 301 sobre un POST deja que el navegador lo
+  // reenvíe como GET y se pierda el cuerpo. El 308 obliga a repetir el mismo
+  // método, así que una subida de la app por http acaba subiendo, no fallando.
+  const soloLee = request.method === "GET" || request.method === "HEAD";
+  return new Response(null, {
+    status: soloLee ? 301 : 308,
+    headers: { Location: destino.toString(), "Cache-Control": "public, max-age=3600" },
+  });
+}
+
+/**
+ * HSTS: tras la primera visita por HTTPS el navegador ya no vuelve a pedir el
+ * sitio en claro ni aunque se teclee http:// o se siga un enlace viejo, así que
+ * el 301 de arriba deja de ser la única defensa (ese primer salto sí viaja en
+ * claro). Un año, subdominios incluidos; sin `preload`, que es irreversible a
+ * corto plazo y obliga a que TODO subdominio futuro hable HTTPS.
+ */
+function conHsts(url, res) {
+  if (url.protocol !== "https:" || esLocal(url.hostname)) return res;
+  const salida = new Response(res.body, res);
+  salida.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  return salida;
+}
+
+/*
+ * La entrada solo se ocupa del transporte (HTTPS y host canónico) y le pone
+ * HSTS a lo que salga; el enrutado de verdad está en `ruta`. Así la cabecera se
+ * pone en UN sitio y no en los treinta y pico `new Response` repartidos por el
+ * Worker. Se llama `app.ruta` y no `this.ruta` a propósito: según cómo invoque
+ * el runtime al manejador, `this` puede no ser este objeto.
+ */
+const app = {
   async fetch(request, env) {
+    const url = new URL(request.url);
+    const canonico = canonicalRedirect(request, url);
+    if (canonico) return canonico;
+    return conHsts(url, await app.ruta(request, env));
+  },
+
+  async ruta(request, env) {
     const url = new URL(request.url);
     const path = url.pathname;
     const cors = corsHeaders(request, url, path);
@@ -112,6 +188,18 @@ export default {
     }
     if (path === "/static/favicon.svg" && request.method === "GET") {
       return staticResponse(request, FAVICON_SVG, "image/svg+xml; charset=utf-8", ETAG_ICON, 86400);
+    }
+    // Recursos con dos versiones (el color va dentro del SVG, así que no hay
+    // currentColor que valga): el mosaico del fondo y el favicon. No cambian
+    // entre despliegues, así que se cachean un día.
+    if (path === "/static/pattern.svg" && request.method === "GET") {
+      return staticResponse(request, PATTERN_SVG, "image/svg+xml; charset=utf-8", ETAG_PATTERN, 86400);
+    }
+    if (path === "/static/pattern-dark.svg" && request.method === "GET") {
+      return staticResponse(request, PATTERN_DARK_SVG, "image/svg+xml; charset=utf-8", ETAG_PATTERN_DARK, 86400);
+    }
+    if (path === "/static/favicon-dark.svg" && request.method === "GET") {
+      return staticResponse(request, FAVICON_DARK_SVG, "image/svg+xml; charset=utf-8", ETAG_ICON_DARK, 86400);
     }
     if (path === "/static/vivace.js" && request.method === "GET") {
       return staticResponse(request, CLIENT_JS, "application/javascript; charset=utf-8", ETAG_JS, 3600);
@@ -182,6 +270,8 @@ export default {
     return new Response("Not found", { status: 404, headers: cors });
   },
 };
+
+export default app;
 
 function json(data, cors, status = 200) {
   return new Response(JSON.stringify(data), {

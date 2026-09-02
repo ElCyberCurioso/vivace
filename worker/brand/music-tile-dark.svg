@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <rect width="400" height="400" fill="#0F2429"></rect>
+  <g transform="translate(40 50) rotate(-18) scale(0.9)" fill="none" stroke="#2E5A60" stroke-width="4"><path d="M0 0h84M0 18h84M0 36h84M0 54h84"></path><path d="M0 0v54M28 0v54M56 0v54M84 0v54"></path><circle cx="28" cy="0" r="6" fill="#2E5A60" stroke="none"></circle><circle cx="56" cy="18" r="6" fill="#2E5A60" stroke="none"></circle><circle cx="14" cy="36" r="6" fill="#2E5A60" stroke="none"></circle></g>
+  <g transform="translate(250 60) rotate(8)" fill="#2E5A60"><ellipse cx="0" cy="16" rx="6.4" ry="5"></ellipse><ellipse cx="19" cy="12" rx="6.4" ry="5"></ellipse><path d="M5.4 16V-6l19-4v22h-2.6V-7.4L8 -3.6V16z"></path></g>
+  <circle cx="350" cy="120" r="16" fill="none" stroke="#2E5A60" stroke-width="6"></circle>
+  <g transform="translate(160 190) rotate(-8) scale(1.4)" fill="#2E5A60"><ellipse cx="0" cy="14" rx="7" ry="5.4" transform="rotate(-18)"></ellipse><path d="M5.6 12.8V-14c4 1.6 8 3.4 8 8.2 0-6.4-4-8.6-8-10.4z"></path></g>
+  <g transform="translate(230 250) rotate(12) scale(0.7)" fill="none" stroke="#2E5A60" stroke-width="4"><path d="M0 0h84M0 18h84M0 36h84M0 54h84"></path><path d="M0 0v54M28 0v54M56 0v54M84 0v54"></path><circle cx="28" cy="0" r="6" fill="#2E5A60" stroke="none"></circle><circle cx="56" cy="18" r="6" fill="#2E5A60" stroke="none"></circle><circle cx="14" cy="36" r="6" fill="#2E5A60" stroke="none"></circle></g>
+  <g transform="translate(60 300) rotate(-12)" fill="#2E5A60"><ellipse cx="0" cy="16" rx="6.4" ry="5"></ellipse><ellipse cx="19" cy="12" rx="6.4" ry="5"></ellipse><path d="M5.4 16V-6l19-4v22h-2.6V-7.4L8 -3.6V16z"></path></g>
+  <g transform="translate(340 300) rotate(14) scale(1.2)" fill="#2E5A60"><ellipse cx="0" cy="14" rx="7" ry="5.4" transform="rotate(-18)"></ellipse><path d="M5.6 12.8V-14c4 1.6 8 3.4 8 8.2 0-6.4-4-8.6-8-10.4z"></path></g>
+  <circle cx="150" cy="350" r="12" fill="none" stroke="#2E5A60" stroke-width="6"></circle>
+</svg>

@@ -76,6 +76,8 @@ import com.guitarchords.app.ui.components.rememberTrashedMessage
 import com.guitarchords.app.ui.components.rememberUndoSnackbar
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
+import com.guitarchords.app.ui.theme.accordioTopBarColors
+import com.guitarchords.app.ui.icons.AccordioIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -129,6 +131,7 @@ fun PlaylistDetailScreen(
                 )
             } else {
                 TopAppBar(
+                    colors = accordioTopBarColors(),
                     title = { Text(playlist?.name ?: "") },
                     navigationIcon = {
                         IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
@@ -137,18 +140,18 @@ fun PlaylistDetailScreen(
                         IconButton(onClick = {
                             searchOpen = !searchOpen
                             if (!searchOpen) query = ""
-                        }) { Icon(Icons.Default.Search, stringResource(R.string.search_songs)) }
+                        }) { Icon(AccordioIcons.buscar(), stringResource(R.string.search_songs)) }
                         SongSortMenu(current = sort, onPick = { vm.setSort(it) })
                         IconButton(onClick = {
                             vm.exportZipShare { intent -> ctx.startActivity(intent) }
-                        }) { Icon(Icons.Default.Share, stringResource(R.string.share)) }
+                        }) { Icon(AccordioIcons.compartir(), stringResource(R.string.share)) }
                     }
                 )
             }
         },
         floatingActionButton = {
             FloatingActionButton(onClick = onAddSong) {
-                Icon(Icons.Default.Add, stringResource(R.string.new_song))
+                Icon(AccordioIcons.mas(), stringResource(R.string.new_song))
             }
         }
     ) { pv ->
@@ -162,7 +165,7 @@ fun PlaylistDetailScreen(
             }
             if (songs.isEmpty()) {
                 EmptyState(
-                    icon = Icons.Default.MusicNote,
+                    icon = AccordioIcons.notas(),
                     title = stringResource(R.string.empty_songs_title),
                     subtitle = stringResource(R.string.empty_songs_subtitle),
                     modifier = Modifier.fillMaxSize()
@@ -354,15 +357,15 @@ private fun SongRow(
             leading = {
                 IconButton(onClick = onFav) {
                     if (song.favorite)
-                        Icon(Icons.Default.Star, stringResource(R.string.remove_favorite), tint = MaterialTheme.colorScheme.primary)
+                        Icon(AccordioIcons.estrella(), stringResource(R.string.remove_favorite), tint = MaterialTheme.colorScheme.primary)
                     else
-                        Icon(Icons.Outlined.StarOutline, stringResource(R.string.favorite))
+                        Icon(AccordioIcons.estrellaHueca(), stringResource(R.string.favorite))
                 }
             },
             trailing = {
                 Box {
                     IconButton(onClick = { menuOpen = true }) {
-                        Icon(Icons.Default.MoreVert, stringResource(R.string.more_options))
+                        Icon(AccordioIcons.menu(), stringResource(R.string.more_options))
                     }
                     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                         DropdownMenuItem(

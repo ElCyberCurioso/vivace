@@ -52,6 +52,7 @@ import com.guitarchords.app.chords.ChordLibrary
 import com.guitarchords.app.chords.SongChords
 import com.guitarchords.app.metronome.MetronomeEngine
 import com.guitarchords.app.ui.components.EmptyState
+import com.guitarchords.app.ui.theme.accordioTopBarColors
 
 /**
  * Práctica de los cambios de acorde de una canción concreta: coge los acordes
@@ -85,6 +86,7 @@ fun SongPracticeScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = accordioTopBarColors(),
                 title = { Text(stringResource(R.string.practice_changes_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

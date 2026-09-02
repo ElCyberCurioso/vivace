@@ -38,6 +38,7 @@ import com.guitarchords.app.R
 import com.guitarchords.app.chords.ChordLibrary
 import kotlin.math.floor
 import kotlin.math.roundToInt
+import com.guitarchords.app.ui.icons.AccordioIcons
 
 /**
  * Mástil interactivo de 6 cuerdas × 5 trastes visibles. Tocar una casilla
@@ -114,7 +115,7 @@ fun BaseFretControls(baseFret: Int, onChange: (Int) -> Unit) {
         IconButton(
             onClick = { if (baseFret < 12) onChange(baseFret + 1) },
             enabled = baseFret < 12
-        ) { Icon(Icons.Default.Add, stringResource(R.string.fret_up)) }
+        ) { Icon(AccordioIcons.mas(), stringResource(R.string.fret_up)) }
     }
 }
 

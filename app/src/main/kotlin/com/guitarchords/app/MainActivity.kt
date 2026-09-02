@@ -54,11 +54,16 @@ class MainActivity : ComponentActivity() {
                 ThemeMode.DARK -> true
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()
             }
-            // Iconos de las barras de sistema según el tema elegido (no el del
-            // sistema): claros sobre fondo oscuro y viceversa, siempre legibles.
+            /*
+             * Iconos de las barras del sistema. La barra de ESTADO queda sobre la
+             * barra superior de la app, que es el teal macizo del kit en los dos
+             * temas: ahí los iconos van siempre claros, o se pierden contra el
+             * teal en modo claro. La de navegación sí sigue al tema, que se apoya
+             * en el fondo de la pantalla.
+             */
             LaunchedEffect(dark) {
                 WindowCompat.getInsetsController(window, window.decorView).apply {
-                    isAppearanceLightStatusBars = !dark
+                    isAppearanceLightStatusBars = false
                     isAppearanceLightNavigationBars = !dark
                 }
             }

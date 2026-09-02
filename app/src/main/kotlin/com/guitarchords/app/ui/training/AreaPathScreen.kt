@@ -39,6 +39,7 @@ import com.guitarchords.app.training.TrainingArea
 import com.guitarchords.app.ui.theme.extendedColors
 import com.guitarchords.app.ui.training.components.LevelBadge
 import com.guitarchords.app.ui.training.components.titleRes
+import com.guitarchords.app.ui.theme.accordioTopBarColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,6 +59,7 @@ fun AreaPathScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = accordioTopBarColors(),
                 title = { Text(stringResource(area.titleRes)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

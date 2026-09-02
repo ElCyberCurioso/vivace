@@ -14,7 +14,8 @@ export function fakeD1(inicial = {}) {
     playlists: inicial.playlists || [],
     song_versions: inicial.song_versions || [],
     proposals: inicial.proposals || [],
-    auth_attempts: inicial.auth_attempts || []
+    auth_attempts: inicial.auth_attempts || [],
+    settings: inicial.settings || []
   };
 
   const norm = (sql) => sql.replace(/\s+/g, " ").trim();
@@ -48,6 +49,9 @@ export function fakeD1(inicial = {}) {
       return { maxima: suyas.reduce((m, x) => Math.max(m, x.position || 0), 0) };
     }
     if (q.includes("COUNT(*) AS n FROM users")) return { n: t.users.length };
+    if (q.startsWith("SELECT value FROM settings WHERE key")) {
+      return t.settings.find((x) => x.key === v[0]) || null;
+    }
     return null;
   }
 
@@ -222,6 +226,12 @@ export function fakeD1(inicial = {}) {
     }
     if (q.startsWith("DELETE FROM auth_attempts")) {
       t.auth_attempts = t.auth_attempts.filter((a) => a.key !== v[0]);
+      return;
+    }
+    if (q.startsWith("INSERT INTO settings")) {
+      const y = t.settings.find((x) => x.key === v[0]);
+      if (y) Object.assign(y, { value: v[1], updated_at: v[2] });
+      else t.settings.push({ key: v[0], value: v[1], updated_at: v[2] });
       return;
     }
     if (q.startsWith("SELECT count, window_start FROM auth_attempts")) return;

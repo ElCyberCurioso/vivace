@@ -43,6 +43,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.guitarchords.app.R
 import com.guitarchords.app.metronome.MetronomeEngine
 import com.guitarchords.app.ui.theme.VivaceMono
+import com.guitarchords.app.ui.theme.accordioTopBarColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,6 +62,7 @@ fun MetronomeScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = accordioTopBarColors(),
                 title = { Text(stringResource(R.string.metronome_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }

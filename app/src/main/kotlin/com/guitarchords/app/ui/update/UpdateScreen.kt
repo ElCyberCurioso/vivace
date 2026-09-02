@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.guitarchords.app.R
+import com.guitarchords.app.ui.theme.accordioTopBarColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,6 +47,7 @@ fun UpdateScreen(
     Scaffold(
         topBar = {
             androidx.compose.material3.TopAppBar(
+                colors = accordioTopBarColors(),
                 title = { Text(stringResource(R.string.update_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

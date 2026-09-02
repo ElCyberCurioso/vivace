@@ -12,92 +12,265 @@
  */
 
 /** Hoja de estilos, servida en /static/vivace.css. */
-export const WEB_CSS = `  /* Vivace · estilo Nocturno. Oscuro por defecto; claro con [data-theme=light]
-     o si el sistema lo pide. Los nombres --vv-* son los del paquete de marca. */
+export const WEB_CSS = `  /* Accordio · paquete de estilo de marca (accordio-web-kit, claro + oscuro).
+     Los valores --ac-* salen tal cual de tokens.css y tokens.dark.css del kit;
+     encima va la capa semántica --vv-* que es la que piden los componentes.
+
+     Regla 9 del kit: los --vv-* cuelgan de los ROLES (--ac-action, --ac-active,
+     --ac-highlight, --ac-pending, --ac-nav-*), no de las rampas de marca. Los
+     roles ya cambian solos con el tema, así que casi nada hay que redefinir en
+     oscuro: la marca no se invierte; lo que cambia es quién hace de acción.
+     En oscuro el teal deja de contrastar y pasa a titular, y la acción la toma
+     el turquesa. */
   :root {
-    color-scheme: dark light;
-    --vv-bg:#0F1113; --vv-surface:#17191C; --vv-surface-alt:#1E2124;
-    --vv-border:#2B2D31; --vv-border-strong:#3A3D42;
-    --vv-text:#F2EFE9; --vv-text-muted:#A7ABB2; --vv-text-subtle:#8B8F96;
-    --vv-accent:#E8B04B; --vv-accent-strong:#C2762B; --vv-on-accent:#0F1113;
-    --vv-beat:#7FB2A0; --vv-danger:#E0654B;
-    --vv-accent-soft:rgba(232,176,75,.16);
-    --vv-glow:0 0 14px rgba(232,176,75,.85);
-    --vv-shadow-card:0 1px 2px rgba(0,0,0,.4);
-    --vv-font-ui:'Space Grotesk',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    color-scheme: light dark;
+
+    /* ---- kit: marca y rampas (iguales en los dos temas) ---- */
+    --ac-primary:#1A535C;
+    --ac-primary-100:#E3EEF0; --ac-primary-200:#BCD6DA; --ac-primary-300:#8DB6BD;
+    --ac-primary-400:#4E8A94; --ac-primary-600:#154650; --ac-primary-700:#113941;
+    --ac-primary-800:#0D2B31; --ac-primary-900:#081D21;
+    --ac-coral:#FF6B6B; --ac-coral-200:#FFCCCC; --ac-coral-400:#FF8888;
+    --ac-coral-600:#EE5253; --ac-coral-700:#C93B3C;
+    --ac-turquoise:#4ECDC4; --ac-turquoise-200:#C2F0EB; --ac-turquoise-300:#94E4DD;
+    --ac-turquoise-400:#6DD9D0; --ac-turquoise-600:#37AFA6; --ac-turquoise-700:#2A8A83;
+    --ac-yellow:#FFE66D; --ac-yellow-600:#F2CE3D; --ac-yellow-900:#6B550A;
+
+    /* ---- kit: superficies y texto (claro) ---- */
+    --ac-bg:#F7EFE3; --ac-bg-alt:#F3E3CD;
+    --ac-surface:#F2FAF6; --ac-surface-2:#FFFFFF;
+    --ac-ink:#12363D; --ac-body:#3F5257; --ac-muted:#7B8E92;
+    --ac-line:#DCE8E5; --ac-line-strong:#1A535C;
+
+    /* ---- kit: roles (esto es lo que cambia con el tema) ---- */
+    --ac-action:var(--ac-primary); --ac-action-hover:var(--ac-primary-600);
+    --ac-on-action:#F2FAF6;
+    --ac-highlight:var(--ac-coral); --ac-highlight-hover:var(--ac-coral-600);
+    --ac-on-highlight:#FFFFFF;
+    --ac-active:var(--ac-turquoise); --ac-pending:var(--ac-yellow);
+    --ac-focus:var(--ac-turquoise-700);
+    --ac-nav-bg:var(--ac-primary); --ac-nav-fg:#F2FAF6;
+    --ac-icon-color:var(--ac-primary);
+    --ac-pattern:url("/static/pattern.svg");
+
+    /* ---- kit: tipografía, radios, sombras y movimiento ---- */
+    --ac-font-heading:'Montserrat',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    --ac-font-body:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    --ac-radius-sm:8px; --ac-radius-md:12px; --ac-radius-lg:20px; --ac-radius-pill:999px;
+    --ac-shadow-sm:0 1px 2px rgba(18,54,61,.06), 0 2px 6px rgba(18,54,61,.05);
+    --ac-shadow-md:0 4px 10px rgba(18,54,61,.07), 0 12px 28px rgba(18,54,61,.07);
+    --ac-shadow-lg:0 10px 24px rgba(18,54,61,.10), 0 28px 60px rgba(18,54,61,.10);
+    --ac-ease:cubic-bezier(.2,.8,.2,1); --ac-dur:200ms;
+
+    /* ---- capa semántica de la web ---- */
+    --vv-bg:var(--ac-bg); --vv-surface:var(--ac-surface); --vv-surface-alt:var(--ac-surface-2);
+    --vv-border:var(--ac-line); --vv-border-strong:var(--ac-primary-200);
+    --vv-text:var(--ac-body); --vv-head:var(--ac-ink);
+    --vv-text-muted:var(--ac-muted); --vv-text-subtle:var(--ac-muted);
+    --vv-accent:var(--ac-action); --vv-accent-strong:var(--ac-action-hover);
+    --vv-on-accent:var(--ac-on-action); --vv-accent-soft:var(--ac-primary-100);
+    /* Estado seleccionado/activo: turquesa (regla 1, un acento por bloque). */
+    --vv-active:var(--ac-active); --vv-on-active:var(--ac-primary-800);
+    --vv-active-soft:var(--ac-turquoise-200);
+    /* Amarillo SOLO como estado: capo, estrellas, propuestas pendientes. */
+    --vv-state:var(--ac-pending); --vv-on-state:var(--ac-yellow-900);
+    --vv-state-soft:#FFFBE6; --vv-state-text:var(--ac-yellow-900);
+    --vv-danger-soft:#FFE9E9; --vv-danger-text:var(--ac-coral-700);
+    /* Regla 5: coral vale de relleno, no de texto. Sobre crema, el coral de
+       marca da 2,4:1; para LEER acordes hace falta la rampa 700. En oscuro sí
+       vale el rol, que ya viene aclarado (#FF8A8A sobre #0F2429). */
+    --vv-chord:var(--ac-coral-700); --vv-danger:var(--ac-coral-700);
+    --vv-danger-solid:var(--ac-highlight); --vv-on-danger:var(--ac-on-highlight);
+    --vv-beat:var(--ac-active);
+    --vv-focus:var(--ac-focus);
+    --vv-header-bg:var(--ac-nav-bg); --vv-header-text:var(--ac-nav-fg);
+    --vv-glow:none;
+    --vv-shadow-card:var(--ac-shadow-sm); --vv-shadow-pop:var(--ac-shadow-md);
+    --vv-font-ui:var(--ac-font-body); --vv-font-head:var(--ac-font-heading);
+    /* El kit no trae monoespaciada y la hoja no puede prescindir de ella: los
+       acordes van sobre la sílaba exacta, columna a columna. Se queda JetBrains
+       Mono para partitura, cifras y diagramas. */
     --vv-font-mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-    --vv-radius-sm:8px; --vv-radius-md:10px; --vv-radius-lg:16px;
+    --vv-radius-sm:var(--ac-radius-sm); --vv-radius-md:var(--ac-radius-md);
+    --vv-radius-lg:var(--ac-radius-lg); --vv-radius-pill:var(--ac-radius-pill);
     /* Ancho de la hoja de partitura, en caracteres del tipo monoespaciado.
        Va en ch y no en px a propósito: al cambiar el tamaño de letra, la hoja
        sigue teniendo el mismo número de columnas y la lectura no se descoloca. */
     --vv-sheet:68ch;
   }
-  [data-theme=light] {
-    color-scheme: light;
-    --vv-bg:#F6F4EF; --vv-surface:#FFFFFF; --vv-surface-alt:#EFEDE7;
-    --vv-border:#E2DED5; --vv-border-strong:#D5D0C5;
-    --vv-text:#16181A; --vv-text-muted:#4A4D52; --vv-text-subtle:#6B7076;
-    --vv-accent:#B8791F; --vv-accent-strong:#8F5A12; --vv-on-accent:#FFFFFF;
-    --vv-beat:#2F6B5B; --vv-danger:#B33F26;
-    --vv-accent-soft:rgba(184,121,31,.14); --vv-glow:none;
-    --vv-shadow-card:0 1px 2px rgba(22,24,26,.06);
-  }
-  @media (prefers-color-scheme: light) {
-    :root:not([data-theme=dark]):not([data-theme=light]) {
-      color-scheme: light;
-      --vv-bg:#F6F4EF; --vv-surface:#FFFFFF; --vv-surface-alt:#EFEDE7;
-      --vv-border:#E2DED5; --vv-border-strong:#D5D0C5;
-      --vv-text:#16181A; --vv-text-muted:#4A4D52; --vv-text-subtle:#6B7076;
-      --vv-accent:#B8791F; --vv-accent-strong:#8F5A12; --vv-on-accent:#FFFFFF;
-      --vv-beat:#2F6B5B; --vv-danger:#B33F26;
-      --vv-accent-soft:rgba(184,121,31,.14); --vv-glow:none;
-      --vv-shadow-card:0 1px 2px rgba(22,24,26,.06);
+
+  /* Modo oscuro del kit (tokens.dark.css), palabra por palabra. Se escribe dos
+     veces —media query y atributo— igual que en el kit: el atributo tiene que
+     poder ganarle al sistema en los dos sentidos. */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme=light]) {
+      color-scheme: dark;
+      --ac-bg:#0F2429; --ac-bg-alt:#122E34;
+      --ac-surface:#163A41; --ac-surface-2:#1C464E;
+      --ac-ink:#F2FAF6; --ac-body:#C6DCDE; --ac-muted:#8CA6AA;
+      --ac-line:#26545C; --ac-line-strong:#94E4DD;
+      --ac-primary:#94E4DD; --ac-coral:#FF8A8A; --ac-turquoise:#6DD9D0; --ac-yellow:#FFEA82;
+      --ac-action:#4ECDC4; --ac-action-hover:#94E4DD;
+      --ac-highlight:#FF8A8A; --ac-highlight-hover:#FFA8A8;
+      --ac-active:#6DD9D0; --ac-pending:#FFE66D; --ac-focus:#94E4DD;
+      --ac-on-action:#08262B; --ac-on-highlight:#3B0E0E;
+      --ac-nav-bg:#0B1D21; --ac-nav-fg:#F2FAF6;
+      --ac-icon-color:#DCECEE;
+      --ac-pattern:url("/static/pattern-dark.svg");
+      --ac-shadow-sm:0 1px 2px rgba(0,0,0,.30), 0 2px 6px rgba(0,0,0,.24);
+      --ac-shadow-md:0 4px 10px rgba(0,0,0,.34), 0 12px 28px rgba(0,0,0,.30);
+      --ac-shadow-lg:0 10px 24px rgba(0,0,0,.40), 0 28px 60px rgba(0,0,0,.36);
+      /* Lo único que la capa semántica tiene que rectificar en oscuro: los
+         rellenos tintados y el borde fuerte, que en claro salen de rampas
+         claras, y el coral de texto, que aquí ya es legible como rol. */
+      --vv-border-strong:#2F636B;
+      --vv-accent-soft:rgba(78,205,196,.16);
+      --vv-active-soft:rgba(109,217,208,.20);
+      --vv-chord:var(--ac-highlight); --vv-danger:var(--ac-highlight);
+      --vv-on-active:var(--ac-primary-800);
+      --vv-state-soft:rgba(255,230,109,.16); --vv-state-text:var(--ac-yellow);
+      --vv-danger-soft:rgba(255,138,138,.16); --vv-danger-text:var(--ac-highlight);
+      /* El gris del kit (#8CA6AA) se queda en 3,6:1 sobre la tarjeta oscura: el
+         artista y las notas al pie costaban de leer. Se sube el ROL de texto
+         secundario; el token de marca --ac-muted no se toca. */
+      --vv-text-muted:#A9C3C6; --vv-text-subtle:#93AFB2;
     }
   }
+  [data-theme=dark] {
+    color-scheme: dark;
+    --ac-bg:#0F2429; --ac-bg-alt:#122E34;
+    --ac-surface:#163A41; --ac-surface-2:#1C464E;
+    --ac-ink:#F2FAF6; --ac-body:#C6DCDE; --ac-muted:#8CA6AA;
+    --ac-line:#26545C; --ac-line-strong:#94E4DD;
+    --ac-primary:#94E4DD; --ac-coral:#FF8A8A; --ac-turquoise:#6DD9D0; --ac-yellow:#FFEA82;
+    --ac-action:#4ECDC4; --ac-action-hover:#94E4DD;
+    --ac-highlight:#FF8A8A; --ac-highlight-hover:#FFA8A8;
+    --ac-active:#6DD9D0; --ac-pending:#FFE66D; --ac-focus:#94E4DD;
+    --ac-on-action:#08262B; --ac-on-highlight:#3B0E0E;
+    --ac-nav-bg:#0B1D21; --ac-nav-fg:#F2FAF6;
+    --ac-icon-color:#DCECEE;
+    --ac-pattern:url("/static/pattern-dark.svg");
+    --ac-shadow-sm:0 1px 2px rgba(0,0,0,.30), 0 2px 6px rgba(0,0,0,.24);
+    --ac-shadow-md:0 4px 10px rgba(0,0,0,.34), 0 12px 28px rgba(0,0,0,.30);
+    --ac-shadow-lg:0 10px 24px rgba(0,0,0,.40), 0 28px 60px rgba(0,0,0,.36);
+    --vv-border-strong:#2F636B;
+    --vv-accent-soft:rgba(78,205,196,.16);
+    --vv-active-soft:rgba(109,217,208,.20);
+    --vv-chord:var(--ac-highlight); --vv-danger:var(--ac-highlight);
+    --vv-on-active:var(--ac-primary-800);
+    --vv-state-soft:rgba(255,230,109,.16); --vv-state-text:var(--ac-yellow);
+    --vv-danger-soft:rgba(255,138,138,.16); --vv-danger-text:var(--ac-highlight);
+    --vv-text-muted:#A9C3C6; --vv-text-subtle:#93AFB2;
+  }
   * { box-sizing:border-box; }
-  a { color:var(--vv-accent); text-decoration:none; }
-  a:hover { color:var(--vv-accent-strong); }
-  a.brand { color:var(--vv-text); }
-  a.brand:hover { color:var(--vv-text); }
+  a { color:var(--ac-turquoise-700); text-decoration:none; }
+  a:hover { color:var(--vv-accent); }
+  a.brand { color:var(--vv-header-text); }
+  a.brand:hover { color:var(--vv-header-text); }
+  /* Fondo crema con el mosaico de notas del kit (regla 6: solo sobre crema y
+     sin tintar). En oscuro no se pone: el mosaico está dibujado en tonos crema
+     y sobre el fondo oscuro sería ruido. */
   body { margin:0; background:var(--vv-bg); color:var(--vv-text);
-         font:16px/1.5 var(--vv-font-ui); -webkit-font-smoothing:antialiased; }
+         font:400 16px/1.6 var(--vv-font-ui); -webkit-font-smoothing:antialiased; }
+  /* Mosaico de notas de fondo (regla 6): va en el fondo de PÁGINA y tal cual,
+     sin tintar. El kit trae su versión night, así que ahora sale en los dos
+     temas: la elige el token --ac-pattern. En una capa propia detrás de todo y
+     con pointer-events en none, para no comerse ningún clic. */
+  body::before { content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
+                 background-image:var(--ac-pattern); background-repeat:repeat;
+                 background-size:400px 400px; }
+  h1, h2, h3, h4 { font-family:var(--vv-font-head); color:var(--vv-head);
+                   font-weight:700; letter-spacing:-.02em; line-height:1.15; }
   button, input, select, textarea { font:inherit; color:inherit; }
-  :focus-visible { outline:2px solid var(--vv-accent); outline-offset:2px; }
-  ::selection { background:var(--vv-accent-soft); }
-  button { cursor:pointer; border:1px solid var(--vv-border-strong); background:transparent;
-           color:var(--vv-text); border-radius:var(--vv-radius-md); padding:9px 15px;
-           font-weight:500; white-space:nowrap; }
-  button:hover { background:var(--vv-accent-soft); }
+  /* Regla 8 del kit: el foco se ve siempre, y en turquesa. */
+  :focus-visible { outline:3px solid var(--vv-focus); outline-offset:2px;
+                   border-radius:var(--vv-radius-sm); }
+  ::selection { background:var(--ac-turquoise-200); color:var(--ac-ink); }
+  /* Nada cuadrado (regla 3): los controles son píldoras. */
+  /* Los botones secundarios tienen SUPERFICIE, no solo contorno: sobre el crema
+     con mosaico, un borde pálido y letra fina no se leían como algo pulsable, y
+     «Cargar más» directamente se perdía en el fondo. */
+  button { cursor:pointer; border:1.5px solid var(--vv-border-strong);
+           background:var(--vv-surface-alt); color:var(--vv-accent);
+           border-radius:var(--vv-radius-pill); padding:9px 18px;
+           font-weight:600; font-size:14px; white-space:nowrap;
+           box-shadow:var(--vv-shadow-card);
+           transition:background var(--ac-dur) var(--ac-ease), color var(--ac-dur) var(--ac-ease),
+                      border-color var(--ac-dur) var(--ac-ease); }
+  /* El tinte de hover es para los CONTROLES. Las tarjetas también son <button>
+     (se pulsan enteras), pero tienen superficie propia, y --vv-accent-soft es
+     semitransparente: al pasar por encima dejaban ver el mosaico del fondo a
+     través de la tarjeta. Se excluyen aquí y se les da su propio hover. */
+  button:hover:not(.card):not(.chordCard) { background:var(--vv-accent-soft);
+                                            border-color:var(--vv-accent); }
   button.primary { background:var(--vv-accent); color:var(--vv-on-accent);
-                   border-color:transparent; font-weight:600; }
+                   border-color:transparent; }
   button.primary:hover { background:var(--vv-accent-strong); }
-  button.ghost { border-color:transparent; background:transparent; }
+  button.ghost { border-color:transparent; background:transparent; color:var(--vv-text);
+                 box-shadow:none; }
   button:disabled { opacity:.45; cursor:default; background:transparent; }
   input[type=text], input[type=email], input[type=password], input[type=url], textarea, select {
-    background:var(--vv-surface-alt); border:1px solid var(--vv-border);
-    border-radius:var(--vv-radius-md); padding:10px 12px; width:100%; }
+    background:var(--vv-surface-alt); border:1.5px solid var(--vv-border);
+    border-radius:var(--vv-radius-md); padding:10px 14px; width:100%; color:var(--vv-head); }
+  input:hover, textarea:hover, select:hover { border-color:var(--ac-turquoise-400); }
+  input:focus, textarea:focus, select:focus { border-color:var(--vv-focus); outline:none;
+    box-shadow:0 0 0 3px var(--vv-active-soft); }
   input::placeholder, textarea::placeholder { color:var(--vv-text-subtle); }
+  /* Barra superior teal maciza, como en la guía del kit. */
   header { position:sticky; top:0; z-index:10; display:flex; gap:12px; align-items:center;
-           padding:10px 16px; background:var(--vv-surface); border-bottom:1px solid var(--vv-border); }
-  header .brand { display:flex; align-items:center; gap:10px; min-width:0; }
+           padding:12px 24px; background:var(--vv-header-bg); color:var(--vv-header-text);
+           border-bottom:0; box-shadow:var(--ac-shadow-sm); }
+  header .brand { display:flex; align-items:center; gap:12px; min-width:0; }
   header .brand svg { flex:0 0 auto; }
-  header h1 { margin:0; font-size:22px; font-weight:500; letter-spacing:.01em; line-height:1; }
-  header .kicker { display:block; font-size:9px; letter-spacing:.22em; font-weight:500;
-                   text-transform:uppercase; color:var(--vv-text-subtle); margin-top:3px; }
+  header h1 { margin:0; font-size:22px; font-weight:700; letter-spacing:-.02em; line-height:1;
+              color:var(--vv-header-text); }
+  header .kicker { display:block; font-size:9px; letter-spacing:.18em; font-weight:600;
+                   text-transform:uppercase; color:var(--ac-turquoise-200); margin-top:4px; }
+  /* Sobre el teal, los botones de la cabecera van en claro. */
+  /* En la barra teal los botones NO llevan la superficie clara de los demás:
+     ahí el fondo ya es macizo y una píldora blanca con letra clara se quedaba
+     ilegible. Contorno claro y letra crema. */
+  header button { background:transparent; box-shadow:none;
+                  border-color:rgba(242,250,246,.45); color:var(--vv-header-text); }
+  /* El velo claro de antes quedaba casi del color del icono y se lo comía. Sobre
+     la barra siempre hay teal, así que el hover OSCURECE en vez de aclarar, y el
+     icono se pasa al amarillo de la marca (lo que el kit usa para los iconos de
+     la barra): amarillo sobre teal oscuro se ve de lejos.
+     Los :not() son para ganarle al hover genérico de los botones, que si no
+     repintaría el fondo en menta clara y volvería a comerse el icono. */
+  header button:hover:not(.card):not(.chordCard) {
+    background:rgba(8,29,33,.42); border-color:var(--ac-yellow); color:var(--ac-yellow); }
+  header button:hover .iconoTema { color:var(--ac-yellow); }
+  header button.primary { background:var(--ac-turquoise); color:var(--ac-primary-800);
+                          border-color:transparent; }
+  header button.primary:hover { background:var(--ac-turquoise-600); }
+  header #who { color:var(--ac-turquoise-200); }
   header .grow { flex:1; }
   main { padding:16px; max-width:1520px; margin:0 auto; }
   #listView, #authView { max-width:960px; margin:0 auto; }
   .tabs { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
-  .tabs button[aria-selected=true] { background:var(--vv-accent); color:var(--vv-on-accent);
-                                     border-color:transparent; font-weight:600; }
+  .tabs button { border-color:var(--vv-border-strong); color:var(--vv-accent); }
+  .tabs button[aria-selected=true] { background:var(--vv-active); color:var(--vv-on-active);
+                                     border-color:transparent; box-shadow:var(--vv-shadow-pop); }
+  .tabs button[aria-selected=true]:hover { background:var(--ac-turquoise-600); }
   .grid { display:grid; gap:10px; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); align-items:start; }
   /* Las tarjetas son <button>, y la regla de arriba les pone nowrap: sin esto
      un titulo largo se sale de la tarjeta por la derecha. */
   .card, .chordCard { white-space:normal; }
-  .card { display:block; text-align:left; width:100%; border:1px solid var(--vv-border);
-          border-radius:var(--vv-radius-lg); padding:14px 16px; background:var(--vv-surface);
-          box-shadow:var(--vv-shadow-card); }
-  .card:hover { border-color:var(--vv-accent); background:var(--vv-surface); }
+  .card { display:block; text-align:left; width:100%; border:1.5px solid transparent;
+          border-radius:var(--vv-radius-lg); padding:16px 18px; background:var(--vv-surface);
+          box-shadow:var(--vv-shadow-card);
+          transition:box-shadow var(--ac-dur) var(--ac-ease),
+                     border-color var(--ac-dur) var(--ac-ease),
+                     transform var(--ac-dur) var(--ac-ease); }
+  /* La tarjeta no cambia de color al pasar por encima: se levanta. Mantiene su
+     superficie opaca (si no, se transparenta sobre el mosaico) y solo se le
+     suben la sombra y el borde. */
+  .card:hover { background:var(--vv-surface); border-color:var(--vv-active);
+                box-shadow:var(--vv-shadow-pop); transform:translateY(-2px); }
+  .card:active { transform:translateY(0); box-shadow:var(--vv-shadow-card); }
+  .card .t { font-family:var(--vv-font-head); font-weight:700; letter-spacing:-.01em;
+             color:var(--vv-head); }
   .card .a { font-size:13px; color:var(--vv-text-muted); overflow-wrap:anywhere; }
   .card .t { font-weight:600; overflow-wrap:anywhere; }
   #vSource { border:1px solid var(--vv-border-strong); border-radius:var(--vv-radius-md);
@@ -108,8 +281,8 @@ export const WEB_CSS = `  /* Vivace · estilo Nocturno. Oscuro por defecto; clar
   .versions { display:flex; gap:6px; overflow-x:auto; padding:8px 14px;
               background:var(--vv-surface); border-bottom:1px solid var(--vv-border); }
   .versions button { flex:0 0 auto; padding:6px 12px; font-size:13px; }
-  .versions button[aria-pressed=true] { background:var(--vv-accent); color:var(--vv-on-accent);
-                                        border-color:transparent; font-weight:600; }
+  .versions button[aria-pressed=true] { background:var(--vv-active); color:var(--vv-on-active);
+                                        border-color:transparent; }
   .versions .sep { flex:1 1 auto; min-width:8px; }
   /* Fichas de la cola de revisión y del listado de usuarios. */
   .fila { display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap;
@@ -119,13 +292,16 @@ export const WEB_CSS = `  /* Vivace · estilo Nocturno. Oscuro por defecto; clar
   .fila .t { font-weight:600; overflow-wrap:anywhere; }
   .fila .meta { font-size:13px; color:var(--vv-text-muted); overflow-wrap:anywhere; }
   .fila .nota { margin-top:6px; font-size:14px; overflow-wrap:anywhere; }
-  .estado { font-size:11px; border-radius:999px; padding:2px 9px; border:1px solid var(--vv-border-strong);
-            color:var(--vv-text-muted); font-family:var(--vv-font-mono); }
-  .estado[data-s=pending] { color:var(--vv-accent); border-color:var(--vv-accent); }
+  .estado { font-size:12px; border-radius:var(--vv-radius-pill); padding:4px 12px;
+            border:1.5px solid transparent; background:var(--vv-accent-soft);
+            color:var(--vv-accent); font-weight:600; }
+  .estado[data-s=pending] { background:var(--vv-state); color:var(--vv-on-state);
+                            border-color:transparent; }
   .estado[data-s=approved] { color:var(--vv-beat); border-color:var(--vv-beat); }
   .estado[data-s=rejected], .estado[data-s=withdrawn] { color:var(--vv-danger); border-color:var(--vv-danger); }
-  .aviso { background:var(--vv-accent-soft); border:1px solid var(--vv-accent);
-           border-radius:var(--vv-radius-md); padding:10px 12px; margin-bottom:12px; font-size:14px; }
+  .aviso { background:var(--vv-active-soft); border:1.5px solid var(--ac-turquoise-400);
+           color:var(--vv-head); border-radius:var(--vv-radius-md); padding:11px 14px;
+           margin-bottom:12px; font-size:14px; }
   .filtros { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; align-items:flex-end; }
   /* La etiqueta va encima del control: antes el nombre del filtro solo existía
      como title=, que ni se lee con lector de pantalla ni se ve al tocar. */
@@ -135,27 +311,45 @@ export const WEB_CSS = `  /* Vivace · estilo Nocturno. Oscuro por defecto; clar
   /* El control ocupa el ancho de su etiqueta y NADA de flex propio: dentro de
      una columna, un flex-basis se convertiría en altura y salen cajas gigantes. */
   .filtro input, .filtro select { width:100%; flex:0 0 auto; }
-  #favFilter[aria-pressed=true] { background:var(--vv-accent); color:var(--vv-on-accent);
-                                  border-color:var(--vv-accent); }
+  /* El estado relleno lo pone .tool[aria-pressed=true] con --tono. */
+  #favFilter[aria-pressed=true] .ic { color:var(--ac-on-highlight); }
   .listas { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px; }
   .listas .etiqueta { font-size:11px; text-transform:uppercase; letter-spacing:.08em;
                       color:var(--vv-text-muted); }
   .chips { display:flex; gap:6px; flex-wrap:wrap; }
   .chip { border:1px solid var(--vv-border); border-radius:999px; padding:4px 12px;
           font-size:13px; background:transparent; color:inherit; cursor:pointer; }
-  .chip[aria-pressed=true] { background:var(--vv-accent); color:var(--vv-on-accent);
-                             border-color:var(--vv-accent); }
+  .chip[aria-pressed=true] { background:var(--vv-active); color:var(--vv-on-active);
+                             border-color:var(--vv-active); font-weight:600; }
   .card .fav { float:right; border:0; background:transparent; font-size:16px; line-height:1;
                padding:0 0 0 8px; cursor:pointer; color:var(--vv-text-muted); }
-  .card .fav[aria-pressed=true] { color:var(--vv-accent); }
+  .card .fav[aria-pressed=true] { color:var(--ac-coral); }
   .acciones { display:flex; gap:6px; margin-top:8px; }
-  .adminTool { border:1px solid var(--vv-border); border-radius:var(--vv-radius);
-               padding:14px; margin-bottom:12px; }
-  .adminTool h3 { margin:0 0 6px; font-size:15px; }
+  /* Antes: fondo transparente y un radio inexistente (--vv-radius), así que la
+     sección se leía sobre el mosaico del fondo y las esquinas salían rectas. */
+  .adminTool { border:1.5px solid var(--vv-border); border-radius:var(--vv-radius-lg);
+               background:var(--vv-surface); box-shadow:var(--vv-shadow-card);
+               padding:16px 18px; margin-bottom:12px; }
+  .adminTool h3 { margin:0 0 6px; font-size:16px; font-family:var(--vv-font-head);
+                  font-weight:700; letter-spacing:-.01em; color:var(--vv-head); }
   .adminTool p { margin:0 0 10px; font-size:13px; color:var(--vv-text-muted); }
-  .badge { display:inline-block; font-size:11px; border-radius:999px; padding:2px 9px;
-           border:1px solid var(--vv-border-strong); color:var(--vv-text-muted); margin-top:6px;
-           font-family:var(--vv-font-mono); }
+  /* Las etiquetas van en su propia fila con separación real: pegadas unas a
+     otras parecían una sola píldora partida. */
+  .etiquetas { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+  .badge { display:inline-block; font-size:12px; border-radius:var(--vv-radius-pill);
+           padding:4px 12px; border:1.5px solid transparent; background:var(--vv-accent-soft);
+           color:var(--vv-accent); font-weight:600; }
+  /* Cada etiqueta dice una cosa distinta, así que no todas son del mismo color:
+     categoría en el teal de marca, pública en turquesa (estado), privada sin
+     relleno y lista en amarillo. */
+  /* Además del color cambia la FORMA, que es lo que se distingue de un vistazo
+     y también en oscuro, donde varios tintes turquesa se parecen entre sí:
+     pública va rellena, privada solo de contorno y la lista en amarillo. */
+  .badge.publica { background:var(--vv-active); color:var(--vv-on-active); }
+  .badge.privada { background:transparent; border-color:var(--vv-border-strong);
+                   color:var(--vv-text-muted); }
+  .badge.lista { background:var(--vv-state-soft); color:var(--vv-state-text);
+                 border-color:var(--vv-state); }
   .msg { color:var(--vv-danger); min-height:1.2em; }
   .empty { color:var(--vv-text-muted); text-align:center; padding:40px 12px; }
   .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
@@ -171,18 +365,33 @@ export const WEB_CSS = `  /* Vivace · estilo Nocturno. Oscuro por defecto; clar
               los acordes van sobre la sílaba exacta, así que partir la línea
               no es una opción. */
            overflow-x:auto; }
-  /* ---- editor a dos paneles ---- */
-  .editor { max-width:1520px; margin:0 auto; display:flex; flex-direction:column; gap:12px; }
-  .editHead { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-  #editSplit { display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items:start; }
+  /* ---- editor: escribir · ver · ajustar ----
+     Las dos primeras columnas se reparten lo que sobra y la de ajustes tiene
+     ancho fijo: es un formulario, y estirarlo no lo hace más útil, mientras que
+     cada píxel de más en la hoja sí se nota al escribir. */
+  .editor { max-width:1760px; margin:0 auto; display:flex; flex-direction:column; gap:12px; }
+  /*
+   * Las tres columnas se alinean porque comparten estructura —cabecera de alto
+   * fijo y debajo una caja del mismo alto— y no por casualidad. La ficha llevaba
+   * su fondo en el propio panel, cabecera incluida, así que su caja empezaba
+   * donde las OTRAS tenían el rótulo: 38 px más arriba, y otros tantos de menos
+   * por abajo.
+   */
+  #editSplit { display:grid; grid-template-columns:1fr 1fr clamp(280px, 22vw, 340px); gap:14px;
+               align-items:stretch; --alto-editor:calc(100vh - 210px); }
   .pane { display:flex; flex-direction:column; gap:6px; min-width:0; }
   .pane .hd { display:flex; align-items:center; gap:8px; font-size:11px; letter-spacing:.18em;
-              text-transform:uppercase; color:var(--vv-text-subtle); min-height:38px; }
+              text-transform:uppercase; color:var(--vv-text-subtle);
+              height:38px; flex:0 0 auto; }
   .pane .hd small { letter-spacing:0; text-transform:none; font-size:12px; }
-  #eContent { height:58vh; min-height:280px; resize:vertical;
+  /* Un solo alto para las tres cajas: cambiarlo es tocar --alto-editor. */
+  #eContent, #ePreview, #eSideBox { height:var(--alto-editor); }
+  #eContent, #ePreview { min-height:320px; }
+  /* La hoja ocupa lo que hay: es el trabajo de verdad. */
+  #eContent { resize:vertical;
               font-family:var(--vv-font-mono); font-size:14px; line-height:1.45; white-space:pre; }
-  #ePreview { height:58vh; min-height:280px; overflow:auto;
-              background:var(--vv-surface); border:1px solid var(--vv-border);
+  #ePreview { overflow:auto;
+              background:var(--vv-surface); border:1.5px solid var(--vv-border);
               border-radius:var(--vv-radius-md); padding:10px 12px;
               font-family:var(--vv-font-mono); font-size:14px; line-height:1.45; }
   /* Misma altura de linea que el textarea: asi la linea N de la izquierda cae
@@ -190,9 +399,65 @@ export const WEB_CSS = `  /* Vivace · estilo Nocturno. Oscuro por defecto; clar
      visor se mantiene 1.35, que ahi se lee mas apretado y no hay con que
      comparar. */
   #ePreview .ln, #ePreview .tab { line-height:1.45; }
+
+  /* Columna de ajustes: se desplaza sola si no cabe, y los botones quedan
+     siempre abajo, pegados al borde de la tarjeta. */
+  #eSideBox { display:flex; flex-direction:column;
+              background:var(--vv-surface); border:1.5px solid var(--vv-border);
+              border-radius:var(--vv-radius-lg); box-shadow:var(--vv-shadow-card);
+              padding:14px; }
+  /*
+   * min-height:0 no es un adorno: sin él, un hijo flexible NO encoge por debajo
+   * de su contenido, así que la lista de campos empujaba la caja hacia abajo, el
+   * overflow no llegaba a activarse y había que recorrer la página entera para
+   * llegar al último campo. Con esto el scroll se queda dentro del panel.
+   */
+  #eSideBody { display:flex; flex-direction:column; gap:12px;
+               overflow-y:auto; flex:1 1 auto; min-height:0; padding-right:4px; }
+  #eSide label { display:block; font-size:13px; }
+  #eSide label input, #eSide label select { margin-top:4px; }
+  #eVersionHead { display:flex; flex-direction:column; gap:12px; }
+  #eAcciones { display:flex; flex-direction:column; gap:8px; flex:0 0 auto;
+               margin-top:12px; padding-top:12px; border-top:1.5px solid var(--vv-border); }
+  #eAcciones .msg:empty, #eAcciones .aviso.hidden { display:none; }
+
+  /*
+   * La ficha sigue siendo una COLUMNA mientras quepa, hasta 1000 px. Antes bajaba
+   * a lo ancho ya en 1200, y entonces para tocar la categoría o el capo había que
+   * recorrer toda la página: el panel dejaba de tener scroll propio. En un
+   * portátil de 1280 —o con la ventana sin maximizar— eso era el caso normal.
+   */
+  @media (max-width:1280px) {
+    /* La vista previa es lo primero que sobra: se escribe mirando el textarea. */
+    #editSplit { grid-template-columns:1.2fr 1fr clamp(260px, 24vw, 320px); }
+    /* Las aclaraciones del rótulo se parten en dos líneas y se salen de los
+       38 px de la cabecera. Son ayuda, no información: se quitan antes que
+       descuadrar las columnas. */
+    #editSplit .hd small { display:none; }
+  }
+  /*
+   * Pantalla baja (portátiles de 768, o con la ventana sin maximizar): los
+   * botones en columna se comían 156 px de los 390 que quedaban, y la ficha se
+   * veía por una rendija de dos campos. En fila ocupan la mitad.
+   */
+  @media (max-height:820px) and (min-width:1001px) {
+    #eAcciones { flex-direction:row; flex-wrap:wrap; align-items:center; }
+    #eAcciones button { flex:1 1 auto; }
+    #eAcciones .msg, #eAcciones .aviso { flex:1 1 100%; }
+  }
+  @media (max-width:1000px) {
+    /* Ya no caben tres: la ficha baja a lo ancho, en rejilla, y ahí sí fluye con
+       la página porque no hay ninguna columna con la que alinearse. */
+    #editSplit { grid-template-columns:1fr 1fr; }
+    #eSide { grid-column:1 / -1; }
+    #eSideBox { height:auto; }
+    #eSideBody { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+                 align-items:end; overflow:visible; }
+    #eAcciones { flex-direction:row; flex-wrap:wrap; align-items:center; }
+  }
   @media (max-width:900px) {
-    #editSplit, .editHead { grid-template-columns:1fr; }
-    #eContent, #ePreview { height:40vh; }
+    #editSplit { grid-template-columns:1fr; --alto-editor:40vh; }
+    #eContent, #ePreview { min-height:220px; }
   }
   label small { color:var(--vv-text-subtle); }
   /* ---- visor ---- */
@@ -220,7 +485,7 @@ export const WEB_CSS = `  /* Vivace · estilo Nocturno. Oscuro por defecto; clar
   /* El capo cambia cómo se toca la canción entera: va en ámbar macizo, que no
      se pueda pasar por alto como pasaba con la píldora gris de antes. */
   #vCapo { display:inline-flex; align-items:baseline; gap:6px; flex:0 0 auto;
-           background:var(--vv-accent); color:var(--vv-on-accent); border:0;
+           background:var(--vv-state); color:var(--vv-on-state); border:0;
            border-radius:999px; padding:3px 12px 4px; font-size:11px;
            font-weight:600; letter-spacing:.16em; text-transform:uppercase; }
   #vCapo .n { font-family:var(--vv-font-mono); font-size:15px; letter-spacing:0; }
@@ -253,7 +518,7 @@ export const WEB_CSS = `  /* Vivace · estilo Nocturno. Oscuro por defecto; clar
   #vSheet { width:var(--vv-sheet); max-width:100%; flex:0 0 auto; }
   .ln { white-space:pre; line-height:1.35; margin:0; }
   .tab { white-space:pre; line-height:1.35; color:var(--vv-text-muted); }
-  .chord { color:var(--vv-accent); font-weight:600; }
+  .chord { color:var(--vv-chord); font-weight:600; }
   #vBody .chord { cursor:pointer; border-radius:3px; }
   /* Globo de digitaciones al pasar por encima. Fuera del flujo y sin capturar
      el ratón: si lo capturase, entrar en él contaría como salir del acorde. */
@@ -262,15 +527,15 @@ export const WEB_CSS = `  /* Vivace · estilo Nocturno. Oscuro por defecto; clar
                 border:1px solid var(--vv-border-strong); border-radius:var(--vv-radius-md);
                 box-shadow:0 6px 24px rgba(0,0,0,.35); }
   #chordHover.on { display:flex; }
-  #chordHover .nm { font-family:var(--vv-font-mono); font-weight:600; color:var(--vv-accent);
+  #chordHover .nm { font-family:var(--vv-font-mono); font-weight:600; color:var(--vv-chord);
                     align-self:center; padding-right:2px; }
   /* Fila de botones para capo y traste base: un toque en vez de teclear. */
   .pills { display:flex; flex-wrap:wrap; gap:4px; }
   .pills button { padding:6px 10px; font-family:var(--vv-font-mono); font-size:13px;
                   min-width:38px; }
-  .pills button[aria-pressed=true] { background:var(--vv-accent); color:var(--vv-on-accent);
-                                     border-color:transparent; font-weight:600; }
-  #vBody .chord:hover, #vBody .chord:focus-visible { background:var(--vv-accent-soft); }
+  .pills button[aria-pressed=true] { background:var(--vv-active); color:var(--vv-on-active);
+                                     border-color:transparent; }
+  #vBody .chord:hover, #vBody .chord:focus-visible { background:var(--ac-coral-200); color:var(--ac-coral-700); }
   /* Los mandos y las versiones son dos recuadros en una columna propia a la
      izquierda de la partitura. Columna real, no algo flotando por encima: la
      hoja ocupa lo que queda y no hay que reservarle hueco a mano. */
@@ -291,8 +556,8 @@ export const WEB_CSS = `  /* Vivace · estilo Nocturno. Oscuro por defecto; clar
   .vRow { display:flex; flex-direction:column; gap:4px; padding:8px; border-radius:var(--vv-radius-md);
           border:1px solid transparent; cursor:pointer; background:transparent; text-align:left;
           white-space:normal; }
-  .vRow:hover { background:var(--vv-accent-soft); }
-  .vRow[aria-pressed=true] { border-color:var(--vv-accent); background:var(--vv-accent-soft); }
+  .vRow:hover { background:var(--vv-active-soft); }
+  .vRow[aria-pressed=true] { border-color:var(--vv-active); background:var(--vv-active-soft); }
   .vRow .num { font-family:var(--vv-font-mono); font-size:12px; color:var(--vv-text-subtle); }
   .vRow .nm { font-weight:600; overflow-wrap:anywhere; }
   .vRow .val { display:flex; align-items:center; gap:6px; }
@@ -300,13 +565,21 @@ export const WEB_CSS = `  /* Vivace · estilo Nocturno. Oscuro por defecto; clar
   .stars button, .stars span { border:0; background:none; padding:0 1px; font-size:15px;
                                line-height:1; color:var(--vv-border-strong); cursor:default; }
   .stars button { cursor:pointer; }
-  .stars .on { color:var(--vv-accent); }
+  .stars .on { color:var(--ac-yellow-600); }
   .nota { font-family:var(--vv-font-mono); font-size:12px; color:var(--vv-text-muted); }
   /* Comentarios, al final de la partitura. */
   #vComments { max-width:100%; margin:32px 0 0; border-top:1px solid var(--vv-border);
                padding-top:16px; font-family:var(--vv-font-ui); font-size:15px; }
-  #vComments h4 { margin:0 0 12px; font-size:11px; letter-spacing:.18em; text-transform:uppercase;
-                  color:var(--vv-text-subtle); font-weight:600; }
+  #vComments h4, #vRelated h4 { margin:0 0 12px; font-size:11px; letter-spacing:.18em;
+                  text-transform:uppercase; color:var(--vv-text-subtle); font-weight:600; }
+  /* Recomendadas al pie de la partitura: mismas tarjetas que el catálogo, en
+     una rejilla más apretada porque aquí compiten con la hoja, no la sustituyen. */
+  #vRelated { max-width:100%; margin:28px 0 0; border-top:1px solid var(--vv-border);
+              padding-top:16px; font-family:var(--vv-font-ui); font-size:15px; }
+  #vRelated:empty { display:none; }
+  #vRelated h4 { color:var(--vv-chord); }
+  .relGrid { display:grid; gap:10px; grid-template-columns:repeat(auto-fill,minmax(210px,1fr));
+             align-items:start; }
   .comentario { padding:10px 0; border-bottom:1px solid var(--vv-border); }
   .comentario .quien { font-size:13px; color:var(--vv-text-muted); display:flex; gap:8px; align-items:baseline; }
   .comentario .texto { white-space:pre-wrap; overflow-wrap:anywhere; margin-top:4px; }
@@ -314,40 +587,139 @@ export const WEB_CSS = `  /* Vivace · estilo Nocturno. Oscuro por defecto; clar
                         padding:0; cursor:pointer; }
   #vCommentForm { display:flex; flex-direction:column; gap:8px; margin-top:12px; }
   #vCommentForm textarea { min-height:80px; font-family:var(--vv-font-ui); }
-  /* En estrecho no caben dos columnas: los recuadros pasan encima de la hoja,
-     apilados, y se les limita la altura para que quede partitura a la vista. */
+  /* ---- visor en pantalla estrecha ---- */
+  /* Con selector de elemento a propósito: .tool también fija display y, a
+     igualdad de peso, ganaba la que va después en la hoja. */
+  button.soloEstrecho { display:none; }
   @media (max-width:900px) {
+    /*
+     * Barra de una sola línea: atrás, título y un botón de acciones. Antes se
+     * apilaba en tres filas y se comía un tercio de la pantalla, que es hoja
+     * que no se lee. Lo que había en la barra vive ahora en el menú.
+     */
+    #vHead { grid-template-columns:auto 1fr auto; gap:8px; padding:6px 10px;
+             position:relative; }
+    #vHead .vMeta { min-width:0; flex-wrap:nowrap; gap:8px; }
+    #vHead .titulo { min-width:0; }
+    #vHead .lado.der { justify-content:flex-end; }
+    #vClose { padding:6px 10px; }
+    /* El capo se queda —cambia cómo suena todo— pero en pequeño. */
+    #vCapo { padding:2px 8px 3px; font-size:10px; }
+    #vCapo .n { font-size:13px; }
+
+    /* Menú de acciones colgando del botón. */
+    #vMenu { position:absolute; top:calc(100% + 6px); right:8px; z-index:32;
+             display:flex; flex-direction:column; align-items:stretch; gap:8px;
+             min-width:190px; padding:10px; background:var(--vv-surface);
+             border:1.5px solid var(--vv-border); border-radius:var(--vv-radius-lg);
+             box-shadow:var(--ac-shadow-lg); }
+    #vMenu[hidden] { display:none; }
+    #vMenu > * { justify-content:flex-start; width:100%; }
+    #vMenu #vSource { padding:9px 14px; border:1.5px solid var(--vv-border-strong);
+                      border-radius:var(--vv-radius-pill); font-weight:600;
+                      font-size:14px; background:var(--vv-surface-alt); }
+    button.soloEstrecho { display:inline-flex; }
+
+    /*
+     * Los mandos, en un panel que sube desde abajo. En el móvil la partitura es
+     * lo único que tiene que estar en pantalla; los mandos se piden, se usan y
+     * se van. Va anclado abajo porque es donde llega el pulgar, y con velo para
+     * que quede claro que el resto está en pausa.
+     */
     #vMain { flex-direction:column; gap:10px; padding:10px; }
-    #vSide { flex:0 0 auto; max-height:46vh; }
+    /* Sin reserva de barra: en el móvil el desplazamiento va por encima y esos
+       ~15 px son ancho de hoja, que es lo que escasea. */
+    #vBody { padding:12px 12px 60px; scrollbar-gutter:auto; }
+    #vSide { position:fixed; left:0; right:0; bottom:0; z-index:31;
+             flex:0 0 auto; max-height:76vh; overflow:auto;
+             padding:10px 14px calc(16px + env(safe-area-inset-bottom));
+             background:var(--vv-surface); border-top:1.5px solid var(--vv-border);
+             border-radius:var(--vv-radius-lg) var(--vv-radius-lg) 0 0;
+             box-shadow:var(--ac-shadow-lg);
+             transform:translateY(101%); transition:transform 280ms var(--ac-ease); }
+    /* Asa: dice «esto se arrastra/se cierra» sin gastar una línea de texto. */
+    #vSide::before { content:""; display:block; width:44px; height:4px; flex:0 0 auto;
+                     border-radius:999px; background:var(--vv-border-strong);
+                     margin:0 auto 10px; }
+    #viewer.conMandos #vSide { transform:none; }
+    /* Cerrar también con un botón: tocar fuera funciona, pero no se ve. */
+    #vToolsClose { position:absolute; top:8px; right:10px; padding:6px 12px;
+                   font-size:13px; color:var(--vv-accent); }
+    #vSide { position:fixed; }
+    /* Dentro del panel, el recuadro de mandos ya no necesita su propia caja. */
+    #vCtrl { background:transparent; border:0; box-shadow:none; padding:0; }
+    #vCtrl .row { flex-wrap:wrap; }
+    #vVelo { position:fixed; inset:0; z-index:30; background:rgba(8,29,33,.45);
+             border:0; padding:0; }
+
+    /* El botón que lo abre: abajo, al alcance del pulgar y sobre la hoja. */
+    #vTools { position:fixed; z-index:29; right:16px;
+              bottom:calc(16px + env(safe-area-inset-bottom));
+              padding:12px 20px; background:var(--vv-accent); color:var(--vv-on-accent);
+              border-color:transparent; box-shadow:var(--ac-shadow-lg); }
+    #vTools .ic { color:var(--vv-on-accent); --ac-icon-accent:var(--vv-on-accent); }
+    #viewer.conMandos #vTools { display:none; }
+
+    /* Las versiones se leen al terminar la partitura, no dentro de los mandos:
+       ahí es donde se decide «pruebo esta otra». Las mueve colocarVersiones(). */
+    #vBody > #vVersionPanel { margin-top:28px; max-height:none; }
+  }
+  @media (max-width:560px) {
+    /* En el móvil la cabecera se queda con lo imprescindible: marca, tema y
+       salir. El lema y el nombre de quien entra partían la barra en dos líneas. */
+    header { padding:10px 12px; gap:8px; }
+    header .kicker { display:none; }
+    header #who { display:none; }
+    header h1 { font-size:19px; }
+
+    /* En la barra solo queda el botón de acciones, y ahí basta el icono; dentro
+       del menú los nombres se leen enteros. */
+    #vHead > .lado .tool span { position:absolute; width:1px; height:1px;
+                                overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+    #vHead > .lado .tool { padding:8px 10px; }
+    #vTitle, #vArtist { font-size:14px; }
+    /* Título y artista en una línea, con puntos suspensivos si no cabe. */
+    #vHead .titulo > * { max-width:46vw; }
   }
   #vCtrl .row label { font-size:12px; color:var(--vv-text-muted); white-space:nowrap; }
+  #vTone { color:var(--vv-accent); font-weight:600; }
   #vCtrl input[type=range] { flex:1; min-width:80px; width:auto; padding:0; border:0;
                              background:transparent; accent-color:var(--vv-accent); }
   /* Cifras (BPM, tono, velocidad, capo) siempre en la mono de la marca. */
   #vSpeedVal, #vBpmVal, #vTone {
     font-family:var(--vv-font-mono); font-variant-numeric:tabular-nums; }
   .beat { width:12px; height:12px; border-radius:50%; background:var(--vv-border-strong); display:inline-block; }
-  .beat.on { background:var(--vv-accent); box-shadow:var(--vv-glow); }
+  .beat.on { background:var(--vv-state); box-shadow:var(--vv-glow); }
   /* ---- acordes ---- */
-  .chordSvg { display:block; }
+  .chordSvg { display:block; color:var(--ac-primary); }
   .chordBar { display:flex; gap:8px; overflow-x:auto; padding:8px 14px; background:var(--vv-surface);
               border-bottom:1px solid var(--vv-border); }
   .chordBar button { flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:2px;
                      padding:6px 8px; border-color:transparent; }
-  .chordBar .nm { font-family:var(--vv-font-mono); font-size:12px; font-weight:600; color:var(--vv-accent); }
+  .chordBar .nm { font-family:var(--vv-font-mono); font-size:12px; font-weight:600; color:var(--vv-chord); }
   .chordBar .none { color:var(--vv-text-subtle); font-size:13px; padding:8px 4px; white-space:nowrap; }
-  .modal { position:fixed; inset:0; z-index:40; background:rgba(0,0,0,.55);
+  .modal { position:fixed; inset:0; z-index:40; background:rgba(8,29,33,.55);
            display:flex; align-items:center; justify-content:center; padding:16px; }
-  .modalBox { background:var(--vv-surface); border:1px solid var(--vv-border); width:100%;
+  .modalBox { background:var(--vv-surface); border:1.5px solid var(--vv-border); width:100%;
+              box-shadow:var(--ac-shadow-lg);
               border-radius:var(--vv-radius-lg); padding:16px; max-width:780px; max-height:86vh;
               overflow:auto; display:flex; flex-direction:column; gap:12px; }
-  .modalBox h3 { margin:0; font-size:20px; font-family:var(--vv-font-mono);
+  .modalBox h3 { margin:0; font-size:20px; font-family:var(--vv-font-head); font-weight:700;
+                 letter-spacing:-.02em; color:var(--vv-head);
                  min-width:0; overflow-wrap:anywhere; }
   .chordCard .nm { overflow-wrap:anywhere; text-align:center; }
   .chordGrid { display:grid; gap:10px; grid-template-columns:repeat(auto-fill,minmax(118px,1fr)); }
   .chordCard { display:flex; flex-direction:column; align-items:center; gap:4px; padding:10px;
-               border:1px solid var(--vv-border); border-radius:var(--vv-radius-md);
-               background:var(--vv-surface); }
+               border:1.5px solid var(--vv-border); border-radius:var(--vv-radius-md);
+               background:var(--vv-surface);
+               transition:box-shadow var(--ac-dur) var(--ac-ease),
+                          border-color var(--ac-dur) var(--ac-ease),
+                          transform var(--ac-dur) var(--ac-ease); }
+  /* Mismo trato que las tarjetas de partitura: las del diccionario también son
+     <button> con superficie propia. */
+  button.chordCard:hover { background:var(--vv-surface); border-color:var(--vv-active);
+                           box-shadow:var(--vv-shadow-pop); transform:translateY(-2px); }
+  button.chordCard:active { transform:translateY(0); box-shadow:none; }
   .chordCard .nm { font-family:var(--vv-font-mono); font-weight:600; }
   .chordCard .va { font-size:11px; color:var(--vv-text-subtle); }
   .posRow { display:flex; gap:12px; align-items:center; flex-wrap:wrap; padding:10px;
@@ -356,6 +728,148 @@ export const WEB_CSS = `  /* Vivace · estilo Nocturno. Oscuro por defecto; clar
   .posRow .lbl { font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--vv-text-subtle); }
   .posRow .grp { display:flex; gap:4px; align-items:center; }
   .posRow .pills button { padding:4px 8px; min-width:30px; font-size:12px; }
+  /* Avisos flotantes y diálogos propios: sustituyen a alert/confirm/prompt del
+     navegador, que salían con la tipografía y los colores del sistema y encima
+     bloqueaban la página entera mientras estaban abiertos. */
+  .toasts { position:fixed; z-index:60; left:50%; transform:translateX(-50%);
+            bottom:calc(16px + env(safe-area-inset-bottom)); display:flex; gap:8px;
+            flex-direction:column; align-items:stretch; pointer-events:none;
+            width:min(440px,calc(100vw - 32px)); }
+  .toast { pointer-events:auto; cursor:pointer; background:var(--vv-surface);
+           border:1.5px solid var(--vv-border); border-left:4px solid var(--vv-accent);
+           border-radius:var(--vv-radius-md); box-shadow:var(--ac-shadow-lg);
+           padding:11px 14px; font-size:14px; color:var(--vv-text); overflow-wrap:anywhere;
+           transition:opacity .18s ease, transform .18s ease; }
+  .toast.ok { border-left-color:var(--ac-turquoise); }
+  .toast.error { border-left-color:var(--ac-coral); }
+  .toast.in { opacity:0; transform:translateY(10px); }
+  .toast.out { opacity:0; transform:translateY(6px); }
+  .dlgBox { max-width:440px; }
+  .dlgText { margin:0; color:var(--vv-text-muted); white-space:pre-line; overflow-wrap:anywhere; }
+  .dlgField { display:flex; flex-direction:column; gap:6px; }
+  .dlgField .lbl { font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+                   color:var(--vv-text-subtle); }
+  .dlgBtns { display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; }
+  button.danger { background:var(--vv-danger-solid); color:var(--vv-on-danger);
+                  border-color:transparent; }
+  button.danger:hover { background:var(--ac-coral-600); }
+  /* Quien pide menos movimiento en el sistema no ve el levantamiento: se queda
+     el cambio de sombra y borde, que ya dice lo mismo. */
+  @media (prefers-reduced-motion: reduce) {
+    #vSide { transition:none; }
+    .card, .chordCard, .toast, button { transition:none; }
+    .card:hover, button.chordCard:hover, .card:active, button.chordCard:active { transform:none; }
+  }
+  /* Botón de solo icono: cuadrado, redondo y sin el relleno de los botones de
+     texto. Vale para la cabecera y para cualquier control que sea solo símbolo. */
+  .iconBtn { display:inline-grid; place-items:center; width:40px; height:40px; padding:0; }
+  .iconBtn svg { width:20px; height:20px; display:block; }
+
+  /* Sol y luna comparten hueco y se turnan: el que entra llega girando desde
+     -90°, el que sale se va girando y encogiendo. Se anima transform y opacity
+     (las dos las resuelve el compositor), no display, que no se puede animar. */
+  .iconoTema .sol, .iconoTema .luna {
+    transform-origin:12px 12px;
+    transition:transform 340ms var(--ac-ease), opacity 220ms var(--ac-ease);
+  }
+  .iconoTema .luna { opacity:0; transform:rotate(-90deg) scale(.4); }
+  .iconoTema .sol { opacity:1; transform:none; }
+  /* Los rayos, además, se abren al aparecer el sol. */
+  .iconoTema .sol path { transition:opacity 220ms var(--ac-ease) 120ms; }
+  #themeBtn:hover .iconoTema .sol { transform:rotate(20deg); }
+  #themeBtn:hover .iconoTema .luna { transform:rotate(-14deg); }
+
+  [data-theme=dark] .iconoTema .sol { opacity:0; transform:rotate(90deg) scale(.4); }
+  [data-theme=dark] .iconoTema .sol path { opacity:0; transition-delay:0ms; }
+  [data-theme=dark] .iconoTema .luna { opacity:1; transform:none; }
+  [data-theme=dark] #themeBtn:hover .iconoTema .sol { transform:rotate(90deg) scale(.4); }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme=light]) .iconoTema .sol { opacity:0; transform:rotate(90deg) scale(.4); }
+    :root:not([data-theme=light]) .iconoTema .sol path { opacity:0; transition-delay:0ms; }
+    :root:not([data-theme=light]) .iconoTema .luna { opacity:1; transform:none; }
+    :root:not([data-theme=light]) #themeBtn:hover .iconoTema .sol { transform:rotate(90deg) scale(.4); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .iconoTema .sol, .iconoTema .luna, .iconoTema .sol path { transition:none; }
+    #themeBtn:hover .iconoTema .sol, #themeBtn:hover .iconoTema .luna { transform:none; }
+  }
+  /* Quien pide menos movimiento en el sistema no ve el levantamiento: se queda
+     el cambio de sombra y borde, que ya dice lo mismo. */
+  @media (prefers-reduced-motion: reduce) {
+    .card, .chordCard, .toast, button { transition:none; }
+    .card:hover, button.chordCard:hover, .card:active, button.chordCard:active { transform:none; }
+  }
+  /* ---- botones con icono ---- */
+  .tool { display:inline-flex; align-items:center; gap:8px; }
+  .ic { width:18px; height:18px; flex:0 0 auto; }
+
+  /*
+   * Cada herramienta del visor lleva el color de su papel, y no seis botones de
+   * texto iguales: turquesa lo que corre, amarillo el pulso, coral los acordes
+   * y teal el tono. El color lo hereda todo el bloque, así que añadir una
+   * herramienta nueva es elegirle color, no repetir cinco reglas.
+   *
+   * Dos variables y no una: --tono es el RELLENO cuando la herramienta está
+   * activa, y --tono-glifo el color del icono y del borde sobre la superficie
+   * clara. Hacen falta las dos porque el turquesa, el amarillo y el coral de
+   * marca son rellenos: como trazo sobre la tarjeta clara se quedan en 2:1 y el
+   * icono desaparece. Para dibujar se usa la rampa que sí contrasta (la misma
+   * que ya usan los acordes y las estrellas), y en oscuro son el color vivo.
+   */
+  .tool { --tono:var(--vv-accent); --tono-texto:var(--vv-on-accent);
+          --tono-glifo:var(--vv-accent); --ac-icon-accent:var(--tono-glifo); }
+  .tool .ic { color:var(--tono-glifo); }
+  .tool:hover { border-color:var(--tono-glifo); }
+  .tool[aria-pressed=true] { background:var(--tono); border-color:transparent;
+                             color:var(--tono-texto); }
+  .tool[aria-pressed=true] .ic { color:var(--tono-texto); --ac-icon-accent:var(--tono-texto); }
+  .herr.scroll .tool  { --tono:var(--ac-active);    --tono-texto:var(--ac-primary-800);
+                        --tono-glifo:var(--vv-beat); }
+  .herr.metro .tool   { --tono:var(--ac-pending);   --tono-texto:var(--ac-yellow-900);
+                        --tono-glifo:var(--vv-state-text); }
+  .herr.acordes .tool { --tono:var(--ac-highlight); --tono-texto:var(--ac-on-highlight);
+                        --tono-glifo:var(--vv-chord); }
+  .herr.tono .tool    { --tono:var(--ac-action);    --tono-texto:var(--ac-on-action);
+                        --tono-glifo:var(--vv-accent); }
+  .tool.compartir     { --tono:var(--ac-highlight); --tono-glifo:var(--vv-chord);
+                        --tono-texto:var(--ac-on-highlight); }
+  .tool.imprimir      { --tono:var(--ac-action); --tono-glifo:var(--vv-accent); }
+  /* «Nueva» es la acción destacada de la página: el kit reserva el coral justo
+     para eso («acción destacada, nuevo»). Va rellena, no de contorno. */
+  .tool.destacada { background:var(--ac-highlight); color:var(--ac-on-highlight);
+                    border-color:transparent; --tono:var(--ac-highlight);
+                    --ac-icon-accent:var(--ac-on-highlight); }
+  .tool.destacada .ic { color:var(--ac-on-highlight); }
+  .tool.destacada:hover { background:var(--ac-highlight-hover); }
+  /* Favoritas: la estrella de las tarjetas ya es coral; el filtro va a juego. */
+  .tool.favoritas { --tono:var(--ac-highlight); --tono-texto:var(--ac-on-highlight);
+                    --tono-glifo:var(--vv-chord); }
+  /* Ocultar publicadas es un filtro de estado: turquesa, y así no compite con
+     el coral de «favoritas», que está al lado. */
+  .tool.privadas { --tono:var(--ac-active); --tono-texto:var(--ac-primary-800);
+                   --tono-glifo:var(--vv-beat); }
+  /* Altas abiertas = estado activo (turquesa relleno); cerradas = contorno. */
+  .tool.altas { --tono:var(--ac-active); --tono-texto:var(--ac-primary-800);
+                --tono-glifo:var(--vv-beat); }
+  /* La etiqueta del bloque también toma el color: es el rótulo de la sección. */
+  .herr > label:first-child { font-size:11px; font-weight:600; letter-spacing:.14em;
+                              text-transform:uppercase; }
+  .herr.tono > label:first-child  { color:var(--vv-accent); }
+  .herr.metro > label:first-child { color:var(--vv-state-text); }
+  .herr.letra > label:first-child { color:var(--vv-text-muted); }
+  /* Las barras deslizantes, del color de su herramienta. */
+  #vCtrl #vSpeed { accent-color:var(--ac-active); }
+  #vCtrl #vBpm { accent-color:var(--ac-pending); }
+  #vSpeedVal { color:var(--vv-beat); }
+  #vBpmVal { color:var(--vv-state-text); }
+
+  /* «Cargar más» cierra el listado y es lo único que hay ahí abajo: va relleno
+     con el color de acción y centrado, no como un contorno perdido en el fondo. */
+  #moreBtn { display:block; margin:16px auto 0; padding:11px 28px;
+             background:var(--vv-accent); color:var(--vv-on-accent);
+             border-color:transparent; box-shadow:var(--vv-shadow-pop); }
+  #moreBtn:hover:not(.card):not(.chordCard) { background:var(--vv-accent-strong);
+                                              border-color:transparent; }
   .hidden { display:none !important; }
 `;
 
@@ -386,13 +900,35 @@ var listHasMore = false;       // queda más detrás en el servidor
 var playlists = [];            // listas (carpetas) del usuario
 var playlistBy = "";           // filtro de lista activo en "Mis partituras"
 var favOnly = false;           // ver solo las favoritas
+/*
+ * Arranca en true: en "Mis partituras" lo que se viene a hacer es rematar lo que
+ * falta, y lo ya publicado es justo lo que no necesita atención. El botón
+ * "Solo privadas" apaga el filtro y devuelve el repertorio entero.
+ */
+var sinPublicas = true;
 var chordDict = null;          // diccionario global, cacheado tras la primera carga
 var chordBarOn = false;
 var editingChord = null;       // nombre que se está editando, "" si es nuevo
 var chordPositions = [];       // posiciones del acorde en edición
+var altasAbiertas = true;      // ¿se pueden crear cuentas? lo dice el servidor
 
 /** Cuántas partituras se piden de golpe. */
 var PAGINA = 60;
+
+/*
+ * Buscar es cosa del SERVIDOR. Antes el buscador solo filtraba lo que ya estaba
+ * descargado —la primera página de 60—, así que una partitura de la mitad del
+ * catálogo no aparecía hasta darle a «Cargar más» las veces que hiciera falta:
+ * el buscador parecía roto y en realidad estaba mirando por una rendija.
+ *
+ * A partir de 3 letras o cifras se le pregunta al Worker, que busca en título y
+ * artista sobre TODO el listado. Y se piden de golpe (500 = el tope del Worker)
+ * porque un resultado de búsqueda paginado es justo el problema de partida.
+ */
+var busqueda = "";             // texto que está filtrando en el servidor
+var MIN_BUSQUEDA = 3;          // letras o cifras a partir de las cuales se busca
+var PAGINA_BUSQUEDA = 500;
+var temporizadorBusqueda = null;
 
 /* ---------- diálogos accesibles ---------- */
 /*
@@ -430,16 +966,164 @@ function cerrarDialogo(caja) {
   focoPrevio = null;
 }
 
+/* ---------- avisos y diálogos con el estilo de la página ---------- */
+/*
+ * alert/confirm/prompt del navegador desentonaban (tipografía y colores del
+ * sistema, ancho fijo, nada del tema claro/oscuro) y además congelan la página
+ * mientras están abiertos: con el metrónomo sonando o una subida en marcha eso
+ * se nota. Aquí van los tres en versión Vivace:
+ *   notificar(texto, tipo)  aviso flotante que se va solo (no bloquea nada)
+ *   confirmar(opciones)     -> Promise<boolean>
+ *   pedirTexto(opciones)    -> Promise<string|null>  (null = ha cancelado)
+ * Las dos últimas devuelven una promesa porque, al no bloquear, la respuesta
+ * llega después: quien las use continúa dentro del .then().
+ */
+function notificar(texto, tipo) {
+  if (!texto) return;
+  var t = document.createElement("div");
+  t.className = "toast in" + (tipo ? " " + tipo : "");
+  // Un error se anuncia interrumpiendo; un "hecho" espera su turno.
+  t.setAttribute("role", tipo === "error" ? "alert" : "status");
+  t.textContent = texto;
+  toastWrap.appendChild(t);
+  requestAnimationFrame(function () { t.classList.remove("in"); });
+  var quitar = function () {
+    if (!t.parentNode) return;
+    t.classList.add("out");
+    setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 200);
+  };
+  t.onclick = quitar;                       // se puede descartar tocándolo
+  setTimeout(quitar, tipo === "error" ? 6000 : 3000);
+}
+
+/** Atajo para el caso más repetido: enseñar el mensaje de error de la API. */
+function avisarError(e) { notificar((e && e.message) || String(e), "error"); }
+
+/**
+ * Diálogo genérico. Con "input" pide texto y resuelve a la cadena (o null si
+ * se cancela); sin él resuelve a true/false.
+ */
+function dialogo(opciones) {
+  var o = opciones || {};
+  var pideTexto = !!o.input;
+  return new Promise(function (resolve) {
+    dlgTitle.textContent = o.titulo || "Confirmar";
+    dlgText.textContent = o.texto || "";
+    dlgText.classList.toggle("hidden", !o.texto);
+    dlgField.classList.toggle("hidden", !pideTexto);
+    dlgLabel.textContent = pideTexto ? (o.input.etiqueta || "") : "";
+    dlgInput.value = pideTexto ? (o.input.valor || "") : "";
+    dlgInput.placeholder = pideTexto ? (o.input.placeholder || "") : "";
+    dlgOk.textContent = o.aceptar || "Aceptar";
+    dlgOk.className = o.peligro ? "danger" : "primary";
+    dlgCancel.textContent = o.cancelar || "Cancelar";
+
+    // Un diálogo puede abrirse desde dentro de otro (p. ej. borrar un acorde
+    // con el editor abierto): se guarda el foco anterior para no perderlo.
+    var previo = focoPrevio;
+    var cerrar = function (valor) {
+      dlgOk.onclick = null;
+      dlgCancel.onclick = null;
+      dlgModal.onkeydown = null;
+      dlgModal.onmousedown = null;
+      cerrarDialogo(dlgModal);
+      focoPrevio = previo;
+      resolve(valor);
+    };
+    dlgOk.onclick = function () {
+      cerrar(pideTexto ? dlgInput.value : true);
+    };
+    dlgCancel.onclick = function () { cerrar(pideTexto ? null : false); };
+    dlgModal.onkeydown = function (e) {
+      if (e.key === "Escape") {
+        // Sin frenar la propagación, el Escape seguiría hasta el manejador
+        // global y cerraría también el visor que hay detrás del diálogo.
+        e.preventDefault();
+        e.stopPropagation();
+        cerrar(pideTexto ? null : false);
+      }
+      else if (e.key === "Enter" && e.target === dlgInput) { e.preventDefault(); dlgOk.click(); }
+    };
+    // Clic en el velo = cancelar; dentro de la caja, no.
+    dlgModal.onmousedown = function (e) { if (e.target === dlgModal) cerrar(pideTexto ? null : false); };
+
+    abrirDialogo(dlgModal);
+    // abrirDialogo enfoca el primer elemento; aquí interesa el campo si lo hay
+    // y, si no, el botón que confirma.
+    (pideTexto ? dlgInput : dlgOk).focus();
+    if (pideTexto) dlgInput.select();
+  });
+}
+
+/** Sí/no. peligro:true pinta el botón en rojo (borrados irreversibles). */
+function confirmar(opciones) {
+  var o = opciones || {};
+  return dialogo({
+    titulo: o.titulo || "¿Seguro?",
+    texto: o.texto || "",
+    aceptar: o.aceptar || "Continuar",
+    cancelar: o.cancelar || "Cancelar",
+    peligro: o.peligro
+  });
+}
+
+/** Pide una cadena. Resuelve a null si se cancela (como el prompt de siempre). */
+function pedirTexto(opciones) {
+  var o = opciones || {};
+  return dialogo({
+    titulo: o.titulo || "",
+    texto: o.texto || "",
+    aceptar: o.aceptar || "Guardar",
+    cancelar: o.cancelar || "Cancelar",
+    input: {
+      etiqueta: o.etiqueta || "",
+      valor: o.valor || "",
+      placeholder: o.placeholder || ""
+    }
+  });
+}
+
 /* ---------- tema ---------- */
 /*
  * Los tokens de color ya contemplaban [data-theme=light], pero nadie ponía
  * nunca ese atributo: el modo claro existía en el CSS y era inalcanzable.
  * Aquí se fija y se recuerda; sin elección guardada manda el sistema.
  */
+/* Color de la barra superior en cada tema (--ac-nav-bg del kit). Va repetido
+   aquí porque el navegador pinta su barra con un meta, y un meta no entiende de
+   variables CSS. */
+var COLOR_BARRA = { light: "#1A535C", dark: "#0B1D21" };
+
 function applyTheme(modo) {
   if (modo === "light" || modo === "dark") document.documentElement.setAttribute("data-theme", modo);
   else document.documentElement.removeAttribute("data-theme");
+  recursosDeTema(temaEfectivo());
 }
+
+/**
+ * Recursos con el color metido dentro del fichero: el favicon (y el color de la
+ * barra del navegador). El resto del tema lo resuelven los tokens solos, pero
+ * un SVG servido aparte no ve el data-theme de la página, así que hay que
+ * cambiarle el href a mano. El mosaico del fondo no entra aquí: ese sí sale de
+ * un token (--ac-pattern) porque lo pide el CSS.
+ */
+function recursosDeTema(modo) {
+  var oscuro = modo === "dark";
+  favicon.href = oscuro ? "/static/favicon-dark.svg" : "/static/favicon.svg";
+  themeColor.content = oscuro ? COLOR_BARRA.dark : COLOR_BARRA.light;
+  // El botón dice a dónde lleva, no dónde estás: el icono ya enseña el tema
+  // actual, y "Cambiar tema" a secas no aclaraba nada a quien no lo ve.
+  var destino = oscuro ? "Cambiar a modo claro" : "Cambiar a modo oscuro";
+  themeBtn.title = destino;
+  themeBtn.setAttribute("aria-label", destino);
+}
+
+/** El tema que se está viendo: la elección guardada o, sin ella, la del sistema. */
+function temaEfectivo() {
+  return currentTheme() ||
+    (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+}
+
 function currentTheme() {
   try { return localStorage.getItem("vivace_theme") || ""; } catch (e) { return ""; }
 }
@@ -451,6 +1135,70 @@ function toggleTheme() {
   var siguiente = oscuroAhora ? "light" : "dark";
   try { localStorage.setItem("vivace_theme", siguiente); } catch (e) {}
   applyTheme(siguiente);
+}
+
+/* ---------- altas de cuenta ---------- */
+/*
+ * El interruptor vive en el servidor (tabla settings) y lo maneja el
+ * administrador. Aquí solo se refleja: se esconde el «crear una cuenta» cuando
+ * están cerradas, para no ofrecer un camino que va a acabar en error. El corte
+ * de verdad lo hace la API en /auth/register; esto es cortesía, no seguridad.
+ */
+function loadSettings() {
+  return api("GET", "/api/settings").then(function (d) {
+    altasAbiertas = d.registrationOpen !== false;
+    pintarAltas();
+  }).catch(function () {
+    // Sin respuesta se supone abierto: es como se comportaba antes, y el que
+    // manda es el servidor cuando llegue el intento de alta.
+    altasAbiertas = true;
+    pintarAltas();
+  });
+}
+
+/** Refleja el estado en la pantalla de entrada y en el panel de administración. */
+function pintarAltas() {
+  var cerrado = !altasAbiertas;
+  // En la pantalla de entrada: sin registro posible, no se ofrece.
+  authSwitch.classList.toggle("hidden", cerrado);
+  authCerrado.classList.toggle("hidden", !cerrado);
+  if (cerrado && registering) authSwitch.onclick();   // volver a «Entrar»
+
+  // En el panel: solo lo ve (y lo toca) el administrador.
+  var admin = !!user && user.role === "admin";
+  altasTool.classList.toggle("hidden", !admin);
+  altasBtn.setAttribute("aria-pressed", altasAbiertas ? "true" : "false");
+  altasBtn.querySelector("span").textContent = altasAbiertas
+    ? "Altas abiertas" : "Altas cerradas";
+  altasBtn.title = altasAbiertas
+    ? "Cerrar las altas: nadie podrá crear cuentas nuevas"
+    : "Abrir las altas: cualquiera podrá crear una cuenta";
+}
+
+function alternarAltas() {
+  var siguiente = !altasAbiertas;
+  var pregunta = siguiente
+    ? confirmar({
+        titulo: "Abrir las altas",
+        texto: "Cualquiera con la dirección de la web podrá crear una cuenta.",
+        aceptar: "Abrir"
+      })
+    : confirmar({
+        titulo: "Cerrar las altas",
+        texto: "Nadie podrá crear cuentas nuevas. Quien ya tiene la suya sigue entrando.",
+        aceptar: "Cerrar altas"
+      });
+  pregunta.then(function (sigue) {
+    if (!sigue) return;
+    altasBtn.disabled = true;
+    return api("PUT", "/api/settings", { registrationOpen: siguiente }).then(function (d) {
+      altasAbiertas = d.registrationOpen !== false;
+      pintarAltas();
+      altasMsg.textContent = "";
+      notificar(altasAbiertas ? "Altas abiertas" : "Altas cerradas", "ok");
+    }).catch(function (e) { altasMsg.textContent = e.message; })
+      .then(function () { altasBtn.disabled = false; });
+  });
 }
 
 /* ---------- API ---------- */
@@ -485,6 +1233,9 @@ function setSession(tok, u) {
   tabUsers.classList.toggle("hidden", !esAdmin());
   tabTrash.classList.toggle("hidden", !user);
   tabAdmin.classList.toggle("hidden", !esEditor());
+  // El interruptor de altas solo lo ve el administrador, y la pantalla de
+  // entrada tiene que reflejar el estado también al cerrar sesión.
+  pintarAltas();
   newBtn.classList.toggle("hidden", !user);
   if (!user && tab === "mine") tab = "public";
   if (!esEditor() && tab === "chords") tab = "public";
@@ -499,7 +1250,9 @@ function setSession(tok, u) {
     playlists = [];
     playlistBy = "";
     favOnly = false;
-    favFilter.setAttribute("aria-pressed", "false");
+    sinPublicas = true;
+    marcarPrivadas();
+    marcarFavoritas();
     renderPlaylistControls();
   }
 }
@@ -562,32 +1315,51 @@ function renderPlaylistControls() {
 }
 
 function crearLista() {
-  var nombre = prompt("Nombre de la lista");
-  if (!nombre || !nombre.trim()) return;
-  api("POST", "/api/playlists", { name: nombre.trim() })
-    .then(loadPlaylists)
-    .catch(function (e) { aviso(listEmpty, e.message); });
+  pedirTexto({
+    titulo: "Nueva lista",
+    etiqueta: "Nombre",
+    placeholder: "Conciertos, Para aprender…",
+    aceptar: "Crear"
+  }).then(function (nombre) {
+    if (!nombre || !nombre.trim()) return;
+    return api("POST", "/api/playlists", { name: nombre.trim() })
+      .then(loadPlaylists)
+      .then(function () { notificar("Lista creada", "ok"); })
+      .catch(function (e) { aviso(listEmpty, e.message); });
+  });
 }
 
 function renombrarLista() {
   var lista = playlists.filter(function (p) { return p.id === playlistBy; })[0];
   if (!lista) return;
-  var nombre = prompt("Nuevo nombre", lista.name);
-  if (!nombre || !nombre.trim()) return;
-  api("PUT", "/api/playlists/" + lista.id, { name: nombre.trim() })
-    .then(loadPlaylists)
-    .catch(function (e) { aviso(listEmpty, e.message); });
+  pedirTexto({
+    titulo: "Renombrar lista",
+    etiqueta: "Nombre",
+    valor: lista.name
+  }).then(function (nombre) {
+    if (!nombre || !nombre.trim()) return;
+    return api("PUT", "/api/playlists/" + lista.id, { name: nombre.trim() })
+      .then(loadPlaylists)
+      .catch(function (e) { aviso(listEmpty, e.message); });
+  });
 }
 
 function borrarLista() {
   var lista = playlists.filter(function (p) { return p.id === playlistBy; })[0];
   if (!lista) return;
   // Igual que en la app: borrar la carpeta NO borra las partituras.
-  if (!confirm("Se borrará la lista «" + lista.name + "». Sus partituras no se borran: pasan a «Sin lista». ¿Continuar?")) return;
-  api("DELETE", "/api/playlists/" + lista.id).then(function () {
-    playlistBy = "";
-    return loadPlaylists();
-  }).then(refresh).catch(function (e) { aviso(listEmpty, e.message); });
+  confirmar({
+    titulo: "Borrar «" + lista.name + "»",
+    texto: "Sus partituras no se borran: pasan a «Sin lista».",
+    aceptar: "Borrar lista",
+    peligro: true
+  }).then(function (sigue) {
+    if (!sigue) return;
+    return api("DELETE", "/api/playlists/" + lista.id).then(function () {
+      playlistBy = "";
+      return loadPlaylists();
+    }).then(refresh).catch(function (e) { aviso(listEmpty, e.message); });
+  });
 }
 
 /** Aviso corto en un hueco de la página (sin alert(), que bloquea). */
@@ -730,11 +1502,13 @@ function refresh() {
   listasBar.classList.toggle("hidden", !propio);
   playlistFilterWrap.classList.toggle("hidden", !propio);
   favFilter.classList.toggle("hidden", !propio);
+  privFilter.classList.toggle("hidden", !propio);
   // El catálogo puede ser enorme: género y orden los resuelve SQL. "Mis
   // partituras" son pocas y se ordenan aquí mismo, sin ida y vuelta.
   // Los listados vienen por páginas: sin tope, una cuenta grande se traía
   // el catálogo entero en cada visita.
-  var pag = "limit=" + PAGINA + "&offset=" + listOffset;
+  var pag = "limit=" + (busqueda ? PAGINA_BUSQUEDA : PAGINA) + "&offset=" + listOffset +
+            (busqueda ? "&q=" + encodeURIComponent(busqueda) : "");
   var path = tab === "trash"
     ? "/api/songs?trash=1&" + pag
     : tab === "mine"
@@ -770,15 +1544,19 @@ function sortMine(lista) {
 }
 
 function renderList(error) {
-  var q = search.value.trim().toLowerCase();
+  // Se filtra otra vez aquí, y con la MISMA normalización que el servidor, para
+  // que escribir la cuarta letra no espere a la respuesta: lo ya cargado se
+  // recorta al instante y luego llega el listado completo.
+  var q = vNormalizarBusqueda(search.value);
   var propio = tab === "mine";
   var shown = songs.filter(function (s) {
     if (propio && genreBy && (s.genre || "").toLowerCase() !== genreBy.toLowerCase()) return false;
     if (propio && favOnly && !s.favorite) return false;
+    if (propio && sinPublicas && s.visibility === "public") return false;
     if (propio && playlistBy === "none" && s.playlistId) return false;
     if (propio && playlistBy && playlistBy !== "none" && s.playlistId !== playlistBy) return false;
     if (!q) return true;
-    return ((s.title || "") + " " + (s.artist || "")).toLowerCase().indexOf(q) >= 0;
+    return vNormalizarBusqueda((s.title || "") + " " + (s.artist || "")).indexOf(q) >= 0;
   });
   list.innerHTML = "";
   shown.forEach(function (s) {
@@ -793,24 +1571,21 @@ function renderList(error) {
     // solo aparece en "Mis partituras" y en el editor.
     t.textContent = (tab === "mine" && s.locked ? "🔒 " : "") + (s.title || "(sin título)");
     card.appendChild(a); card.appendChild(t);
-    if (s.genre) {
-      var g = document.createElement("span");
-      g.className = "badge";
-      g.textContent = s.genre;
-      card.appendChild(g);
+    var etiquetas = document.createElement("div");
+    etiquetas.className = "etiquetas";
+    card.appendChild(etiquetas);
+    function etiqueta(texto, clase) {
+      var e = document.createElement("span");
+      e.className = "badge" + (clase ? " " + clase : "");
+      e.textContent = texto;
+      etiquetas.appendChild(e);
     }
+    if (s.genre) etiqueta(s.genre);
     if (propio) {
-      var b = document.createElement("span");
-      b.className = "badge";
-      b.textContent = s.visibility === "public" ? "Pública" : "Privada";
-      card.appendChild(b);
+      etiqueta(s.visibility === "public" ? "Pública" : "Privada",
+               s.visibility === "public" ? "publica" : "privada");
       var lista = playlists.filter(function (p) { return p.id === s.playlistId; })[0];
-      if (lista) {
-        var lb = document.createElement("span");
-        lb.className = "badge";
-        lb.textContent = lista.name;
-        card.appendChild(lb);
-      }
+      if (lista) etiqueta(lista.name, "lista");
       // La estrella va dentro de la tarjeta, que es un <button>: se marca como
       // control aparte y se corta la propagación para no abrir el visor.
       var star = document.createElement("span");
@@ -852,8 +1627,24 @@ function renderList(error) {
     card.onclick = function () { if (tab !== "trash") openSong(s.id); };
     list.appendChild(card);
   });
+  // Con menos de 3 letras no se ha preguntado al servidor: si el recorte local
+  // no encuentra nada, hay que decir que la búsqueda aún no ha salido de aquí,
+  // y no que no existe la partitura.
+  var cortaParaBuscar = q && vLetrasYCifras(search.value) < MIN_BUSQUEDA;
+  // Si hay partituras y no se ve ninguna, lo que sobra es un filtro, no el
+  // repertorio: decirlo así evita el «todavía no tienes partituras» que sonaba
+  // a que se habían perdido.
+  var filtrando = propio && songs.length > 0 &&
+                  (favOnly || sinPublicas || playlistBy || genreBy);
   var msg = error ? error
     : shown.length ? ""
+    : cortaParaBuscar ? "Escribe al menos " + MIN_BUSQUEDA +
+        " letras o cifras para buscar en todo el catálogo."
+    : q ? "Ninguna partitura coincide con «" + search.value.trim() + "»."
+    // Caso propio y frecuente ahora que el filtro viene puesto: todo publicado.
+    : (propio && sinPublicas && !favOnly && !playlistBy && !genreBy && songs.length)
+        ? "Todas tus partituras están publicadas. Quita «Solo privadas» para verlas."
+    : filtrando ? "Ninguna partitura pasa los filtros que tienes puestos."
     : tab === "trash" ? "La papelera está vacía."
     : (propio ? "Todavía no tienes partituras. Crea la primera con «+ Nueva»."
               : "Aún no hay partituras publicadas.");
@@ -924,33 +1715,50 @@ function compartirCancion() {
   var enlace = enlaceDeCancion(current.song.id);
   var privada = current.song.visibility !== "public";
 
-  function avisar(texto) {
-    var antes = vShare.textContent;
-    vShare.textContent = texto;
-    setTimeout(function () { vShare.textContent = antes; }, 2200);
-  }
-
   // Quien reciba el enlace de una privada se encontrará un 404: la API no
   // enseña lo privado a nadie más. Mejor decirlo al compartir que después.
-  if (privada && !confirm(
-        "Esta partitura es privada: solo tú puedes abrirla.\\n\\n" +
-        "Para que el enlace le sirva a otra persona hay que publicarla " +
-        "(desde el editor, «Proponer publicación»).\\n\\n¿Copiar el enlace igualmente?")) {
-    return;
-  }
+  var permiso = privada
+    ? confirmar({
+        titulo: "Esta partitura es privada",
+        texto: "Solo tú puedes abrirla, así que a otra persona el enlace le dará " +
+               "un error. Para que sirva hay que publicarla: en el editor, " +
+               "«Proponer publicación».",
+        aceptar: "Ver el enlace igualmente"
+      })
+    : Promise.resolve(true);
 
-  if (navigator.share) {
-    navigator.share({ title: current.song.title || "Partitura", url: enlace })
-      .catch(function () { /* cancelar el menú del sistema no es un error */ });
-    return;
-  }
-  if (navigator.clipboard && navigator.clipboard.writeText) {
+  permiso.then(function (sigue) { if (sigue) ventanaDeEnlace(enlace); });
+}
+
+/*
+ * Compartir en la web es ENSEÑAR el enlace, no adivinar qué quiere hacer el
+ * navegador. Antes se llamaba a navigator.share o se copiaba en silencio: en el
+ * escritorio no hay menú del sistema, y una copia sin ventana no se distingue de
+ * un botón que no hace nada. Ahora sale el enlace, seleccionado y listo para
+ * copiar, con un botón que además lo copia al portapapeles cuando se puede.
+ */
+function ventanaDeEnlace(enlace) {
+  var titulo = current && current.song ? (current.song.title || "esta partitura") : "esta partitura";
+  pedirTexto({
+    titulo: "Compartir «" + titulo + "»",
+    texto: "Este enlace abre la partitura directamente. Cópialo y mándalo a quien quieras.",
+    etiqueta: "Enlace",
+    valor: enlace,
+    aceptar: "Copiar enlace"
+  }).then(function (valor) {
+    if (valor === null) return;                 // ha cerrado la ventana
+    if (!navigator.clipboard || !navigator.clipboard.writeText) {
+      // Sin portapapeles (sitio en http, permiso denegado, navegador viejo) el
+      // enlace ya estaba a la vista y seleccionado: no hay nada que arreglar.
+      notificar("Copia el enlace a mano: tu navegador no deja copiarlo solo.", "error");
+      return;
+    }
     navigator.clipboard.writeText(enlace)
-      .then(function () { avisar("✓ Enlace copiado"); })
-      .catch(function () { prompt("Copia el enlace:", enlace); });
-    return;
-  }
-  prompt("Copia el enlace:", enlace);
+      .then(function () { notificar("Enlace copiado", "ok"); })
+      .catch(function () {
+        notificar("No se ha podido copiar. El enlace estaba seleccionado: usa Ctrl+C.", "error");
+      });
+  });
 }
 
 /* ---------- favoritos y papelera ---------- */
@@ -972,10 +1780,18 @@ function restaurar(s) {
 
 function borrarDelTodo(s) {
   // Este sí es irreversible, y es el único sitio donde puede ocurrir.
-  if (!confirm("Se borrará «" + (s.title || "sin título") + "» para siempre. Esto no se puede deshacer. ¿Continuar?")) return;
-  api("DELETE", "/api/songs/" + s.id + "?hard=1")
-    .then(refresh)
-    .catch(function (e) { aviso(listEmpty, e.message); });
+  confirmar({
+    titulo: "Borrar para siempre",
+    texto: "«" + (s.title || "sin título") + "» se borrará definitivamente. " +
+           "Esto no se puede deshacer.",
+    aceptar: "Borrar para siempre",
+    peligro: true
+  }).then(function (sigue) {
+    if (!sigue) return;
+    return api("DELETE", "/api/songs/" + s.id + "?hard=1")
+      .then(refresh)
+      .catch(function (e) { aviso(listEmpty, e.message); });
+  });
 }
 
 /* ---------- impresión ---------- */
@@ -985,31 +1801,239 @@ function borrarDelTodo(s) {
  * (tinta oscura sobre blanco) en vez de imprimir la interfaz oscura.
  * Portado del panel /admin, que era el único sitio que sabía imprimir.
  */
+/*
+ * Hoja de estilo del papel: el paquete Accordio aplicado a un documento A4.
+ *
+ * La partitura ocupa la PÁGINA, no una tarjeta dentro de ella. Título y autor
+ * van arriba y el número de hoja abajo, repetidos en todas: eso es lo que
+ * distingue un documento de una captura de pantalla, y con una canción de tres
+ * páginas es lo que permite saber qué se tiene en la mano.
+ *
+ * Las páginas se reparten AQUÍ, no se dejan al navegador (ver paginar()). Se
+ * probaron antes las dos vías que suelen recomendarse y ninguna sirve en Chrome:
+ * un elemento position:fixed no se repite —se pinta una vez y donde caiga— y
+ * counter(page) fuera de un margen con nombre devuelve 0. Los márgenes con
+ * nombre de @page (@bottom-center y compañía), que son los que resolverían esto
+ * en CSS, no están implementados.
+ *
+ * Tres decisiones que no son evidentes:
+ *
+ *  - Va SIEMPRE en claro, aunque se esté leyendo en modo oscuro. Un PDF con
+ *    fondo teal es un cartucho de tinta y una fotocopia ilegible.
+ *  - Sin el mosaico de notas del fondo: en pantalla es identidad, pero debajo de
+ *    una letra que hay que leer tocando es ruido.
+ *  - Todo lo que lleva color pide print-color-adjust: al imprimir, el navegador
+ *    descarta fondos y bordes salvo que se le diga expresamente.
+ */
+var ESTILO_IMPRESION =
+  /* Sin margen de página: cada hoja se dibuja entera y pone el suyo. */
+  '@page{size:A4;margin:0;}' +
+  '*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+  'html,body{margin:0;padding:0;background:#F7EFE3;color:#12363D;' +
+  "font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;}" +
+
+  /* Una hoja de verdad: A4 exacto, con sus márgenes por dentro. */
+  '.hoja{width:210mm;height:297mm;padding:16mm 15mm 12mm;background:#F7EFE3;' +
+  'display:flex;flex-direction:column;overflow:hidden;' +
+  'break-after:page;page-break-after:always;}' +
+  '.hoja:last-child{break-after:auto;page-break-after:auto;}' +
+  /* En pantalla (antes de imprimir) se ven como folios sobre la mesa. */
+  '@media screen{body{background:#DCE8E5;padding:16px 0;}' +
+  '.hoja{margin:0 auto 16px;box-shadow:0 2px 12px rgba(18,54,61,.18);}}' +
+
+  /* ---- cabecera ---- */
+  '.cab{flex:0 0 auto;display:flex;align-items:center;gap:10px;' +
+  'border-bottom:1.5px solid #1A535C;padding-bottom:5px;margin-bottom:7mm;}' +
+  /* La marca manda el alto de la cabecera; el resto se alinea con ella. */
+  '.cab .logo{flex:0 0 auto;width:30px;height:21px;display:block;}' +
+  ".cab .tit{font-family:'Montserrat',system-ui,sans-serif;font-weight:700;" +
+  'letter-spacing:-.02em;font-size:15px;color:#12363D;' +
+  'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}' +
+  '.cab .aut{font-size:12px;color:#3F5257;white-space:nowrap;}' +
+  '.cab .est{margin-left:auto;display:flex;gap:6px;flex:0 0 auto;}' +
+  '.cab .etq{border-radius:999px;padding:2px 9px;font-size:9.5px;font-weight:600;' +
+  'letter-spacing:.1em;text-transform:uppercase;background:#FFE66D;color:#6B550A;}' +
+  '.cab .etq.tono{background:#E3EEF0;color:#113941;}' +
+
+  /* ---- la partitura, a página completa ---- */
+  ".cuerpo{flex:1 1 auto;min-height:0;font-family:'JetBrains Mono',ui-monospace," +
+  'SFMono-Regular,Menlo,monospace;font-size:12px;line-height:1.5;color:#12363D;}' +
+  '.ln{white-space:pre;margin:0;}' +
+  '.tab{white-space:pre;color:#3F5257;}' +
+  '.chord{color:#C93B3C;font-weight:600;}' +
+  '.fuente{margin-top:6mm;font-size:9px;color:#7B8E92;' +
+  'border-top:1px solid #DCE8E5;padding-top:4px;}' +
+
+  /* ---- pie ---- */
+  '.pie{flex:0 0 auto;display:flex;align-items:baseline;' +
+  'border-top:1px solid #DCE8E5;padding-top:5px;margin-top:6mm;' +
+  'font-size:9.5px;color:#7B8E92;letter-spacing:.06em;}' +
+  '.pie .der{margin-left:auto;}';
+
+/*
+ * Reparte las líneas en hojas A4. Se ejecuta DENTRO de la ventana de impresión,
+ * con las fuentes ya cargadas: sin ellas las medidas son las de la tipografía de
+ * reserva y el corte cae donde no toca.
+ *
+ * El método es el simple y el que no falla: se van metiendo líneas en la hoja
+ * mientras quepan y, cuando una se sale, empieza otra. Medir es más lento que
+ * calcular, pero calcular a ojo se rompe con la primera canción que traiga una
+ * tablatura o un bloque de otro alto.
+ */
+var GUION_PAGINAR = [
+  "function paginar() {",
+  "  var molde = document.getElementById('molde');",
+  "  var lineas = Array.prototype.slice.call(molde.children);",
+  "  var cab = document.getElementById('cabPlantilla').innerHTML;",
+  "  var pie = document.getElementById('piePlantilla').innerHTML;",
+  "  var destino = document.getElementById('hojas');",
+  "  molde.remove();",
+  "",
+  "  function nuevaHoja() {",
+  "    var hoja = document.createElement('section');",
+  "    hoja.className = 'hoja';",
+  "    var c = document.createElement('header');",
+  "    c.className = 'cab';",
+  "    c.innerHTML = cab;",
+  "    var cuerpo = document.createElement('div');",
+  "    cuerpo.className = 'cuerpo';",
+  "    var p = document.createElement('footer');",
+  "    p.className = 'pie';",
+  "    p.innerHTML = pie;",
+  "    hoja.appendChild(c);",
+  "    hoja.appendChild(cuerpo);",
+  "    hoja.appendChild(p);",
+  "    destino.appendChild(hoja);",
+  "    return cuerpo;",
+  "  }",
+  "",
+  "  // Una linea de acordes y la letra que va debajo son un bloque: separarlas",
+  "  // en dos hojas deja los acordes sin cancion y la cancion sin acordes.",
+  "  function soloAcordes(n) {",
+  "    if (!n.querySelector || !n.querySelector('.chord')) return false;",
+  "    var resto = n.textContent;",
+  "    var acordes = n.querySelectorAll('.chord');",
+  "    for (var k = 0; k < acordes.length; k++) {",
+  "      resto = resto.replace(acordes[k].textContent, '');",
+  "    }",
+  "    return resto.trim() === '';",
+  "  }",
+  "",
+  "  var bloques = [];",
+  "  for (var b = 0; b < lineas.length; b++) {",
+  "    var grupo = [lineas[b]];",
+  "    if (soloAcordes(lineas[b]) && lineas[b + 1] && !soloAcordes(lineas[b + 1])) {",
+  "      grupo.push(lineas[++b]);",
+  "    }",
+  "    bloques.push(grupo);",
+  "  }",
+  "",
+  "  var cuerpo = nuevaHoja();",
+  "  for (var i = 0; i < bloques.length; i++) {",
+  "    for (var g = 0; g < bloques[i].length; g++) cuerpo.appendChild(bloques[i][g]);",
+  "    // Se ha salido de la hoja: este bloque abre la siguiente.",
+  "    if (cuerpo.scrollHeight > cuerpo.clientHeight &&",
+  "        cuerpo.children.length > bloques[i].length) {",
+  "      cuerpo = nuevaHoja();",
+  "      for (var g2 = 0; g2 < bloques[i].length; g2++) cuerpo.appendChild(bloques[i][g2]);",
+  "    }",
+  "  }",
+  "",
+  "  // Numerar al final, que es cuando se sabe cuantas hay.",
+  "  var hojas = destino.querySelectorAll('.hoja');",
+  "  for (var j = 0; j < hojas.length; j++) {",
+  "    hojas[j].querySelector('.num').textContent =",
+  "      'P\\u00e1gina ' + (j + 1) + ' de ' + hojas.length;",
+  "  }",
+  "  return hojas.length;",
+  "}"
+].join("\\n");
+
+/*
+ * Marca del mástil para el papel: la versión de fondo claro del kit
+ * (logo/mark-fretboard.svg), que es la que lleva el trazo en teal. Va en la
+ * cabecera de cada hoja, así que se escribe una vez y se copia al paginar.
+ */
+var MARCA_PAPEL =
+  '<svg class="logo" viewBox="0 0 132 92" aria-hidden="true">' +
+  '<g fill="none" stroke="#1A535C" stroke-width="5" stroke-linecap="square">' +
+  '<path d="M8 10H124M8 26H124M8 42H124M8 58H124M8 74H124"></path>' +
+  '<path d="M8 10V74M37 10V74M66 10V74M95 10V74M124 10V74"></path></g>' +
+  '<g><circle cx="66" cy="10" r="8.5" fill="#1A535C"></circle>' +
+  '<circle cx="37" cy="26" r="8.5" fill="#1A535C"></circle>' +
+  '<circle cx="95" cy="26" r="8.5" fill="#FF6B6B"></circle>' +
+  '<circle cx="8" cy="42" r="8.5" fill="#1A535C"></circle>' +
+  '<circle cx="80" cy="42" r="8.5" fill="#FF6B6B"></circle>' +
+  '<circle cx="80" cy="58" r="8.5" fill="#FF6B6B"></circle>' +
+  '<circle cx="51" cy="74" r="8.5" fill="#FF6B6B"></circle></g></svg>';
+
 function printViewer() {
   if (!current) return;
   var w = window.open("", "_blank");
-  if (!w) { alert("El navegador ha bloqueado la ventana de impresión."); return; }
+  if (!w) {
+    notificar("El navegador ha bloqueado la ventana de impresión. Permite las " +
+              "ventanas emergentes de este sitio y vuelve a intentarlo.", "error");
+    return;
+  }
   // current.body ya es lo que se está leyendo: el Original o la versión
-  // elegida. La cejilla se saca del propio rótulo, que es quien la sabe.
+  // elegida, y capoActual es el capo de eso mismo (ver setCapo).
   var lineas = vRenderSong(vTransposeBody(current.body || "", semis, flats));
-  var capo = Number((vCapo.textContent || "").replace(/\D+/g, "")) || 0;
-  var doc = '<!doctype html><meta charset="utf-8"><title>' +
-    vEsc(current.song.title || "Partitura") + '</title>' +
-    '<style>body{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;' +
-    'padding:20px;color:#111;background:#fff;}' +
-    'h1{font-size:18px;margin:0;}h2{font-size:13px;color:#555;margin:2px 0 10px;font-weight:normal;}' +
-    '.chord{color:#1558d6;font-weight:bold;}.ln{white-space:pre;margin:0;line-height:1.35;}' +
-    '.tab{white-space:pre;color:#666;line-height:1.35;}' +
-    '.capo{display:inline-block;border:1px solid #888;border-radius:4px;padding:1px 6px;' +
-    'margin-bottom:10px;font-size:12px;}</style>' +
-    '<h1>' + vEsc(current.song.title || "") + '</h1>' +
-    (current.song.artist ? '<h2>' + vEsc(current.song.artist) + '</h2>' : '') +
-    (capo > 0 ? '<div class="capo">Capo ' + capo + '</div>' : '') +
-    '<div>' + lineas + '</div>';
+  var capo = capoActual;
+  var titulo = current.song.title || "Partitura";
+  var autor = current.song.artist || "";
+  var fuente = vUrlSegura(current.song.sourceUrl) ? current.song.sourceUrl : "";
+
+  var estados =
+    (capo > 0 ? '<span class="etq">Capo ' + capo + '</span>' : '') +
+    (semis !== 0 ? '<span class="etq tono">Tono ' + (semis > 0 ? '+' : '') + semis + '</span>' : '');
+
+  var doc = '<!doctype html><html lang="es"><head><meta charset="utf-8">' +
+    '<title>' + vEsc(titulo) + (autor ? ' · ' + vEsc(autor) : '') + '</title>' +
+    '<link rel="preconnect" href="https://fonts.googleapis.com">' +
+    '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
+    '<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700' +
+    '&family=Poppins:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap"' +
+    ' rel="stylesheet">' +
+    '<style>' + ESTILO_IMPRESION + '</style></head><body>' +
+    // Plantillas de cabecera y pie: se copian en cada hoja al paginar.
+    '<template id="cabPlantilla">' + MARCA_PAPEL +
+      '<span class="tit">' + vEsc(titulo) + '</span>' +
+      (autor ? '<span class="aut">' + vEsc(autor) + '</span>' : '') +
+      (estados ? '<span class="est">' + estados + '</span>' : '') +
+    '</template>' +
+    '<template id="piePlantilla"><span>accordio.site</span>' +
+      '<span class="der num"></span></template>' +
+    '<div id="hojas"></div>' +
+    // Molde: todo el contenido junto, del que se van sacando las líneas.
+    '<div id="molde" style="position:absolute;visibility:hidden">' + lineas +
+      (fuente ? '<div class="fuente">Fuente: ' + vEsc(fuente) + '</div>' : '') +
+    '</div>' +
+    '<script>' + GUION_PAGINAR + '<\/script>' +
+    '</body></html>';
+
   w.document.write(doc);
   w.document.close();
   w.focus();
-  setTimeout(function () { w.print(); }, 250);
+
+  /*
+   * Primero las fuentes, luego paginar, y solo entonces imprimir. Si se midiera
+   * antes de que carguen, el reparto saldría con la tipografía de reserva: las
+   * columnas de la monoespaciada bailan y el corte cae donde no toca. El plazo
+   * es un seguro por si las fuentes no llegan (sin red, bloqueadas): mejor
+   * imprimir con la de reserva que no imprimir.
+   */
+  var hecho = false;
+  var rematar = function () {
+    if (hecho) return;
+    hecho = true;
+    try { w.paginar(); } catch (e) { /* si falla, al menos sale el contenido */ }
+    w.focus();
+    w.print();
+  };
+  if (w.document.fonts && w.document.fonts.ready) {
+    w.document.fonts.ready.then(rematar).catch(rematar);
+  }
+  setTimeout(rematar, 2500);
 }
 
 /* ---------- administración del catálogo ---------- */
@@ -1047,7 +2071,7 @@ function backupZip() {
       var p2 = function (n) { return String(n).padStart(2, "0"); };
       var a = document.createElement("a");
       a.href = URL.createObjectURL(vBuildZip(entradas));
-      a.download = "vivace-" + d2.getFullYear() + p2(d2.getMonth() + 1) + p2(d2.getDate()) +
+      a.download = "accordio-" + d2.getFullYear() + p2(d2.getMonth() + 1) + p2(d2.getDate()) +
                    "-" + p2(d2.getHours()) + p2(d2.getMinutes()) + ".zip";
       a.click();
       URL.revokeObjectURL(a.href);
@@ -1063,32 +2087,42 @@ function restoreZip(file) {
     .then(function (entradas) {
       var textos = entradas.filter(function (e) { return /\.txt$/i.test(e.name); });
       if (!textos.length) { aviso(adminMsg, "El ZIP no trae partituras."); return; }
-      if (!confirm("Se crearán " + textos.length + " partituras a partir del ZIP. ¿Continuar?")) {
-        aviso(adminMsg, "");
-        return;
-      }
-      var ok = 0, fallos = 0;
-      return textos.reduce(function (previa, e) {
-        return previa.then(function () {
-          var cab = vParseSong(e.text).head || {};
-          return api("POST", "/api/songs", {
-            title: cab.title || e.name.replace(/\.txt$/i, ""),
-            artist: cab.artist || "",
-            genre: cab.genre || "",
-            capo: Number(cab.capo) || 0,
-            sourceUrl: cab.url || "",
-            content: e.text
-          }).then(function () { ok++; }, function () { fallos++; })
-            .then(function () {
-              aviso(adminMsg, "Restaurando… " + (ok + fallos) + "/" + textos.length);
-            });
-        });
-      }, Promise.resolve()).then(function () {
-        aviso(adminMsg, "Restauradas " + ok + (fallos ? ", fallidas " + fallos : "") + " ✓");
-        refresh();
+      return confirmar({
+        titulo: "Restaurar copia",
+        texto: "Se crearán " + textos.length + " partituras a partir del ZIP.",
+        aceptar: "Restaurar"
+      }).then(function (sigue) {
+        if (!sigue) { aviso(adminMsg, ""); return; }
+        return importarTextos(textos);
       });
     })
     .catch(function (e) { aviso(adminMsg, "No se ha podido leer el ZIP: " + e.message); });
+}
+
+/** Sube una a una las partituras del ZIP informando del avance. */
+function importarTextos(textos) {
+  var ok = 0, fallos = 0;
+  return textos.reduce(function (previa, e) {
+    return previa.then(function () {
+      var cab = vParseSong(e.text).head || {};
+      return api("POST", "/api/songs", {
+        title: cab.title || e.name.replace(/\.txt$/i, ""),
+        artist: cab.artist || "",
+        genre: cab.genre || "",
+        capo: Number(cab.capo) || 0,
+        sourceUrl: cab.url || "",
+        content: e.text
+      }).then(function () { ok++; }, function () { fallos++; })
+        .then(function () {
+          aviso(adminMsg, "Restaurando… " + (ok + fallos) + "/" + textos.length);
+        });
+    });
+  }, Promise.resolve()).then(function () {
+    aviso(adminMsg, "Restauradas " + ok + (fallos ? ", fallidas " + fallos : "") + " ✓");
+    notificar("Restauradas " + ok + " partituras" + (fallos ? " (" + fallos + " con error)" : ""),
+              fallos ? "error" : "ok");
+    refresh();
+  });
 }
 
 function listarSinVideo() {
@@ -1159,10 +2193,19 @@ function openSong(id, opciones) {
     vBody.scrollTop = 0;
     document.documentElement.classList.add("conVisor");
     document.body.classList.add("conVisor");
+    // El ajuste se hace con el visor ya visible: en display:none, vBody no tiene
+    // ancho y la cuenta saldría con el de la ventana entera.
+    fontSize = letraQueQuepa();
+    vBody.style.setProperty("--fs", fontSize + "px");
     renderTube();
+    colocarVersiones();
+    colocarAcciones();
+    menuAcciones(false);
+    mandos(false);
     loadVersions(d.song.id);
     loadRatings(d.song.id);
     loadComments(d.song.id);
+    loadRelated(d.song.id);
     // Al abrirla desde un enlace se REEMPLAZA el estado: si se empujara, el
     // botón «atrás» devolvería a la misma página en vez de salir de ella.
     ponerUrlDeCancion(d.song.id, desdeUrl);
@@ -1173,16 +2216,101 @@ function openSong(id, opciones) {
         ". Puede ser privada, o haber sido borrada.");
       ponerUrlDeCancion("", true);
     } else {
-      alert(e.message);
+      avisarError(e);
     }
   });
 }
 
 /** Capo de lo que se está mirando; con 0 no se enseña nada. */
+/*
+ * Capo de lo que se está mirando. Se guarda en una variable ADEMÁS de pintarlo:
+ * quien lo necesite (la impresión) lee el dato, no el rótulo.
+ *
+ * Leerlo del rótulo era además una trampa: la expresión que lo extraía vivía
+ * dentro del literal de plantilla que sirve este fichero, y ahí "\D" no es un
+ * escape válido, así que al navegador le llegaba /D+/ —quitar las letras D— en
+ * vez de /\D+/ —quitar lo que no sea dígito—. Resultado: "Capo 3" no se
+ * convertía en 3 sino en NaN, y el PDF salía SIEMPRE sin capo.
+ */
+var capoActual = 0;
+
 function setCapo(capo) {
   var n = Number(capo) || 0;
+  capoActual = n;
   vCapo.innerHTML = n > 0 ? 'Capo <span class="n">' + n + '</span>' : "";
   vCapo.classList.toggle("hidden", n <= 0);
+}
+
+/*
+ * Tamaño de letra que hace que la partitura QUEPA de ancho.
+ *
+ * La hoja mide 68 caracteres de la monoespaciada, que a 18 px son unos 730:
+ * en un móvil de 390 eso obliga a arrastrar de lado para leer cada línea, que
+ * es justo lo que no se puede hacer mientras se toca. Aquí se mide la línea más
+ * larga de ESTA partitura (no las 68 columnas teóricas: casi ninguna canción
+ * las gasta) y se elige el mayor tamaño que entra, entre 11 y 18 px.
+ *
+ * Solo se hace al abrir y solo en estrecho. A partir de ahí manda A-/A+: si
+ * alguien decide leer más grande y arrastrar, es cosa suya.
+ */
+/*
+ * Ancho de un carácter de la monoespaciada, en fracción del tamaño de letra.
+ * Se MIDE en vez de darlo por supuesto: JetBrains Mono avanza 0,6 em, pero si no
+ * ha cargado todavía manda la de reserva del sistema, que no tiene por qué. Con
+ * el número estimado el cálculo se quedaba corto por unos píxeles y la línea se
+ * salía igualmente por la derecha, que era justo lo que se quería evitar.
+ * Se mide una vez y se guarda: es una lectura de layout, y no cambia.
+ */
+var anchoChar = 0;
+
+/* Tamaño mínimo del ajuste automático: por debajo no se lee de un vistazo. */
+var SUELO_LETRA = 13;
+
+function anchoDeCaracter() {
+  if (anchoChar) return anchoChar;
+  var regla = document.createElement("span");
+  regla.textContent = "0123456789";
+  regla.style.cssText = "position:absolute;visibility:hidden;white-space:pre;" +
+                        "font-family:var(--vv-font-mono);font-size:100px";
+  document.body.appendChild(regla);
+  anchoChar = regla.getBoundingClientRect().width / 1000;   // 10 caracteres a 100 px
+  regla.remove();
+  return anchoChar || 0.6;
+}
+
+function letraQueQuepa() {
+  if (!current || pantallaAncha.matches) return fontSize;
+  var lineas = String(current.body || "").split("\\n");
+  var largo = 0;
+  for (var i = 0; i < lineas.length; i++) {
+    // Las llaves de los acordes no se pintan: {Am} ocupa dos columnas, no cuatro.
+    var limpia = lineas[i].replace(/[{}]/g, "");
+    if (limpia.length > largo) largo = limpia.length;
+  }
+  if (!largo) return fontSize;
+  var hoja = vSheet.querySelector(".sheet");
+  var hueco = (hoja ? hoja.clientWidth : vBody.clientWidth || window.innerWidth);
+  var cabe = Math.floor(hueco / (largo * anchoDeCaracter()));
+  /*
+   * El suelo del ajuste automático son 13 px, y es un suelo de LEGIBILIDAD, no
+   * de encaje: por debajo la letra no se lee de un vistazo con la guitarra en
+   * las manos, así que una canción de columnas exageradas se queda a 13 y se
+   * arrastra de lado. Encoger hasta que "quepa" cueste lo que cueste daba
+   * partituras que entraban enteras y no se leían, que es peor negocio.
+   *
+   * Antes eran 10, y además chocaba con el mínimo de A- (11): el ajuste dejaba
+   * la letra ya por debajo del mínimo manual y el botón de reducir no hacía
+   * nada. Ahora A- baja hasta 8 para quien quiera apretar de verdad.
+   */
+  /*
+   * Suelo blando: si la canción entra justo un punto por debajo (12 px), se le
+   * concede. Plantarse en 13 a rajatabla dejaba hojas que se salían por cinco
+   * píxeles —arrastrar la línea entera para leer una sílaba— cuando bajando uno
+   * entraban enteras. Dos puntos por debajo ya no: ahí se prefiere leer y
+   * arrastrar.
+   */
+  var suelo = cabe === SUELO_LETRA - 1 ? cabe : SUELO_LETRA;
+  return Math.max(suelo, Math.min(18, cabe));
 }
 
 function renderViewer() {
@@ -1226,7 +2354,8 @@ function step(ts) {
 function startScroll() {
   if (scrolling) return;
   scrolling = true; lastTs = 0; remainder = 0;
-  vPlay.textContent = "⏸ Scroll";
+  vPlayIcon.setAttribute("href", "#ic-pausa");
+  vPlay.setAttribute("aria-pressed", "true");
   if (navigator.wakeLock) {
     navigator.wakeLock.request("screen").then(function (w) { wakeLock = w; }).catch(function () {});
   }
@@ -1234,7 +2363,8 @@ function startScroll() {
 }
 function stopScroll() {
   scrolling = false;
-  vPlay.textContent = "▶ Scroll";
+  vPlayIcon.setAttribute("href", "#ac-play-circle");
+  vPlay.setAttribute("aria-pressed", "false");
   if (raf) { cancelAnimationFrame(raf); raf = 0; }
   if (wakeLock) { try { wakeLock.release(); } catch (e) {} wakeLock = null; }
 }
@@ -1250,11 +2380,13 @@ function renderBeats(beat) {
 function toggleMetro() {
   if (metro.isRunning()) {
     metro.stop();
-    vMetro.textContent = "♩ Metrónomo";
+    vMetroIcon.setAttribute("href", "#ac-metronome");
+    vMetro.setAttribute("aria-pressed", "false");
   } else {
     metro.bpm = +vBpm.value;
     metro.start();
-    vMetro.textContent = "■ Metrónomo";
+    vMetroIcon.setAttribute("href", "#ic-stop");
+    vMetro.setAttribute("aria-pressed", "true");
   }
 }
 metro.onBeat = renderBeats;
@@ -1442,10 +2574,68 @@ function rateVersion(versionId, stars) {
     ratings = d.ratings || {};
     myRatings = d.mine || {};
     renderVersionBar();
-  }).catch(function (e) { alert(e.message); });
+  }).catch(avisarError);
 }
 
 /* ---------- comentarios ---------- */
+
+/*
+ * Recomendadas: lo decide el servidor (mismo artista y, si no hay, mismo
+ * estilo) y aquí solo se pinta. Es una carga aparte y a propósito: si la
+ * consulta falla o tarda, la partitura ya está en pantalla y se lee igual.
+ */
+function loadRelated(songId) {
+  vRelated.innerHTML = "";
+  api("GET", "/api/songs/" + songId + "/related").then(function (d) {
+    renderRelated(d.songs || [], d.reason || "");
+  }).catch(function () {
+    // Sin recomendaciones no pasa nada: la sección simplemente no aparece. No
+    // se avisa del error porque no es algo que el lector haya pedido.
+    vRelated.innerHTML = "";
+  });
+}
+
+function renderRelated(lista, motivo) {
+  vRelated.innerHTML = "";
+  if (!lista.length || !current) return;
+
+  var titulo = document.createElement("h4");
+  titulo.textContent = motivo === "artist"
+    ? "Más de " + (current.song.artist || "este artista")
+    : motivo === "genre"
+    ? "Más " + (current.song.genre || "de este estilo").toLowerCase()
+    : "También te puede servir";
+  vRelated.appendChild(titulo);
+
+  var rejilla = document.createElement("div");
+  rejilla.className = "relGrid";
+  lista.forEach(function (s) {
+    var card = document.createElement("button");
+    card.className = "card";
+    var a = document.createElement("div");
+    a.className = "a";
+    a.textContent = s.artist || (s.ownerName ? "de " + s.ownerName : "");
+    var t = document.createElement("div");
+    t.className = "t";
+    t.textContent = s.title || "(sin título)";
+    card.appendChild(a);
+    card.appendChild(t);
+    if (s.genre && motivo === "artist") {
+      var etiquetas = document.createElement("div");
+      etiquetas.className = "etiquetas";
+      var g = document.createElement("span");
+      g.className = "badge";
+      g.textContent = s.genre;
+      etiquetas.appendChild(g);
+      card.appendChild(etiquetas);
+    }
+    // Se abre EN EL MISMO visor: cambia la partitura, la URL y las propias
+    // recomendaciones, sin pasar por el catálogo.
+    card.onclick = function () { openSong(s.id); };
+    rejilla.appendChild(card);
+  });
+  vRelated.appendChild(rejilla);
+}
 
 function loadComments(songId) {
   comments = [];
@@ -1523,7 +2713,7 @@ function renderComments() {
     enviar.disabled = true;
     api("POST", "/api/songs/" + current.song.id + "/comments", { body: texto })
       .then(function () { area.value = ""; loadComments(current.song.id); })
-      .catch(function (e) { alert(e.message); })
+      .catch(avisarError)
       .then(function () { enviar.disabled = false; });
   };
   fila.appendChild(enviar);
@@ -1533,10 +2723,17 @@ function renderComments() {
 }
 
 function deleteComment(id) {
-  if (!confirm("¿Borrar este comentario?")) return;
-  api("DELETE", "/api/comments/" + id)
-    .then(function () { loadComments(current.song.id); })
-    .catch(function (e) { alert(e.message); });
+  confirmar({
+    titulo: "Borrar comentario",
+    texto: "Se quitará de la partitura y no se puede recuperar.",
+    aceptar: "Borrar",
+    peligro: true
+  }).then(function (sigue) {
+    if (!sigue) return;
+    return api("DELETE", "/api/comments/" + id)
+      .then(function () { loadComments(current.song.id); })
+      .catch(avisarError);
+  });
 }
 
 /** Cambia lo que se lee sin salir del visor: se conservan tono y tamaño. */
@@ -1558,7 +2755,7 @@ function showVersion(id) {
     renderViewer();
     renderVersionBar();
     vBody.scrollTop = 0;
-  }).catch(function (e) { alert(e.message); });
+  }).catch(avisarError);
 }
 
 function newVersion() {
@@ -1592,16 +2789,23 @@ function editVersion(id) {
     closeViewer();
     applyEditorMode();
     showEdit(true);
-  }).catch(function (e) { alert(e.message); });
+  }).catch(avisarError);
 }
 
 function deleteVersion(id) {
-  if (!confirm("¿Eliminar esta versión? La partitura original no se toca.")) return;
-  api("DELETE", "/api/versions/" + id).then(function () {
-    currentVersion = null;
-    showVersion(null);
-    loadVersions(current.song.id);
-  }).catch(function (e) { alert(e.message); });
+  confirmar({
+    titulo: "Eliminar versión",
+    texto: "La partitura original no se toca; solo se borra esta versión.",
+    aceptar: "Eliminar",
+    peligro: true
+  }).then(function (sigue) {
+    if (!sigue) return;
+    return api("DELETE", "/api/versions/" + id).then(function () {
+      currentVersion = null;
+      showVersion(null);
+      loadVersions(current.song.id);
+    }).catch(avisarError);
+  });
 }
 
 /** Proponer una versión: no toca nada hasta que alguien la apruebe. */
@@ -1721,10 +2925,16 @@ function renderProposals(error) {
       var retirar = document.createElement("button");
       retirar.textContent = "Retirar";
       retirar.onclick = function () {
-        if (!confirm("¿Retirar esta propuesta?")) return;
-        api("DELETE", "/api/proposals/" + p.id)
-          .then(loadProposals)
-          .catch(function (e) { propMsg.textContent = e.message; });
+        confirmar({
+          titulo: "Retirar propuesta",
+          texto: "Dejará de estar en la cola de revisión.",
+          aceptar: "Retirar"
+        }).then(function (sigue) {
+          if (!sigue) return;
+          return api("DELETE", "/api/proposals/" + p.id)
+            .then(loadProposals)
+            .catch(function (e) { propMsg.textContent = e.message; });
+        });
       };
       acciones.appendChild(retirar);
     }
@@ -1742,19 +2952,31 @@ function renderProposals(error) {
 
 /** Aprobar aplica el cambio; rechazar pide el motivo, que le llega al autor. */
 function resolveProposal(p, accion) {
-  var nota = "";
-  if (accion === "reject") {
-    nota = prompt("Motivo del rechazo (lo verá quien la propuso):");
-    if (nota === null) return;
-  } else if (!confirm(p.kind === "publish"
-      ? "¿Publicar «" + (p.songTitle || "") + "» en el catálogo? La verá cualquiera."
-      : "¿Añadir esta versión a la partitura?")) {
-    return;
-  }
-  api("POST", "/api/proposals/" + p.id + "/" + accion, { note: nota }).then(function () {
-    loadProposals();
-    loadGenres();
-  }).catch(function (e) { propMsg.textContent = e.message; });
+  var pregunta = accion === "reject"
+    ? pedirTexto({
+        titulo: "Rechazar propuesta",
+        texto: "El motivo le llega a quien la propuso.",
+        etiqueta: "Motivo",
+        placeholder: "Qué habría que cambiar",
+        aceptar: "Rechazar"
+      })
+    : confirmar(p.kind === "publish"
+        ? {
+            titulo: "Publicar en el catálogo",
+            texto: "«" + (p.songTitle || "") + "» pasará a verse desde cualquier cuenta.",
+            aceptar: "Publicar"
+          }
+        : { titulo: "Añadir versión", texto: "Se añadirá a la partitura.", aceptar: "Añadir" });
+
+  pregunta.then(function (respuesta) {
+    // Rechazar devuelve el texto (null = cancelado); aprobar, un booleano.
+    if (respuesta === null || respuesta === false) return;
+    var nota = typeof respuesta === "string" ? respuesta : "";
+    return api("POST", "/api/proposals/" + p.id + "/" + accion, { note: nota }).then(function () {
+      loadProposals();
+      loadGenres();
+    }).catch(function (e) { propMsg.textContent = e.message; });
+  });
 }
 
 /** Enseña el texto propuesto tal y como quedaría, sin aplicarlo. */
@@ -1881,7 +3103,10 @@ function renderChordBar() {
 
 function toggleChordBar() {
   chordBarOn = !chordBarOn;
-  vChords.textContent = chordBarOn ? "♦ Ocultar acordes" : "♦ Acordes";
+  // El botón conserva su icono: solo cambia la palabra y el estado, que es lo
+  // que lee tanto el ojo (relleno coral) como el lector de pantalla.
+  vChords.querySelector("span").textContent = chordBarOn ? "Ocultar acordes" : "Acordes";
+  vChords.setAttribute("aria-pressed", chordBarOn ? "true" : "false");
   if (chordBarOn) loadChords().then(renderChordBar);
   else renderChordBar();
 }
@@ -2070,12 +3295,20 @@ function saveChord() {
 
 function deleteChord() {
   if (!editingChord) return;
-  if (!confirm("¿Quitar " + editingChord + " del diccionario global? Deja de verse para todo el mundo.")) return;
-  var siguiente = {};
-  Object.keys(chordDict).forEach(function (k) { if (k !== editingChord) siguiente[k] = chordDict[k]; });
-  saveChordDict(siguiente, "Eliminado " + editingChord).then(function () {
-    cerrarDialogo(chordEditor);
-  }).catch(function (e) { chMsg.textContent = e.message; });
+  var nombre = editingChord;
+  confirmar({
+    titulo: "Quitar " + nombre,
+    texto: "Sale del diccionario global: deja de verse para todo el mundo.",
+    aceptar: "Quitar",
+    peligro: true
+  }).then(function (sigue) {
+    if (!sigue) return;
+    var siguiente = {};
+    Object.keys(chordDict).forEach(function (k) { if (k !== nombre) siguiente[k] = chordDict[k]; });
+    return saveChordDict(siguiente, "Eliminado " + nombre).then(function () {
+      cerrarDialogo(chordEditor);
+    }).catch(function (e) { chMsg.textContent = e.message; });
+  });
 }
 
 function seedChords() {
@@ -2203,11 +3436,23 @@ function newSong() {
 }
 function editCurrent() {
   if (!current) return;
+  // El aviso va ANTES de tocar el estado del editor: si se cancela, editingId
+  // no debe quedarse apuntando a una partitura que no se va a editar.
+  var permiso = current.song.locked
+    ? confirmar({
+        titulo: "Partitura bloqueada",
+        texto: "Está bloqueada para evitar cambios accidentales.",
+        aceptar: "Editarla igualmente"
+      })
+    : Promise.resolve(true);
+  permiso.then(function (sigue) { if (sigue) abrirEditorDeCancion(); });
+}
+
+/** Vuelca la partitura del visor en el editor. Sale de editCurrent. */
+function abrirEditorDeCancion() {
   editorMode = "song";
   editingVersionId = null;
   editingId = current.song.id;
-  if (current.song.locked &&
-      !confirm("Esta partitura está bloqueada para evitar cambios accidentales. ¿Editarla igualmente?")) return;
   eTitle.value = current.song.title || "";
   eArtist.value = current.song.artist || "";
   editCapo = Number(current.song.capo) || 0;
@@ -2289,25 +3534,42 @@ function sendVersionProposal() {
 /** Pide que la partitura entre en el catálogo. No la publica: la propone. */
 function proposePublish() {
   if (!editingId) return;
-  var nota = prompt("¿Algo que quieras contarle a quien la revise? (opcional)");
-  if (nota === null) return;
-  api("POST", "/api/songs/" + editingId + "/proposals", { kind: "publish", note: nota })
-    .then(function () {
-      showEdit(false);
-      tab = "proposals";
-      listOffset = 0;
-      refresh();
-    }).catch(function (e) { editMsg.textContent = e.message; });
+  var id = editingId;
+  pedirTexto({
+    titulo: "Proponer publicación",
+    texto: "La revisará alguien del equipo antes de que entre en el catálogo.",
+    etiqueta: "Nota para quien revise (opcional)",
+    placeholder: "De dónde sale, qué has corregido…",
+    aceptar: "Enviar propuesta"
+  }).then(function (nota) {
+    if (nota === null) return;
+    return api("POST", "/api/songs/" + id + "/proposals", { kind: "publish", note: nota })
+      .then(function () {
+        showEdit(false);
+        tab = "proposals";
+        listOffset = 0;
+        refresh();
+        notificar("Propuesta enviada", "ok");
+      }).catch(function (e) { editMsg.textContent = e.message; });
+  });
 }
 
 function deleteSong() {
   if (!editingId) return;
-  if (!confirm("¿Mover esta partitura a la papelera?")) return;
-  api("DELETE", "/api/songs/" + editingId).then(function () {
-    showEdit(false);
-    loadGenres();
-    refresh();
-  }).catch(function (e) { editMsg.textContent = e.message; });
+  var id = editingId;
+  confirmar({
+    titulo: "Mover a la papelera",
+    texto: "Se puede recuperar después desde la papelera.",
+    aceptar: "Mover"
+  }).then(function (sigue) {
+    if (!sigue) return;
+    return api("DELETE", "/api/songs/" + id).then(function () {
+      showEdit(false);
+      loadGenres();
+      refresh();
+      notificar("Partitura en la papelera", "ok");
+    }).catch(function (e) { editMsg.textContent = e.message; });
+  });
 }
 
 /* ---------- eventos ---------- */
@@ -2320,7 +3582,7 @@ function ajustarAutocomplete() {
   password.setAttribute("autocomplete", registering ? "new-password" : "current-password");
 }
 
-loginBtn.onclick = function () { registering = false; authTitle.textContent = "Entrar en Vivace";
+loginBtn.onclick = function () { registering = false; authTitle.textContent = "Entrar en Accordio";
   authSubmit.textContent = "Entrar"; authSwitch.textContent = "Crear una cuenta";
   nameWrap.classList.add("hidden"); ajustarAutocomplete(); showAuth(true); };
 logoutBtn.onclick = function () {
@@ -2337,7 +3599,7 @@ logoutBtn.onclick = function () {
 };
 authSwitch.onclick = function () {
   registering = !registering;
-  authTitle.textContent = registering ? "Crear cuenta en Vivace" : "Entrar en Vivace";
+  authTitle.textContent = registering ? "Crear cuenta en Accordio" : "Entrar en Accordio";
   authSubmit.textContent = registering ? "Crear cuenta" : "Entrar";
   authSwitch.textContent = registering ? "Ya tengo cuenta" : "Crear una cuenta";
   nameWrap.classList.toggle("hidden", !registering);
@@ -2358,8 +3620,26 @@ tabPublic.onclick = function () { irA("public"); };
 tabMine.onclick = function () { irA("mine"); };
 tabTrash.onclick = function () { irA("trash"); };
 tabAdmin.onclick = function () { irA("admin"); };
+altasBtn.onclick = alternarAltas;
 moreBtn.onclick = function () { listOffset += PAGINA; refresh(); };
-search.oninput = function () { renderList(); };
+/*
+ * Al teclear: recorte inmediato de lo que ya hay y, si hay al menos 3 letras o
+ * cifras, consulta al servidor un poco después. El retardo es para no lanzar
+ * una consulta por tecla; con menos de 3 no se consulta, pero el recorte local
+ * sigue funcionando.
+ */
+search.oninput = function () {
+  renderList();
+  var texto = search.value.trim();
+  var quiereBuscar = vLetrasYCifras(texto) >= MIN_BUSQUEDA ? texto : "";
+  if (quiereBuscar === busqueda) return;      // nada que cambiar en el servidor
+  clearTimeout(temporizadorBusqueda);
+  temporizadorBusqueda = setTimeout(function () {
+    busqueda = quiereBuscar;
+    listOffset = 0;
+    refresh();
+  }, 250);
+};
 tabChords.onclick = function () { irA("chords"); };
 
 themeBtn.onclick = toggleTheme;
@@ -2371,9 +3651,114 @@ playlistFilter.onchange = function () {
 };
 favFilter.onclick = function () {
   favOnly = !favOnly;
-  favFilter.setAttribute("aria-pressed", favOnly);
+  marcarFavoritas();
   renderList();
 };
+
+privFilter.onclick = function () {
+  sinPublicas = !sinPublicas;
+  marcarPrivadas();
+  renderList();
+};
+
+/** Estado del filtro, y qué pasa al pulsarlo. */
+function marcarPrivadas() {
+  privFilter.setAttribute("aria-pressed", sinPublicas ? "true" : "false");
+  privFilter.title = sinPublicas
+    ? "Ver también las que ya están publicadas"
+    : "Ocultar las que ya están publicadas";
+}
+
+/** Estrella hueca o rellena, según el filtro esté puesto o no. */
+function marcarFavoritas() {
+  favFilter.setAttribute("aria-pressed", favOnly ? "true" : "false");
+  favFilter.querySelector("use")
+    .setAttribute("href", favOnly ? "#ac-star" : "#ac-star-outline");
+}
+/*
+ * Panel de mandos del móvil. En pantalla ancha los mandos viven en su columna y
+ * nada de esto se usa; en estrecho suben desde abajo, con velo, y se cierran
+ * tocando fuera, con Escape o con el asa. El botón que los abre está anclado
+ * abajo a la derecha, que es donde llega el pulgar.
+ */
+function mandos(abrir) {
+  viewer.classList.toggle("conMandos", abrir);
+  vTools.setAttribute("aria-expanded", abrir ? "true" : "false");
+  vVelo.hidden = !abrir;
+  if (abrir) vSide.scrollTop = 0;
+}
+
+vTools.onclick = function () { mandos(!viewer.classList.contains("conMandos")); };
+vVelo.onclick = function () { mandos(false); };
+vToolsClose.onclick = function () { mandos(false); };
+document.addEventListener("keydown", function (e) {
+  if (e.key === "Escape" && viewer.classList.contains("conMandos")) {
+    e.stopPropagation();          // que no se lleve por delante el visor entero
+    mandos(false);
+  }
+});
+
+/*
+ * Las versiones cambian de sitio según el ancho: en la columna de mandos cuando
+ * hay sitio, y al final de la partitura en el móvil, que es donde se decide
+ * «pruebo esta otra». Se MUEVE el mismo nodo en vez de duplicarlo: con dos
+ * copias habría dos listas que mantener y dos veces los mismos ids.
+ */
+var pantallaAncha = window.matchMedia("(min-width: 901px)");
+
+/*
+ * Acciones de la partitura (original, compartir, PDF, editar). En pantalla ancha
+ * van en la barra; en el móvil esa barra se comía un tercio de la pantalla, así
+ * que se mudan a un menú que cuelga del botón «Acciones». Se mueven los MISMOS
+ * nodos, como con las versiones: duplicarlos obligaría a repetir cada onclick y
+ * cada .hidden (el de «Editar» depende de quién seas).
+ */
+var accionesDelVisor = [];
+
+function colocarAcciones() {
+  if (!accionesDelVisor.length) {
+    accionesDelVisor = [vSource, vShare, vPrint, vEdit];
+  }
+  var destino = pantallaAncha.matches ? vLadoDer : vMenu;
+  accionesDelVisor.forEach(function (n) {
+    if (n.parentElement !== destino) destino.appendChild(n);
+  });
+  if (pantallaAncha.matches) menuAcciones(false);
+}
+
+function menuAcciones(abrir) {
+  vMenu.hidden = !abrir;
+  vMenuBtn.setAttribute("aria-expanded", abrir ? "true" : "false");
+}
+
+function colocarVersiones() {
+  if (pantallaAncha.matches) {
+    if (vVersionPanel.parentElement !== vSide) vSide.appendChild(vVersionPanel);
+  } else if (vVersionPanel.parentElement !== vBody) {
+    vBody.insertBefore(vVersionPanel, vComments);
+  }
+}
+pantallaAncha.addEventListener("change", function () {
+  colocarVersiones();
+  colocarAcciones();
+  if (pantallaAncha.matches) mandos(false);   // en ancho no hay panel que cerrar
+});
+colocarVersiones();
+colocarAcciones();
+
+vMenuBtn.onclick = function (e) {
+  e.stopPropagation();
+  menuAcciones(vMenu.hidden);
+};
+// Tocar en cualquier otro sitio lo cierra, y también al elegir una acción.
+document.addEventListener("click", function (e) {
+  if (!vMenu.hidden && !vMenu.contains(e.target)) menuAcciones(false);
+});
+vMenu.addEventListener("click", function () { menuAcciones(false); });
+document.addEventListener("keydown", function (e) {
+  if (e.key === "Escape" && !vMenu.hidden) { e.stopPropagation(); menuAcciones(false); }
+});
+
 vShare.onclick = compartirCancion;
 vPrint.onclick = printViewer;
 
@@ -2494,8 +3879,13 @@ vSpeed.oninput = function () { vSpeedVal.textContent = vSpeed.value + " px/s"; }
 vUp.onclick = function () { semis = Math.min(11, semis + 1); renderViewer(); };
 vDown.onclick = function () { semis = Math.max(-11, semis - 1); renderViewer(); };
 vFlat.onclick = function () { flats = !flats; renderViewer(); };
-vFontUp.onclick = function () { fontSize = Math.min(40, fontSize + 2); renderViewer(); };
-vFontDown.onclick = function () { fontSize = Math.max(11, fontSize - 2); renderViewer(); };
+/*
+ * Paso de 1 px y no de 2: cerca del suelo, dos píxeles son un salto enorme
+ * (de 14 a 12 la hoja cambia de aspecto entero). El mínimo es 8 para que
+ * siempre quede recorrido por debajo del tamaño que elige el ajuste automático.
+ */
+vFontUp.onclick = function () { fontSize = Math.min(40, fontSize + 1); renderViewer(); };
+vFontDown.onclick = function () { fontSize = Math.max(8, fontSize - 1); renderViewer(); };
 vMetro.onclick = toggleMetro;
 vBpm.oninput = function () { vBpmVal.textContent = vBpm.value; metro.bpm = +vBpm.value; };
 document.addEventListener("keydown", function (e) {
@@ -2503,10 +3893,15 @@ document.addEventListener("keydown", function (e) {
 });
 
 applyTheme(currentTheme());
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function () {
+  if (!currentTheme()) recursosDeTema(temaEfectivo());
+});
 renderBeats(0);
 loadGenres();
+loadSettings();
 restoreSession().then(function () {
-  if (user) tab = "mine";
+  // La portada es el catálogo, se tenga sesión o no: al entrar interesa ver lo
+  // que hay publicado, no la carpeta propia (que está a un clic, en su pestaña).
   refresh();
   // Lo último: así una partitura privada propia se abre con la sesión ya puesta.
   aplicarUrl();
@@ -2518,13 +3913,17 @@ export const WEB_HTML = `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Vivace</title>
-<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-<meta name="theme-color" content="#0F1113" media="(prefers-color-scheme: dark)">
-<meta name="theme-color" content="#F6F4EF" media="(prefers-color-scheme: light)">
+<title>Accordio</title>
+<!-- Favicon y color de la barra del navegador los pone el JS del tema: con
+     media queries seguirían al sistema y no a la elección manual. -->
+<link id="favicon" rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<meta id="themeColor" name="theme-color" content="#1A535C">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<!-- Montserrat (titulares) y Poppins (texto) son las del kit. JetBrains Mono no
+     sale de él: la hoja de partitura necesita monoespaciada o los acordes dejan
+     de caer sobre su sílaba. -->
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Poppins:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <script>
   /* El tema elegido se aplica ANTES de pintar: si se hiciera al final del
      <body>, la página aparecería un instante con el tema contrario. */
@@ -2538,23 +3937,39 @@ export const WEB_HTML = `<!doctype html>
 <body>
 
 <header>
-  <a class="brand" href="/" aria-label="Vivace">
-    <svg width="30" height="30" viewBox="0 0 48 48" aria-hidden="true">
-      <rect x="18" y="6" width="12" height="30" fill="none" stroke="var(--vv-accent)" stroke-width="2.4"></rect>
-      <g fill="currentColor">
-        <circle cx="12" cy="14" r="2.4"></circle><circle cx="12" cy="22" r="2.4"></circle><circle cx="12" cy="30" r="2.4"></circle>
-        <circle cx="36" cy="14" r="2.4"></circle><circle cx="36" cy="22" r="2.4"></circle><circle cx="36" cy="30" r="2.4"></circle>
+  <a class="brand" href="/" aria-label="Accordio">
+    <svg width="42" height="29" viewBox="0 0 132 92" aria-hidden="true">
+      <g fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="square">
+        <path d="M8 10H124M8 26H124M8 42H124M8 58H124M8 74H124"></path>
+        <path d="M8 10V74M37 10V74M66 10V74M95 10V74M124 10V74"></path>
       </g>
-      <rect x="18" y="38" width="12" height="3.4" fill="var(--vv-accent)"></rect>
+      <g>
+        <circle cx="66" cy="10" r="9" fill="currentColor"></circle>
+        <circle cx="37" cy="26" r="9" fill="currentColor"></circle>
+        <circle cx="95" cy="26" r="9" fill="#FF6B6B"></circle>
+        <circle cx="8" cy="42" r="9" fill="currentColor"></circle>
+        <circle cx="80" cy="42" r="9" fill="#FF6B6B"></circle>
+        <circle cx="80" cy="58" r="9" fill="#FF6B6B"></circle>
+        <circle cx="51" cy="74" r="9" fill="#FF6B6B"></circle>
+      </g>
     </svg>
     <span>
-      <h1>vivace</h1>
-      <span class="kicker">Practice room</span>
+      <h1>Accordio</h1>
+      <span class="kicker">Acordes de la comunidad</span>
     </span>
   </a>
   <span class="grow"></span>
   <span id="who" class="hidden" style="font-size:13px;color:var(--vv-text-muted)"></span>
-  <button id="themeBtn" title="Cambiar entre claro y oscuro" aria-label="Cambiar tema">🌓</button>
+  <button id="themeBtn" class="iconBtn" title="Cambiar tema" aria-label="Cambiar tema">
+    <svg class="iconoTema" viewBox="0 0 24 24" aria-hidden="true" fill="none"
+         stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+      <g class="sol">
+        <circle cx="12" cy="12" r="4.1"></circle>
+        <path d="M12 2.6v2.1M12 19.3v2.1M4.4 4.4l1.5 1.5M18.1 18.1l1.5 1.5M2.6 12h2.1M19.3 12h2.1M4.4 19.6l1.5-1.5M18.1 5.9l1.5-1.5"></path>
+      </g>
+      <path class="luna" d="M20.1 14.6A8.5 8.5 0 0 1 9.4 3.9a8.5 8.5 0 1 0 10.7 10.7z"></path>
+    </svg>
+  </button>
   <button id="loginBtn">Entrar</button>
   <button id="logoutBtn" class="hidden">Salir</button>
 </header>
@@ -2563,7 +3978,7 @@ export const WEB_HTML = `<!doctype html>
   <!-- acceso -->
   <section id="authView" class="hidden">
     <div class="stack">
-      <h2 id="authTitle" style="margin:0">Entrar en Vivace</h2>
+      <h2 id="authTitle" style="margin:0">Entrar en Accordio</h2>
       <label>Email<input type="email" id="email" autocomplete="email"></label>
       <label id="nameWrap" class="hidden">Nombre<input type="text" id="name" autocomplete="name"></label>
       <label>Contraseña <small>(mínimo 8 caracteres)</small>
@@ -2571,6 +3986,8 @@ export const WEB_HTML = `<!doctype html>
       <div class="msg" id="authMsg"></div>
       <button class="primary" id="authSubmit">Entrar</button>
       <button class="ghost" id="authSwitch">Crear una cuenta</button>
+      <p id="authCerrado" class="hidden aviso" style="margin:0">
+        Las altas de cuenta están cerradas ahora mismo. Si ya tienes una, puedes entrar.</p>
     </div>
   </section>
 
@@ -2585,7 +4002,8 @@ export const WEB_HTML = `<!doctype html>
       <button id="tabTrash" aria-selected="false" class="hidden" title="Partituras borradas">Papelera</button>
       <button id="tabAdmin" aria-selected="false" class="hidden" title="Herramientas del catálogo">Administración</button>
       <span class="grow"></span>
-      <button id="newBtn" class="hidden">+ Nueva</button>
+      <button id="newBtn" class="tool destacada hidden">
+        <svg class="ic"><use href="#ac-plus"></use></svg><span>Nueva</span></button>
     </div>
     <div class="filtros">
       <label class="filtro" for="search">Buscar
@@ -2604,7 +4022,10 @@ export const WEB_HTML = `<!doctype html>
         <select id="playlistFilter">
           <option value="">Todas</option>
         </select></label>
-      <button id="favFilter" class="hidden" aria-pressed="false" title="Ver solo las favoritas">★ Favoritas</button>
+      <button id="favFilter" class="tool favoritas hidden" aria-pressed="false" title="Ver solo las favoritas">
+        <svg class="ic"><use href="#ac-star-outline"></use></svg><span>Favoritas</span></button>
+      <button id="privFilter" class="tool privadas hidden" aria-pressed="true" title="Ver también las que ya están publicadas">
+        <svg class="ic"><use href="#ic-candado"></use></svg><span>Solo privadas</span></button>
     </div>
     <div id="listasBar" class="listas hidden">
       <span class="etiqueta">Listas</span>
@@ -2641,6 +4062,19 @@ export const WEB_HTML = `<!doctype html>
       <button id="noVideoBtn">Listar</button>
       <div id="noVideoList" class="stack" style="margin-top:10px"></div>
     </div>
+    <!-- Solo para el administrador: se enseña desde el JS, porque a la pestaña
+         de Administración también llegan los editores. -->
+    <div class="adminTool hidden" id="altasTool">
+      <h3>Altas de cuenta</h3>
+      <p>Con las altas cerradas, nadie puede crear una cuenta nueva: ni desde la
+         web ni llamando a la API. Quien ya la tiene sigue entrando con
+         normalidad.</p>
+      <div class="acciones">
+        <button id="altasBtn" class="tool altas" aria-pressed="false">
+          <svg class="ic"><use href="#ac-user"></use></svg><span>Altas: …</span></button>
+      </div>
+      <div class="msg" id="altasMsg"></div>
+    </div>
     <div class="adminTool">
       <h3>Categorías automáticas</h3>
       <p>Propone una categoría para las partituras que no tienen ninguna.
@@ -2655,53 +4089,20 @@ export const WEB_HTML = `<!doctype html>
 
   <!-- editor -->
   <section id="editView" class="hidden">
+    <!--
+      Tres columnas: escribir, ver cómo queda y los ajustes. Antes los campos
+      iban apilados ARRIBA y empujaban el editor y la vista previa fuera de la
+      pantalla, cuando escribir la partitura es el 90 % del trabajo y el título
+      o la categoría se tocan una vez. Ahora la hoja manda y los ajustes están
+      al lado, en su columna, junto con los botones.
+    -->
     <div class="editor">
-      <div class="editHead">
-        <label>Título<input type="text" id="eTitle"></label>
-        <label>Artista<input type="text" id="eArtist"></label>
-        <label>Categoría <small>estilo musical</small>
-          <input type="text" id="eGenre" list="genreList" placeholder="Rock, bolero, folk…">
-          <datalist id="genreList"></datalist></label>
-        <label id="ePlaylistWrap">Lista
-          <select id="ePlaylist">
-            <option value="">Sin lista</option>
-          </select></label>
-        <label id="eLockedWrap" class="row" style="gap:8px;align-items:center">
-          <input type="checkbox" id="eLocked" style="width:auto">
-          <span>Bloqueada <small>pide confirmación antes de editarla</small></span>
-        </label>
-        <label id="eVisibilityWrap">Visibilidad
-          <select id="eVisibility">
-            <option value="private">Privada (solo yo)</option>
-            <option value="public">Pública (cualquiera puede verla)</option>
-          </select>
-        </label>
-      </div>
-      <div class="editHead" style="grid-template-columns:1fr" id="eVersionHead">
-        <label>Nombre de la versión <small>«Acústica», «En Do», «Tablatura»…</small>
-          <input type="text" id="eVersionName" placeholder="Acústica"></label>
-        <label id="eNoteWrap">Mensaje para quien la revise <small>opcional</small>
-          <input type="text" id="eNote" placeholder="Qué cambia y por qué"></label>
-      </div>
-      <div class="editHead" style="grid-template-columns:1fr">
-        <label>URL de la partitura original <small>opcional</small>
-          <input type="url" id="eSource" placeholder="https://…"></label>
-        <label>Vídeo de YouTube <small>opcional; se ve junto a la partitura</small>
-          <input type="text" id="eTube" placeholder="https://youtu.be/…"></label>
-        <div class="row">
-          <button id="eTubeSearch" title="Abre la búsqueda en otra pestaña">Buscar en YouTube</button>
-          <span id="eTubeMsg" class="nota"></span>
-        </div>
-        <div>
-          <div class="vv-kicker" style="margin-bottom:6px">Capo</div>
-          <div class="pills" id="eCapoPills"></div>
-        </div>
-      </div>
       <div id="editSplit">
         <div class="pane">
           <div class="hd">Partitura <small>acordes entre llaves: {Am}</small>
             <span class="grow"></span>
-            <button id="eDetect" title="Marca las líneas que solo llevan acordes">♪ Detectar acordes</button>
+            <button id="eDetect" class="tool" title="Marca las líneas que solo llevan acordes">
+              <svg class="ic"><use href="#ac-notes"></use></svg><span>Detectar acordes</span></button>
           </div>
           <textarea id="eContent" spellcheck="false"
                     placeholder="#title: Título&#10;#artist: Autor&#10;---&#10;{Am} Primera línea"></textarea>
@@ -2710,15 +4111,67 @@ export const WEB_HTML = `<!doctype html>
           <div class="hd">Vista previa <small>tal cual se verá</small></div>
           <div id="ePreview"></div>
         </div>
-      </div>
-      <div id="editAviso" class="aviso hidden"></div>
-      <div class="msg" id="editMsg"></div>
-      <div class="row">
-        <button class="primary" id="saveBtn">Guardar</button>
-        <button id="proposeBtn" class="hidden" title="Un editor la revisará antes de publicarla">Proponer publicación</button>
-        <button id="cancelEdit">Cancelar</button>
-        <span class="grow"></span>
-        <button id="deleteBtn" class="hidden" style="color:var(--vv-danger)">Eliminar</button>
+
+        <!-- Ajustes: lo que se rellena una vez y se mira de reojo. -->
+        <aside class="pane" id="eSide">
+          <div class="hd">Ficha</div>
+          <!-- La caja va aparte de la cabecera, igual que en las otras dos
+               columnas: así las tres empiezan y acaban a la misma altura. -->
+          <div id="eSideBox">
+            <div id="eSideBody">
+            <label>Título<input type="text" id="eTitle"></label>
+            <label>Artista<input type="text" id="eArtist"></label>
+            <label>Categoría <small>estilo musical</small>
+              <input type="text" id="eGenre" list="genreList" placeholder="Rock, bolero, folk…">
+              <datalist id="genreList"></datalist></label>
+            <label id="ePlaylistWrap">Lista
+              <select id="ePlaylist">
+                <option value="">Sin lista</option>
+              </select></label>
+            <label id="eVisibilityWrap">Visibilidad
+              <select id="eVisibility">
+                <option value="private">Privada (solo yo)</option>
+                <option value="public">Pública (cualquiera puede verla)</option>
+              </select>
+            </label>
+            <label id="eLockedWrap" class="row" style="gap:8px;align-items:center">
+              <input type="checkbox" id="eLocked" style="width:auto">
+              <span>Bloqueada <small>pide confirmación antes de editarla</small></span>
+            </label>
+
+            <div id="eVersionHead">
+              <label>Nombre de la versión <small>«Acústica», «En Do», «Tablatura»…</small>
+                <input type="text" id="eVersionName" placeholder="Acústica"></label>
+              <label id="eNoteWrap">Mensaje para quien la revise <small>opcional</small>
+                <input type="text" id="eNote" placeholder="Qué cambia y por qué"></label>
+            </div>
+
+            <div>
+              <div class="vv-kicker" style="margin-bottom:6px">Capo</div>
+              <div class="pills" id="eCapoPills"></div>
+            </div>
+
+            <label>URL de la partitura original <small>opcional</small>
+              <input type="url" id="eSource" placeholder="https://…"></label>
+            <label>Vídeo de YouTube <small>opcional; se ve junto a la partitura</small>
+              <input type="text" id="eTube" placeholder="https://youtu.be/…"></label>
+            <div class="row">
+              <button id="eTubeSearch" title="Abre la búsqueda en otra pestaña">Buscar en YouTube</button>
+              <span id="eTubeMsg" class="nota"></span>
+            </div>
+          </div>
+
+            <!-- Los botones cierran la columna: se llega a ellos sin buscar. -->
+            <div id="eAcciones">
+              <div id="editAviso" class="aviso hidden"></div>
+              <div class="msg" id="editMsg"></div>
+              <button class="primary" id="saveBtn">Guardar</button>
+              <button id="proposeBtn" class="hidden" title="Un editor la revisará antes de publicarla">Proponer publicación</button>
+              <button id="cancelEdit">Cancelar</button>
+              <button id="deleteBtn" class="hidden danger">Eliminar</button>
+            </div>
+          </div>
+        </aside>
       </div>
     </div>
   </section>
@@ -2832,42 +4285,69 @@ export const WEB_HTML = `<!doctype html>
       </div>
       <span id="vCapo" class="hidden"></span>
     </div>
-    <div class="lado der">
+    <div class="lado der" id="vLadoDer">
+      <button id="vMenuBtn" class="tool soloEstrecho" aria-expanded="false" aria-controls="vMenu"
+              aria-label="Acciones de la partitura" title="Acciones de la partitura">
+        <svg class="ic"><use href="#ac-menu"></use></svg><span>Acciones</span></button>
       <a id="vSource" class="hidden" href="#" target="_blank" rel="noopener noreferrer"
          title="Abrir la partitura original en otra pestaña">Original ↗</a>
-      <button id="vShare" title="Copiar el enlace de esta partitura">🔗 Compartir</button>
-      <button id="vPrint" title="Abre el diálogo de impresión; ahí puedes elegir «Guardar como PDF»">🖨 PDF</button>
+      <button id="vShare" class="tool compartir" title="Copiar el enlace de esta partitura">
+        <svg class="ic"><use href="#ac-submit"></use></svg><span>Compartir</span></button>
+      <button id="vPrint" class="tool imprimir" title="Abre el diálogo de impresión; ahí puedes elegir «Guardar como PDF»">
+        <svg class="ic"><use href="#ac-sheet-music"></use></svg><span>PDF</span></button>
       <button id="vEdit" class="hidden">Editar</button>
     </div>
+    <!-- En estrecho, las acciones se mudan aquí dentro (ver colocarAcciones). -->
+    <div id="vMenu" hidden></div>
   </div>
   <div id="vChordBar" class="chordBar hidden"></div>
   <div id="vMain">
+    <!-- Solo en móvil: velo y botón inferior del panel deslizante. -->
+    <div id="vVelo" hidden></div>
+    <button id="vTools" class="tool soloEstrecho" aria-expanded="false" aria-controls="vSide">
+      <svg class="ic"><use href="#ac-settings"></use></svg><span>Mandos</span></button>
     <div id="vSide">
+      <button id="vToolsClose" class="ghost soloEstrecho" title="Cerrar los mandos">Cerrar</button>
       <div id="vCtrl">
-      <div class="row">
-        <button id="vPlay" title="Desplazamiento automático">▶ Scroll</button>
-        <input type="range" id="vSpeed" min="5" max="300" value="40" style="min-width:60px">
-        <label id="vSpeedVal">40 px/s</label>
+      <!-- Cada herramienta tiene su color de la paleta: turquesa lo que corre
+           (scroll), amarillo lo que marca el pulso (metrónomo), coral los
+           acordes y teal el tono. Antes eran seis botones de texto idénticos y
+           no se distinguía uno de otro de un vistazo. -->
+      <div class="row herr scroll">
+        <button id="vPlay" class="tool" aria-pressed="false" title="Desplazamiento automático">
+          <svg class="ic"><use id="vPlayIcon" href="#ac-play-circle"></use></svg><span>Scroll</span>
+        </button>
+        <!-- Hasta 100 px/s: por encima la hoja pasa más rápido de lo que se
+             toca, y el rango de 300 dejaba lo útil (10-40) apelotonado en el
+             primer centímetro de la barra. -->
+        <input type="range" id="vSpeed" min="2" max="100" value="20" style="min-width:60px">
+        <label id="vSpeedVal">20 px/s</label>
       </div>
-      <div class="row">
+      <div class="row herr tono">
         <label>Tono</label>
-        <button id="vDown">–</button>
+        <button id="vDown" class="tool" title="Bajar medio tono">–</button>
         <label id="vTone" style="min-width:2.5em;text-align:center">±0</label>
-        <button id="vUp">+</button>
-        <button id="vFlat">♭</button>
+        <button id="vUp" class="tool" title="Subir medio tono">+</button>
+        <button id="vFlat" class="tool" title="Escribir con bemoles">♭</button>
       </div>
-      <div class="row">
+      <div class="row herr letra">
         <label>Letra</label>
-        <button id="vFontDown">A-</button>
-        <button id="vFontUp">A+</button>
+        <button id="vFontDown" class="tool" title="Letra más pequeña">A-</button>
+        <button id="vFontUp" class="tool" title="Letra más grande">A+</button>
         <span class="grow"></span>
-        <button id="vChords" title="Diagramas de los acordes de esta partitura">♦ Acordes</button>
       </div>
-      <div class="row">
-        <button id="vMetro" title="Metrónomo">♩ Metrónomo</button>
+      <div class="row herr acordes">
+        <button id="vChords" class="tool" aria-pressed="false" title="Diagramas de los acordes de esta partitura">
+          <svg class="ic"><use href="#ac-chord"></use></svg><span>Acordes</span>
+        </button>
+      </div>
+      <div class="row herr metro">
+        <button id="vMetro" class="tool" aria-pressed="false" title="Metrónomo">
+          <svg class="ic"><use id="vMetroIcon" href="#ac-metronome"></use></svg><span>Metrónomo</span>
+        </button>
         <span id="vBeats" class="row" style="gap:4px"></span>
       </div>
-      <div class="row">
+      <div class="row herr metro">
         <label>BPM</label>
         <input type="range" id="vBpm" min="40" max="200" value="100" style="min-width:70px">
         <label id="vBpmVal">100</label>
@@ -2879,8 +4359,51 @@ export const WEB_HTML = `<!doctype html>
         <div id="vVersionActions" class="row" style="gap:6px"></div>
       </div>
     </div>
-    <div id="vBody"><div id="vSheet"></div><div id="vComments"></div></div>
+    <div id="vBody"><div id="vSheet"></div><div id="vComments"></div><div id="vRelated"></div></div>
     <div id="vTube"><div class="marco"></div></div>
+  </div>
+</div>
+
+<!-- Iconos del kit (icons/sprite.svg), solo los que se usan. Van como <symbol>
+     porque el trazo lee currentColor y el detalle --ac-icon-accent: así cada
+     herramienta pinta su icono con el color de su papel sin duplicar ficheros.
+     Las dos últimas no salen del kit: le faltan pausa y stop. -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <symbol id="ac-play-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.6"></circle><path d="m10.2 8.6 5.4 3.4-5.4 3.4z" fill="var(--ac-icon-accent, #FF6B6B)" stroke="var(--ac-icon-accent, #FF6B6B)"></path></symbol>
+  <symbol id="ac-metronome" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.2 4h5.6l4.4 16.4H4.8z"></path><path d="M6.2 14.6h11.6"></path><path d="M12 14.6 19.6 5.4" stroke="var(--ac-icon-accent, #FF6B6B)"></path></symbol>
+  <symbol id="ac-chord" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4.5" width="16" height="15" rx="1"></rect><path d="M9.3 4.5v15M14.7 4.5v15M4 9.5h16M4 14.5h16"></path><circle cx="9.3" cy="7" r="1.7" fill="var(--ac-icon-accent, #FF6B6B)" stroke="none"></circle><circle cx="14.7" cy="12" r="1.7" fill="var(--ac-icon-accent, #FF6B6B)" stroke="none"></circle></symbol>
+  <symbol id="ac-sheet-music" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5.4 3.6h9l4.6 4.6v12.2H5.4z"></path><path d="M14.2 3.6v4.8H19"></path><circle cx="9.4" cy="16.4" r="1.8" fill="var(--ac-icon-accent, #FF6B6B)" stroke="var(--ac-icon-accent, #FF6B6B)"></circle><path d="M11.2 16.4v-5l3.4-1"></path></symbol>
+  <symbol id="ac-submit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20.4 3.6 3.6 10.4l6.6 2.8 2.8 6.6z"></path><path d="M20.4 3.6 10.2 13.2" stroke="var(--ac-icon-accent, #FF6B6B)"></path></symbol>
+  <symbol id="ac-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.6l2.6 5.5 6 .8-4.4 4.2 1.1 6-5.3-2.9-5.3 2.9 1.1-6L3.4 9.9l6-.8z" fill="currentColor" stroke="currentColor"></path></symbol>
+  <symbol id="ac-star-outline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.6l2.6 5.5 6 .8-4.4 4.2 1.1 6-5.3-2.9-5.3 2.9 1.1-6L3.4 9.9l6-.8z"></path></symbol>
+  <symbol id="ac-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.2v13.6M5.2 12h13.6"></path></symbol>
+  <symbol id="ac-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.8" cy="10.8" r="6.4"></circle><path d="m15.6 15.6 4.4 4.4" stroke="var(--ac-icon-accent, #FF6B6B)"></path></symbol>
+  <symbol id="ac-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 3.4v2.6M12 18v2.6M4.9 7.6l2.3 1.3M16.8 15.1l2.3 1.3M4.9 16.4l2.3-1.3M16.8 8.9l2.3-1.3" stroke="var(--ac-icon-accent, #FF6B6B)"></path></symbol>
+  <symbol id="ac-review" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7.4 20.6V10l4.3-6.7c1.7.2 2.4 1.3 2.2 3l-.4 3.7h5a2 2 0 0 1 2 2.4l-1.3 6a2 2 0 0 1-2 1.6z"></path><rect x="2.4" y="10" width="4.6" height="10.6" rx="1.2" fill="var(--ac-icon-accent, #FF6B6B)" stroke="var(--ac-icon-accent, #FF6B6B)"></rect></symbol>
+  <symbol id="ac-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.7"></circle><path d="M4.9 20.5a7.1 7.1 0 0 1 14.2 0"></path></symbol>
+  <symbol id="ac-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.6 7h16.8M3.6 12h16.8M3.6 17h16.8"></path></symbol>
+  <symbol id="ac-notes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.6" cy="17" r="2.7"></circle><circle cx="17" cy="15" r="2.7"></circle><path d="M10.3 17V7.2l9.4-2.4V15"></path><path d="M10.3 9.6l9.4-2.4" stroke="var(--ac-icon-accent, #FF6B6B)"></path></symbol>
+  <symbol id="ic-candado" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4.6" y="10.4" width="14.8" height="9.6" rx="2.4"></rect><path d="M8.2 10.4V7.6a3.8 3.8 0 0 1 7.6 0v2.8"></path><circle cx="12" cy="15.2" r="1.6" fill="var(--ac-icon-accent, #FF6B6B)" stroke="none"></circle></symbol>
+  <symbol id="ic-pausa" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.6"></circle><path d="M10.2 9v6M13.8 9v6" stroke="var(--ac-icon-accent, #FF6B6B)"></path></symbol>
+  <symbol id="ic-stop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.2 4h5.6l4.4 16.4H4.8z"></path><path d="M6.2 14.6h11.6"></path><rect x="9.6" y="8.4" width="4.8" height="4.8" rx="1" fill="var(--ac-icon-accent, #FF6B6B)" stroke="var(--ac-icon-accent, #FF6B6B)"></rect></symbol>
+</svg>
+
+<!-- Avisos flotantes (aria-live: un lector de pantalla los canta sin robar el
+     foco) y diálogo genérico de confirmar/pedir texto, con el estilo de la web. -->
+<div id="toastWrap" class="toasts" aria-live="polite" aria-atomic="false"></div>
+
+<div id="dlgModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="dlgTitle">
+  <div class="modalBox dlgBox">
+    <h3 id="dlgTitle">Confirmar</h3>
+    <p id="dlgText" class="dlgText"></p>
+    <label id="dlgField" class="dlgField hidden">
+      <span id="dlgLabel" class="lbl"></span>
+      <input id="dlgInput" type="text" autocomplete="off" spellcheck="false">
+    </label>
+    <div class="dlgBtns">
+      <button id="dlgCancel" type="button">Cancelar</button>
+      <button id="dlgOk" type="button" class="primary">Aceptar</button>
+    </div>
   </div>
 </div>
 
@@ -2890,10 +4413,45 @@ export const WEB_HTML = `<!doctype html>
 </body>
 </html>`;
 
-/** Marca reducida (4 clavijas) sobre el fondo Nocturno; se sirve en /static/favicon.svg. */
-export const FAVICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
-  <rect width="48" height="48" rx="10" fill="#0F1113"></rect>
-  <rect x="17.5" y="8" width="13" height="26" fill="none" stroke="#E8B04B" stroke-width="2.6"></rect>
-  <g fill="#F2EFE9"><circle cx="11" cy="16" r="2.6"></circle><circle cx="11" cy="26" r="2.6"></circle><circle cx="37" cy="16" r="2.6"></circle><circle cx="37" cy="26" r="2.6"></circle></g>
-  <rect x="17.5" y="36" width="13" height="3.5" fill="#E8B04B"></rect>
+/** Favicon del kit: marca G sobre teal. Bajo 32 px el mástil no se lee, y esta
+    es la versión que el propio kit manda usar a ese tamaño. */
+export const FAVICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <rect width="64" height="64" rx="14" fill="#1A535C"></rect>
+  <rect x="26" y="12" width="12" height="20" rx="3" fill="#FFE66D"></rect>
+  <rect x="27" y="33" width="10" height="7" fill="#FF6B6B"></rect>
+  <text x="32" y="56" text-anchor="middle" font-family="Montserrat, system-ui, sans-serif" font-weight="700" font-size="30" fill="#FFE66D">G</text>
+</svg>`;
+
+/** La misma marca en night: el kit trae par para cada recurso con color fijo,
+    y el conmutador de tema le cambia el href al <link rel=icon>. */
+export const FAVICON_DARK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <rect width="64" height="64" rx="14" fill="#0B1D21"></rect>
+  <rect x="26" y="12" width="12" height="20" rx="3" fill="#94E4DD"></rect>
+  <rect x="27" y="33" width="10" height="7" fill="#FF8A8A"></rect>
+  <text x="32" y="56" text-anchor="middle" font-family="Montserrat, system-ui, sans-serif" font-weight="700" font-size="30" fill="#94E4DD">G</text>
+</svg>`;
+
+/** Mosaico de notas del fondo (400x400, se repite), en sus dos versiones. */
+export const PATTERN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <rect width="400" height="400" fill="#F7EFE3"></rect>
+  <g transform="translate(40 50) rotate(-18) scale(0.9)" fill="none" stroke="#E8D4B8" stroke-width="4"><path d="M0 0h84M0 18h84M0 36h84M0 54h84"></path><path d="M0 0v54M28 0v54M56 0v54M84 0v54"></path><circle cx="28" cy="0" r="6" fill="#E8D4B8" stroke="none"></circle><circle cx="56" cy="18" r="6" fill="#E8D4B8" stroke="none"></circle><circle cx="14" cy="36" r="6" fill="#E8D4B8" stroke="none"></circle></g>
+  <g transform="translate(250 60) rotate(8)" fill="#E8D4B8"><ellipse cx="0" cy="16" rx="6.4" ry="5"></ellipse><ellipse cx="19" cy="12" rx="6.4" ry="5"></ellipse><path d="M5.4 16V-6l19-4v22h-2.6V-7.4L8 -3.6V16z"></path></g>
+  <circle cx="350" cy="120" r="16" fill="none" stroke="#E8D4B8" stroke-width="6"></circle>
+  <g transform="translate(160 190) rotate(-8) scale(1.4)" fill="#E8D4B8"><ellipse cx="0" cy="14" rx="7" ry="5.4" transform="rotate(-18)"></ellipse><path d="M5.6 12.8V-14c4 1.6 8 3.4 8 8.2 0-6.4-4-8.6-8-10.4z"></path></g>
+  <g transform="translate(230 250) rotate(12) scale(0.7)" fill="none" stroke="#E8D4B8" stroke-width="4"><path d="M0 0h84M0 18h84M0 36h84M0 54h84"></path><path d="M0 0v54M28 0v54M56 0v54M84 0v54"></path><circle cx="28" cy="0" r="6" fill="#E8D4B8" stroke="none"></circle><circle cx="56" cy="18" r="6" fill="#E8D4B8" stroke="none"></circle><circle cx="14" cy="36" r="6" fill="#E8D4B8" stroke="none"></circle></g>
+  <g transform="translate(60 300) rotate(-12)" fill="#E8D4B8"><ellipse cx="0" cy="16" rx="6.4" ry="5"></ellipse><ellipse cx="19" cy="12" rx="6.4" ry="5"></ellipse><path d="M5.4 16V-6l19-4v22h-2.6V-7.4L8 -3.6V16z"></path></g>
+  <g transform="translate(340 300) rotate(14) scale(1.2)" fill="#E8D4B8"><ellipse cx="0" cy="14" rx="7" ry="5.4" transform="rotate(-18)"></ellipse><path d="M5.6 12.8V-14c4 1.6 8 3.4 8 8.2 0-6.4-4-8.6-8-10.4z"></path></g>
+  <circle cx="150" cy="350" r="12" fill="none" stroke="#E8D4B8" stroke-width="6"></circle>
+</svg>`;
+
+export const PATTERN_DARK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <rect width="400" height="400" fill="#0F2429"></rect>
+  <g transform="translate(40 50) rotate(-18) scale(0.9)" fill="none" stroke="#2E5A60" stroke-width="4"><path d="M0 0h84M0 18h84M0 36h84M0 54h84"></path><path d="M0 0v54M28 0v54M56 0v54M84 0v54"></path><circle cx="28" cy="0" r="6" fill="#2E5A60" stroke="none"></circle><circle cx="56" cy="18" r="6" fill="#2E5A60" stroke="none"></circle><circle cx="14" cy="36" r="6" fill="#2E5A60" stroke="none"></circle></g>
+  <g transform="translate(250 60) rotate(8)" fill="#2E5A60"><ellipse cx="0" cy="16" rx="6.4" ry="5"></ellipse><ellipse cx="19" cy="12" rx="6.4" ry="5"></ellipse><path d="M5.4 16V-6l19-4v22h-2.6V-7.4L8 -3.6V16z"></path></g>
+  <circle cx="350" cy="120" r="16" fill="none" stroke="#2E5A60" stroke-width="6"></circle>
+  <g transform="translate(160 190) rotate(-8) scale(1.4)" fill="#2E5A60"><ellipse cx="0" cy="14" rx="7" ry="5.4" transform="rotate(-18)"></ellipse><path d="M5.6 12.8V-14c4 1.6 8 3.4 8 8.2 0-6.4-4-8.6-8-10.4z"></path></g>
+  <g transform="translate(230 250) rotate(12) scale(0.7)" fill="none" stroke="#2E5A60" stroke-width="4"><path d="M0 0h84M0 18h84M0 36h84M0 54h84"></path><path d="M0 0v54M28 0v54M56 0v54M84 0v54"></path><circle cx="28" cy="0" r="6" fill="#2E5A60" stroke="none"></circle><circle cx="56" cy="18" r="6" fill="#2E5A60" stroke="none"></circle><circle cx="14" cy="36" r="6" fill="#2E5A60" stroke="none"></circle></g>
+  <g transform="translate(60 300) rotate(-12)" fill="#2E5A60"><ellipse cx="0" cy="16" rx="6.4" ry="5"></ellipse><ellipse cx="19" cy="12" rx="6.4" ry="5"></ellipse><path d="M5.4 16V-6l19-4v22h-2.6V-7.4L8 -3.6V16z"></path></g>
+  <g transform="translate(340 300) rotate(14) scale(1.2)" fill="#2E5A60"><ellipse cx="0" cy="14" rx="7" ry="5.4" transform="rotate(-18)"></ellipse><path d="M5.6 12.8V-14c4 1.6 8 3.4 8 8.2 0-6.4-4-8.6-8-10.4z"></path></g>
+  <circle cx="150" cy="350" r="12" fill="none" stroke="#2E5A60" stroke-width="6"></circle>
 </svg>`;

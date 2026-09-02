@@ -56,6 +56,7 @@ import com.guitarchords.app.ui.theme.extendedColors
 import kotlin.math.abs
 import kotlin.math.ln
 import kotlin.math.roundToInt
+import com.guitarchords.app.ui.theme.accordioTopBarColors
 
 private data class StringTarget(val name: String, val freq: Float)
 
@@ -100,6 +101,7 @@ fun TunerScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = accordioTopBarColors(),
                 title = { Text(stringResource(R.string.tuner_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }

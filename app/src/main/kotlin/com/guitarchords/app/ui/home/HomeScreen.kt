@@ -48,9 +48,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.guitarchords.app.R
+import com.guitarchords.app.ui.icons.AccordioIcons
 import com.guitarchords.app.update.UpdateController
 import com.guitarchords.app.ui.responsive.WidthClass
 import com.guitarchords.app.ui.responsive.rememberWidthClass
+import com.guitarchords.app.ui.theme.accordioTopBarColors
 
 private data class HomeAction(
     val label: String,
@@ -74,27 +76,38 @@ fun HomeScreen(
 ) {
     val update by UpdateController.available.collectAsStateWithLifecycle()
     val actions = listOf(
-        HomeAction(stringResource(R.string.home_training), Icons.Default.School, onOpenTraining),
-        HomeAction(stringResource(R.string.home_playlists), Icons.Default.LibraryMusic, onOpenPlaylists),
-        HomeAction(stringResource(R.string.home_favorites), Icons.Default.Star, onOpenFavorites),
+        HomeAction(stringResource(R.string.home_training), AccordioIcons.revision(), onOpenTraining),
+        HomeAction(stringResource(R.string.home_playlists), AccordioIcons.partitura(), onOpenPlaylists),
+        HomeAction(stringResource(R.string.home_favorites), AccordioIcons.estrella(), onOpenFavorites),
         HomeAction(stringResource(R.string.home_tuner), Icons.Default.GraphicEq, onOpenTuner),
-        HomeAction(stringResource(R.string.metronome_title), Icons.Default.Timer, onOpenMetronome),
-        HomeAction(stringResource(R.string.home_finder), Icons.Default.Piano, onOpenFinder),
-        HomeAction(stringResource(R.string.home_dictionary), Icons.AutoMirrored.Filled.MenuBook, onOpenDictionary),
+        HomeAction(stringResource(R.string.metronome_title), AccordioIcons.metronomo(), onOpenMetronome),
+        HomeAction(stringResource(R.string.home_finder), AccordioIcons.guitarra(), onOpenFinder),
+        HomeAction(stringResource(R.string.home_dictionary), AccordioIcons.acorde(), onOpenDictionary),
         HomeAction(stringResource(R.string.home_trash), Icons.Default.Delete, onOpenTrash),
-        HomeAction(stringResource(R.string.home_settings), Icons.Default.Settings, onOpenSettings)
+        HomeAction(stringResource(R.string.home_settings), AccordioIcons.ajustes(), onOpenSettings)
     )
 
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = accordioTopBarColors(),
                 title = {
-                    Text(
-                        "Vivace",
-                        style = MaterialTheme.typography.headlineSmall.copy(
-                            fontWeight = FontWeight.Bold
+                    // Misma cabecera que la web: marca del mástil y el nombre.
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            AccordioIcons.marca(),
+                            contentDescription = null,
+                            tint = androidx.compose.ui.graphics.Color.Unspecified,
+                            modifier = Modifier.size(30.dp)
                         )
-                    )
+                        Spacer(Modifier.size(10.dp))
+                        Text(
+                            "Accordio",
+                            style = MaterialTheme.typography.headlineSmall.copy(
+                                fontWeight = FontWeight.Bold
+                            )
+                        )
+                    }
                 }
             )
         }

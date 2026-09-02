@@ -19,3 +19,12 @@ ALTER TABLE songs ADD COLUMN favorite INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE songs ADD COLUMN position INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE songs ADD COLUMN playlist_id TEXT;
 ALTER TABLE song_versions ADD COLUMN rev INTEGER NOT NULL DEFAULT 1;
+
+-- Quinta tanda · interruptor de altas de cuenta.
+-- La tabla se crea aquí además de en schema.sql para las instalaciones que ya
+-- estaban en marcha; CREATE ... IF NOT EXISTS hace que repetirlo no rompa nada.
+CREATE TABLE IF NOT EXISTS settings (
+  key        TEXT PRIMARY KEY,
+  value      TEXT NOT NULL,
+  updated_at INTEGER NOT NULL
+);

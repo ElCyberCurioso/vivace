@@ -1,27 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Vivace · marca 4a (clavijero, trazo fino) — foreground del icono adaptativo.
-  108x108 con la marca dentro de la zona segura de 72dp. Sirve además de icono
-  del splash y de capa monocroma (el sistema la usa como máscara).
+  Accordio · marca del mástil (accordio-web-kit/logo/mark-fretboard-light.svg),
+  la misma que la cabecera de la web, sobre el teal del icono adaptativo.
+
+  108x108 con la marca dentro de la zona segura de 72 dp. Sirve además de icono
+  del splash y de capa monocroma (el sistema la usa como máscara, y por eso los
+  trazos son opacos: una máscara no entiende de opacidades).
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
 
-    <!-- pala del clavijero -->
-    <path android:pathData="M45,27 h18 v45 h-18 z"
-        android:fillColor="#00000000"
-        android:strokeColor="#E8B04B"
-        android:strokeWidth="2.7" />
+    <!-- rejilla del mástil -->
+    <path android:pathData="M18.04,34.16 H89.96 M18.04,44.08 H89.96 M18.04,54.0 H89.96 M18.04,63.92 H89.96 M18.04,73.84 H89.96 M18.04,34.16 V73.84 M36.02,34.16 V73.84 M54.0,34.16 V73.84 M71.98,34.16 V73.84 M89.96,34.16 V73.84"
+        android:strokeColor="#F2FAF6" android:strokeWidth="2.48"
+        android:strokeLineCap="square" android:fillColor="#00000000" />
 
-    <!-- clavijas -->
-    <path android:pathData="M36,39 m-3.3,0 a3.3,3.3 0 1,0 6.6,0 a3.3,3.3 0 1,0 -6.6,0" android:fillColor="#F2EFE9" />
-    <path android:pathData="M36,51 m-3.3,0 a3.3,3.3 0 1,0 6.6,0 a3.3,3.3 0 1,0 -6.6,0" android:fillColor="#F2EFE9" />
-    <path android:pathData="M36,63 m-3.3,0 a3.3,3.3 0 1,0 6.6,0 a3.3,3.3 0 1,0 -6.6,0" android:fillColor="#F2EFE9" />
-    <path android:pathData="M72,39 m-3.3,0 a3.3,3.3 0 1,0 6.6,0 a3.3,3.3 0 1,0 -6.6,0" android:fillColor="#F2EFE9" />
-    <path android:pathData="M72,51 m-3.3,0 a3.3,3.3 0 1,0 6.6,0 a3.3,3.3 0 1,0 -6.6,0" android:fillColor="#F2EFE9" />
-    <path android:pathData="M72,63 m-3.3,0 a3.3,3.3 0 1,0 6.6,0 a3.3,3.3 0 1,0 -6.6,0" android:fillColor="#F2EFE9" />
-
-    <!-- cejuela -->
-    <path android:pathData="M45,75 h18 v4.5 h-18 z" android:fillColor="#E8B04B" />
+    <!-- digitación: claro la mano, amarillo y turquesa los acentos del kit -->
+    <path android:pathData="M54.0,34.16 m-4.96,0 a4.96,4.96 0 1,0 9.92,0 a4.96,4.96 0 1,0 -9.92,0" android:fillColor="#F2FAF6" />
+    <path android:pathData="M36.02,44.08 m-4.96,0 a4.96,4.96 0 1,0 9.92,0 a4.96,4.96 0 1,0 -9.92,0" android:fillColor="#F2FAF6" />
+    <path android:pathData="M71.98,44.08 m-4.96,0 a4.96,4.96 0 1,0 9.92,0 a4.96,4.96 0 1,0 -9.92,0" android:fillColor="#FFE66D" />
+    <path android:pathData="M18.04,54.0 m-4.96,0 a4.96,4.96 0 1,0 9.92,0 a4.96,4.96 0 1,0 -9.92,0" android:fillColor="#F2FAF6" />
+    <path android:pathData="M62.68,54.0 m-4.96,0 a4.96,4.96 0 1,0 9.92,0 a4.96,4.96 0 1,0 -9.92,0" android:fillColor="#FFE66D" />
+    <path android:pathData="M62.68,63.92 m-4.96,0 a4.96,4.96 0 1,0 9.92,0 a4.96,4.96 0 1,0 -9.92,0" android:fillColor="#4ECDC4" />
+    <path android:pathData="M44.7,73.84 m-4.96,0 a4.96,4.96 0 1,0 9.92,0 a4.96,4.96 0 1,0 -9.92,0" android:fillColor="#FFE66D" />
 </vector>

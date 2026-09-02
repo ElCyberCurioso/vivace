@@ -44,6 +44,7 @@ import com.guitarchords.app.training.TrainingArea
 import com.guitarchords.app.ui.training.components.AreaCard
 import com.guitarchords.app.ui.training.components.StreakChip
 import com.guitarchords.app.ui.training.components.XpBar
+import com.guitarchords.app.ui.theme.accordioTopBarColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,6 +64,7 @@ fun TrainingDashboardScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = accordioTopBarColors(),
                 title = { Text(stringResource(R.string.training_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

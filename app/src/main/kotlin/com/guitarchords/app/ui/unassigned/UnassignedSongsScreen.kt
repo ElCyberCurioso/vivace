@@ -56,6 +56,8 @@ import com.guitarchords.app.ui.components.SongSortMenu
 import com.guitarchords.app.ui.components.rememberSongSelection
 import com.guitarchords.app.ui.components.rememberTrashedMessage
 import com.guitarchords.app.ui.components.rememberUndoSnackbar
+import com.guitarchords.app.ui.theme.accordioTopBarColors
+import com.guitarchords.app.ui.icons.AccordioIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -101,6 +103,7 @@ fun UnassignedSongsScreen(
                 )
             } else {
                 TopAppBar(
+                    colors = accordioTopBarColors(),
                     title = { Text(stringResource(R.string.unassigned_songs)) },
                     navigationIcon = {
                         IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
@@ -109,7 +112,7 @@ fun UnassignedSongsScreen(
                         IconButton(onClick = {
                             searchOpen = !searchOpen
                             if (!searchOpen) query = ""
-                        }) { Icon(Icons.Default.Search, stringResource(R.string.search_songs)) }
+                        }) { Icon(AccordioIcons.buscar(), stringResource(R.string.search_songs)) }
                         SongSortMenu(current = sort, onPick = { vm.setSort(it) })
                     }
                 )
@@ -117,7 +120,7 @@ fun UnassignedSongsScreen(
         },
         floatingActionButton = {
             FloatingActionButton(onClick = onAddSong) {
-                Icon(Icons.Default.Add, stringResource(R.string.new_song))
+                Icon(AccordioIcons.mas(), stringResource(R.string.new_song))
             }
         }
     ) { pv ->
@@ -131,7 +134,7 @@ fun UnassignedSongsScreen(
             }
             if (songs.isEmpty()) {
                 EmptyState(
-                    icon = Icons.Default.MusicNote,
+                    icon = AccordioIcons.notas(),
                     title = stringResource(R.string.empty_unassigned_title),
                     subtitle = stringResource(R.string.empty_unassigned_subtitle),
                     modifier = Modifier.fillMaxSize()
@@ -250,9 +253,9 @@ private fun SongRow(
         leading = {
             IconButton(onClick = onFav) {
                 if (song.favorite)
-                    Icon(Icons.Default.Star, stringResource(R.string.remove_favorite), tint = MaterialTheme.colorScheme.primary)
+                    Icon(AccordioIcons.estrella(), stringResource(R.string.remove_favorite), tint = MaterialTheme.colorScheme.primary)
                 else
-                    Icon(Icons.Outlined.StarOutline, stringResource(R.string.favorite))
+                    Icon(AccordioIcons.estrellaHueca(), stringResource(R.string.favorite))
             }
         },
         trailing = {

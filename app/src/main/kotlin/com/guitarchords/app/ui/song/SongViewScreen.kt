@@ -102,6 +102,8 @@ import com.guitarchords.app.ui.playlists.TextDialog
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlin.coroutines.cancellation.CancellationException
+import com.guitarchords.app.ui.theme.accordioTopBarColors
+import com.guitarchords.app.ui.icons.AccordioIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -209,6 +211,7 @@ fun SongViewScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = accordioTopBarColors(),
                 title = {},
                 navigationIcon = {
                     IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
@@ -266,7 +269,7 @@ fun SongViewScreen(
                             }
                             ctx.startActivity(Intent.createChooser(send, shareTitle))
                         }
-                    }) { Icon(Icons.Default.Share, stringResource(R.string.share_song)) }
+                    }) { Icon(AccordioIcons.compartir(), stringResource(R.string.share_song)) }
                     IconButton(onClick = {
                         song?.let { sng ->
                             val base = sng.copy(content = activeContent, capo = activeCapo)
@@ -536,7 +539,7 @@ private fun VersionBar(
         AssistChip(
             onClick = onAdd,
             label = { Text(stringResource(R.string.version)) },
-            leadingIcon = { Icon(Icons.Default.Add, null) }
+            leadingIcon = { Icon(AccordioIcons.mas(), null) }
         )
         if (selectedId != null && versions.any { it.id == selectedId }) {
             IconButton(onClick = onEditSelected) {
@@ -745,7 +748,7 @@ private fun BottomControls(
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                     )
                     IconButton(onClick = { onSemitones(semitones + 1) }) {
-                        Icon(Icons.Default.Add, stringResource(R.string.semitone_up))
+                        Icon(AccordioIcons.mas(), stringResource(R.string.semitone_up))
                     }
                     FilterChip(
                         selected = useFlats,

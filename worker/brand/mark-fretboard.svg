@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 132 92" width="132" height="92" role="img" aria-label="Accordio">
+  <g fill="none" stroke="#1A535C" stroke-width="4" stroke-linecap="square">
+    <path d="M8 10H124M8 26H124M8 42H124M8 58H124M8 74H124"></path>
+    <path d="M8 10V74M37 10V74M66 10V74M95 10V74M124 10V74"></path>
+  </g>
+  <g>
+    <circle cx="66" cy="10" r="8" fill="#1A535C"></circle>
+    <circle cx="37" cy="26" r="8" fill="#1A535C"></circle>
+    <circle cx="95" cy="26" r="8" fill="#FF6B6B"></circle>
+    <circle cx="8" cy="42" r="8" fill="#1A535C"></circle>
+    <circle cx="80" cy="42" r="8" fill="#FF6B6B"></circle>
+    <circle cx="80" cy="58" r="8" fill="#FF6B6B"></circle>
+    <circle cx="51" cy="74" r="8" fill="#FF6B6B"></circle>
+  </g>
+</svg>

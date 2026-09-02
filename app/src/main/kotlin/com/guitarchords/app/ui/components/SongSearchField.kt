@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.guitarchords.app.R
+import com.guitarchords.app.ui.icons.AccordioIcons
 
 /** Campo de búsqueda dentro de una carpeta: filtra por título/artista/género. */
 @Composable
@@ -26,7 +27,7 @@ fun SongSearchField(
         modifier = modifier.fillMaxWidth(),
         singleLine = true,
         placeholder = { Text(stringResource(R.string.search_songs)) },
-        leadingIcon = { Icon(Icons.Default.Search, null) },
+        leadingIcon = { Icon(AccordioIcons.buscar(), null) },
         trailingIcon = {
             if (query.isNotEmpty()) {
                 IconButton(onClick = { onQuery("") }) {

@@ -1,25 +1,48 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Vivace · tokens de marca, modo claro. Mismos nombres que las variables CSS
-  `vv-*` de la web (worker/src/web-html.js), para que un cambio de paleta
-  se pueda seguir de un sitio a otro. Los colores de la interfaz Compose
-  viven en ui/theme/Theme.kt; estos son para recursos XML (splash, icono).
+  Accordio · tokens de marca, modo claro. Mismos valores que `tokens.css` del
+  paquete y que las variables CSS de la web (worker/src/web-html.js), para que
+  un cambio de paleta se pueda seguir de un sitio a otro.
+
+  Los colores de la interfaz Compose viven en ui/theme/Theme.kt; estos son para
+  los recursos XML (splash, icono, fondo de ventana).
 -->
 <resources>
-    <color name="vv_bg">#F6F4EF</color>
-    <color name="vv_surface">#FFFFFF</color>
-    <color name="vv_surface_alt">#EFEDE7</color>
-    <color name="vv_border">#E2DED5</color>
-    <color name="vv_border_strong">#D5D0C5</color>
-    <color name="vv_text">#16181A</color>
-    <color name="vv_text_muted">#4A4D52</color>
-    <color name="vv_text_subtle">#6B7076</color>
-    <color name="vv_accent">#B8791F</color>
-    <color name="vv_accent_strong">#8F5A12</color>
-    <color name="vv_on_accent">#FFFFFF</color>
-    <color name="vv_beat">#2F6B5B</color>
-    <color name="vv_danger">#B33F26</color>
+    <color name="ac_bg">#F7EFE3</color>
+    <color name="ac_bg_alt">#F3E3CD</color>
+    <color name="ac_surface">#F2FAF6</color>
+    <color name="ac_surface_2">#FFFFFF</color>
+    <color name="ac_ink">#12363D</color>
+    <color name="ac_body">#3F5257</color>
+    <color name="ac_muted">#7B8E92</color>
+    <color name="ac_line">#DCE8E5</color>
+    <!-- Roles: son los que cambian con el tema (ver Theme.kt). -->
+    <color name="ac_action">#1A535C</color>
+    <color name="ac_on_action">#F2FAF6</color>
+    <color name="ac_highlight">#FF6B6B</color>
+    <color name="ac_active">#4ECDC4</color>
+    <color name="ac_pending">#FFE66D</color>
+    <color name="ac_nav_bg">#1A535C</color>
+    <color name="ac_nav_fg">#F2FAF6</color>
 
-    <!-- El icono adaptativo no sigue el modo del sistema: siempre Nocturno. -->
-    <color name="ic_launcher_background">#0F1113</color>
+    <!--
+      Nombres anteriores (paleta Nocturno). Se conservan porque los usan temas y
+      recursos XML; apuntan ya a la paleta nueva.
+    -->
+    <color name="vv_bg">#F7EFE3</color>
+    <color name="vv_surface">#F2FAF6</color>
+    <color name="vv_surface_alt">#FFFFFF</color>
+    <color name="vv_border">#DCE8E5</color>
+    <color name="vv_border_strong">#BCD6DA</color>
+    <color name="vv_text">#12363D</color>
+    <color name="vv_text_muted">#3F5257</color>
+    <color name="vv_text_subtle">#7B8E92</color>
+    <color name="vv_accent">#1A535C</color>
+    <color name="vv_accent_strong">#154650</color>
+    <color name="vv_on_accent">#F2FAF6</color>
+    <color name="vv_beat">#2A8A83</color>
+    <color name="vv_danger">#C93B3C</color>
+
+    <!-- El icono adaptativo no sigue el modo del sistema: siempre el teal de marca. -->
+    <color name="ic_launcher_background">#1A535C</color>
 </resources>

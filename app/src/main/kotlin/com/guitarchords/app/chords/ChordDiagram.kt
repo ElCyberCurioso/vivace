@@ -39,11 +39,24 @@ fun ChordDiagram(
     shape: ChordShape,
     name: String? = null,
     modifier: Modifier = Modifier,
-    color: Color = LocalContentColor.current,
+    /*
+     * Regla 7 del paquete: el diagrama va trazado en el color de marca, no en el
+     * del texto de alrededor. `--ac-primary` es el teal en claro y el turquesa
+     * claro en oscuro, que es lo que hace la web con sus diagramas.
+     */
+    color: Color = MaterialTheme.colorScheme.primary,
     showNotes: Boolean = true,
     showFingers: Boolean = false,
     onStringTap: ((stringIdx: Int) -> Unit)? = null
 ) {
+    /*
+     * El número o la nota van dentro del punto, y el punto es del color de
+     * marca: en modo oscuro ese color es turquesa CLARO, así que el blanco fijo
+     * de antes casi no se distinguía. Se usa la superficie de la tarjeta, que es
+     * lo que hace la web con sus diagramas.
+     */
+    val tintaPunto = MaterialTheme.colorScheme.surface.toArgb()
+
     Column(
         modifier = modifier.wrapContentSize(),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -74,7 +87,7 @@ fun ChordDiagram(
                     }
                 )
         ) {
-            drawDiagram(shape, color, showNotes, showFingers)
+            drawDiagram(shape, color, tintaPunto, showNotes, showFingers)
         }
     }
 }
@@ -82,6 +95,8 @@ fun ChordDiagram(
 private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawDiagram(
     shape: ChordShape,
     color: Color,
+    /** Tinta del texto que va DENTRO del punto: la superficie de la tarjeta. */
+    tintaSobrePunto: Int,
     showNotes: Boolean,
     showFingers: Boolean
 ) {
@@ -193,7 +208,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawDiagram(
             val note = NOTE_NAMES[noteIdx]
             drawContext.canvas.nativeCanvas.apply {
                 val paint = android.graphics.Paint().apply {
-                    this.color = android.graphics.Color.WHITE
+                    this.color = tintaSobrePunto
                     textSize = dotRadius * 1.05f
                     isAntiAlias = true
                     textAlign = android.graphics.Paint.Align.CENTER
@@ -206,7 +221,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawDiagram(
             if (finger in 1..4) {
                 drawContext.canvas.nativeCanvas.apply {
                     val paint = android.graphics.Paint().apply {
-                        this.color = android.graphics.Color.WHITE
+                        this.color = tintaSobrePunto
                         textSize = dotRadius * 1.4f
                         isAntiAlias = true
                         textAlign = android.graphics.Paint.Align.CENTER

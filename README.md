@@ -176,15 +176,243 @@ Es el mismo formato en el dispositivo y en el bucket, así que los ficheros son 
 
 ## Web
 
-La misma URL del Worker sirve **Vivace web** en `/`: catálogo publicado (visible sin cuenta), registro e inicio de sesión, tus partituras, y un **visor** con desplazamiento automático a velocidad regulable, metrónomo, transposición ±11 con bemoles, tamaño de letra, aviso de capo e **impresión/PDF** — las mismas herramientas que en el móvil.
+### Diccionario de acordes
+
+El Worker trae **8.669 acordes** (~14.400 nombres contando los alias en
+bemoles, y hasta 4 digitaciones cada uno) importados de
+[guitar-chords-db-json](https://github.com/szaza/guitar-chords-db-json) (MIT).
+El administrador los vuelca al diccionario global con **Importar diccionario
+base**; el volcado solo AÑADE lo que falta, así que nunca pisa un acorde
+editado a mano ni la semilla curada de 348 que ya venía.
+
+El repositorio de origen ocupa 36 MB en 9.072 ficheros: eso ni cabe en el bundle
+del Worker ni tiene sentido mandarlo al navegador. `worker/tools/generar-chords-db.mjs`
+lo reduce a una cadena compacta (`src/chords-db.js`, ~570 KB, 92 KB del bundle
+comprimido) y solo se expande cuando el administrador siembra.
+
+También convierte el formato: el origen da los trastes **absolutos** en base 36
+(`"8aa988"` = 8,10,10,9,8,8) y el diccionario de Accordio los quiere
+**relativos** al traste base, que es la convención de chords-db y la que ya usa
+la app. Ahí salió un fallo de fondo: el dibujante de la web trataba esos números
+como absolutos, así que **todo acorde con traste base mayor que 1** —cejillas y
+posiciones altas, media biblioteca— salía con los puntos corridos o sin ellos.
+Ya está arreglado y cubierto por tests.
+
+### La app Android viste lo mismo
+
+La app usa el **mismo paquete de marca** que la web, no una interpretación:
+
+- **Paleta**, en `ui/theme/Theme.kt`: los valores salen de `tokens.css` y
+  `tokens.dark.css`, y los roles de Material 3 cuelgan de los roles del kit
+  (`action`, `highlight`, `active`, `pending`). Lo que Material pide y el kit no
+  define —contenedores, escalones de superficie— se deriva y va marcado como
+  derivado. Los roles del kit que Material no tiene (`pending`, `chord`, `nav`)
+  entran por `ExtendedColors`.
+- **Color dinámico apagado.** El de Android 12+ pinta la app con el fondo de
+  pantalla del móvil, y entonces deja de ser Accordio: la marca es justo lo que
+  se quiere reconocer entre la web y el móvil.
+- **Tipografías**: Montserrat para titulares y Poppins para el texto,
+  empaquetadas (OFL, ver `app/licenses/`). JetBrains Mono se queda para la hoja
+  de partitura y las cifras, que es la misma concesión que en la web: sin ancho
+  fijo los acordes dejan de caer sobre su sílaba.
+- **Formas**: los radios del kit (8/12/20/28) en `ui/theme/Shape.kt`.
+- **Barra superior** teal maciza con texto crema, como la web, vía
+  `accordioTopBarColors()` — un sitio y no las dos docenas de pantallas que la
+  usan. Los iconos de la barra de estado van siempre claros: encima está el teal
+  en los dos temas.
+- **Iconos**: los 23 del kit, en `ui/icons/AccordioIcons.kt`. No son ficheros
+  sino trazos que se montan con los colores del tema, porque los iconos del kit
+  tienen **dos tonos** —trazo y detalle coral— y ese coral cambia entre claro y
+  oscuro: un vector drawable necesitaría dos copias de cada uno, y el `tint` de
+  Compose aplana el icono entero a un color. Donde el kit no tiene equivalente
+  (atrás, borrar, cerrar, nube, reloj…) se conserva el icono de Material: son
+  símbolos de sistema, y fabricarlos a mano sería inventar marca.
+- **Diagramas de acordes** trazados en el color de marca (regla 7), y el número
+  del dedo en el color de la tarjeta: en oscuro el punto es turquesa claro y el
+  blanco fijo de antes casi no se distinguía.
+- **Icono y splash** con la marca del mástil del kit sobre el teal.
+
+Dos contrastes se subieron respecto al kit, y en los dos casos sube el **rol**,
+no el token de marca: el texto secundario sobre tarjeta clara (`#7B8E92` da
+3,2:1) y sobre tarjeta oscura (`#8CA6AA`, 3,6:1). Es la misma corrección que
+lleva la web.
+
+La app **pasa a llamarse Accordio** en lo visible (nombre del lanzador,
+cabecera). El `applicationId` sigue siendo `com.guitarchords.app`: cambiarlo
+desinstalaría la app de todo el mundo y rompería las actualizaciones. Por dentro
+quedan nombres antiguos (`VivaceClient`, `GuitarChordsTheme`) que no ve nadie.
+
+### Estilo: paquete de marca Accordio
+
+La web viste el kit `accordio-brand-kit.zip`: teal `#1A535C` de marca, coral
+para destacar, turquesa para lo seleccionado y amarillo **solo** como estado
+(capo, estrellas, propuestas pendientes), sobre crema `#F7EFE3` con el mosaico
+de notas de fondo. Titulares en Montserrat, texto en Poppins, controles en
+píldora y tarjetas de 20 px.
+
+Cómo está montado: los tokens `--ac-*` del kit son la única fuente de color y
+tamaño, y encima va una capa semántica `--vv-*` (`--vv-accent` = acción,
+`--vv-active` = seleccionado, `--vv-state` = pendiente/valoración,
+`--vv-chord` = acordes) que es la que piden los componentes. Así se cambia el
+papel de un color en un sitio y no en cuarenta reglas sueltas.
+
+**Modo claro y modo oscuro son los del kit**, no una interpretación: fondo
+`#F7EFE3` / `#0F2429`, tarjetas `#F2FAF6` / `#163A41`, barra `#1A535C` /
+`#0B1D21`. La marca no se invierte; lo que cambia es el papel de cada color: en
+oscuro el teal no contrasta contra el fondo y pasa a titular, la acción la toma
+el turquesa (`#4ECDC4` sobre `#08262B`), y coral y amarillo suben un paso de
+rampa. Cada tema trae además su mosaico de notas y su favicon; los recursos con
+el color metido dentro del SVG los cambia `recursosDeTema()` al conmutar, junto
+con el `theme-color` de la barra del navegador.
+
+Del kit no se coge una cosa, a propósito: **JetBrains Mono** para la hoja, las
+cifras y los diagramas. No trae monoespaciada, y sin ella los acordes dejan de
+caer sobre su sílaba.
+
+Los botones secundarios tienen **superficie**, no solo contorno: sobre el crema
+con mosaico, un borde pálido y letra fina no se leían como algo pulsable
+(«Cargar más» se perdía en el fondo). «Cargar más» va relleno con el color de
+acción y centrado; las pestañas, con superficie y letra de marca, y la activa en
+turquesa. En la barra teal los botones siguen siendo de contorno: ahí el fondo ya
+es macizo.
+
+**El color reparte papeles, no decora.** Teal es la acción, turquesa lo activo o
+publicado, coral lo que llama (crear, favoritas, compartir, los acordes de la
+hoja) y amarillo solo estado: capo, pulso del metrónomo, estrellas y propuestas
+pendientes. Cada herramienta del visor lleva el color de su papel —turquesa lo
+que corre, amarillo el pulso, coral los acordes, teal el tono— con los iconos
+del kit (`icons/sprite.svg`, embebidos como `<symbol>`). Dos variables lo
+gobiernan: `--tono` es el relleno cuando la herramienta está activa y
+`--tono-glifo` el color del icono sobre la superficie clara; hacen falta las dos
+porque el turquesa, el amarillo y el coral de marca son rellenos y como trazo
+sobre crema se quedan en 2:1.
+
+En oscuro, el gris secundario del kit (`#8CA6AA`) se queda en 3,6:1 sobre la
+tarjeta, así que el **rol** de texto secundario sube a `#A9C3C6`; los tokens de
+marca no se tocan.
+
+En `worker/brand/` está la copia de lo que se ha tomado del kit, con el detalle
+de qué se ha usado y qué no.
+
+
+La misma URL del Worker sirve **Accordio** en `/`: catálogo publicado (visible sin cuenta), registro e inicio de sesión, tus partituras, y un **visor** con desplazamiento automático a velocidad regulable, metrónomo, transposición ±11 con bemoles, tamaño de letra, aviso de capo e **impresión/PDF** como documento: A4 con la marca, el título y
+el artista en la cabecera, el número de hoja en el pie, y el capo y el tono
+transpuesto en la píldora amarilla de estado — las mismas herramientas que en el móvil.
+
+En **Mis partituras** hay dos filtros rápidos además de los desplegables:
+**Favoritas** y **Solo privadas**. Este último **viene puesto**: ahí lo que se
+va a hacer es rematar lo que falta, y lo ya publicado es justo lo que no necesita
+atención. Al apagarlo aparece el repertorio entero.
+
+Compartir abre una **ventana con el enlace** de la partitura, seleccionado y con
+un botón que lo copia. Antes se llamaba a `navigator.share` o se copiaba en
+silencio: en el escritorio no hay menú del sistema, y una copia sin ventana no
+se distingue de un botón que no hace nada.
+
+En **móvil** la cabecera del visor cabe en **una línea de 49 px** —atrás, título
+y un botón de acciones— frente a los ~175 px que ocupaba apilada en tres filas;
+compartir, PDF, editar y el enlace al original viven ahora en ese menú. Y la
+partitura **entra de ancho al abrirla**: se mide la línea más larga de la canción
+—y el ancho real de un carácter de la monoespaciada, no uno estimado— y se elige
+el mayor tamaño de letra que quepa, hasta 18 px. El suelo son **13 px, y es de
+legibilidad, no de encaje**: por debajo la letra no se lee de un vistazo con la
+guitarra en las manos, así que una canción de columnas exageradas se queda a 13 y
+se arrastra de lado. Es blando por un punto: si entra entera a 12, se le concede
+—salirse por cinco píxeles obliga a arrastrar la línea completa para leer una
+sílaba—. Partir la línea no es opción: descolocaría los acordes de sus sílabas.
+
+**A-/A+ mandan después**, de píxel en píxel y hasta 8 px. Antes el paso era de 2
+y el mínimo 11, que chocaba con el suelo del ajuste: la letra ya salía por debajo
+del mínimo y el botón de reducir no hacía nada.
+
+El **scroll automático** va de 2 a 100 px/s y arranca en 20. Llegaba a 300, que
+no lo usa ninguna partitura y dejaba el rango útil —los primeros 40— apelotonado
+en un centímetro de barra.
+
+Los mandos —scroll, tono,
+letra, acordes, metrónomo— viven en un **panel que sube desde abajo**, con velo,
+asa y botón de cerrar; lo abre un botón anclado abajo a la derecha, donde llega
+el pulgar. Ocupaban media pantalla y dejaban la partitura bajo el pliegue, que
+es lo que se ha venido a leer. Las **versiones** salen del panel y se leen **al
+final de la partitura**, que es donde uno decide «pruebo esta otra». Es el mismo
+nodo movido según el ancho, no una copia: con dos listas habría dos cosas que
+mantener. En pantalla ancha todo sigue en su columna, sin botón ni panel.
+
+Al pie de cada partitura hay **recomendadas**: si el mismo artista tiene más en
+el catálogo, salen esas («Más de David Bisbal»); si no, otras del mismo estilo
+(«Más flamenco»). Lo decide el servidor y por prioridad, no mezclando: son dos
+consultas, y la del estilo solo entra cuando la del artista no da nada. Solo se
+recomienda lo publicado —recomendar algo que quien lo lee no puede abrir es
+enseñar un 404— y nunca la partitura que se está viendo. Se abren en el mismo
+visor, sin pasar por el catálogo.
+
+Al entrar, la portada es siempre el **catálogo**, se tenga sesión o no: lo
+primero es ver lo publicado, y el repertorio propio está a un clic en su
+pestaña.
+
+**Las páginas las reparte la web, no el navegador.** Se probaron antes las dos
+vías que suelen recomendarse y ninguna sirve en Chrome: un elemento
+`position:fixed` no se repite en cada hoja —se pinta una vez y donde caiga— y
+`counter(page)` fuera de un margen con nombre devuelve `0`; los márgenes con
+nombre de `@page` (`@bottom-center` y compañía), que resolverían esto en CSS, no
+están implementados. Así que el documento se corta midiendo: se van metiendo
+líneas en la hoja mientras quepan y, cuando una se sale, empieza otra. Una línea
+de acordes y su letra viajan juntas: separarlas deja los acordes sin canción y
+la canción sin acordes.
+
+El **papel** tiene tres reglas propias, y las tres son a conciencia: sale
+**siempre en claro** aunque se esté leyendo en modo oscuro —un PDF con fondo
+teal es un cartucho de tinta y una fotocopia ilegible—, **sin el mosaico** de
+notas, que en pantalla es identidad pero debajo de una letra que se lee tocando
+es ruido, y con `print-color-adjust: exact` en todo lo que lleva color, porque
+al imprimir el navegador descarta fondos y bordes salvo que se le diga. Antes de
+paginar se espera a que carguen las tipografías: si se midiera con la de
+reserva, el corte caería donde no toca.
+
+**Buscar es cosa del servidor.** Con 3 letras o cifras el buscador consulta el
+catálogo entero por título y artista, sin distinguir mayúsculas ni tildes
+(«buleria» encuentra «Bulería»), y devuelve todos los resultados de una vez.
+Antes solo filtraba lo que ya estaba descargado —la primera página de 60—, así
+que una partitura que cayera más atrás no aparecía hasta pulsar «Cargar más» las
+veces que hiciera falta. Con menos de 3 caracteres se recorta lo ya cargado y se
+avisa de que hay que escribir un poco más.
 
 Desde la web se gestiona el repertorio propio igual que desde el móvil: **listas (carpetas)** con su filtro, **favoritas**, **papelera** con restaurar y borrar definitivamente, y el editor con visibilidad, candado, categoría, capo, vídeo y lista.
 
 Hay **conmutador de tema** claro/oscuro en la cabecera (se recuerda en el navegador; sin elección manda el del sistema).
 
+Los **avisos y las confirmaciones son de la propia web**, no del navegador: al compartir una partitura, al borrar o al pedir un texto sale un diálogo con la tipografía y los colores de Vivace (y respeta el tema claro/oscuro), más un aviso flotante que se va solo. `alert`, `confirm` y `prompt` desentonaban y, encima, congelaban la página mientras estaban abiertos: con el metrónomo sonando o una restauración en marcha se notaba.
+
+El **editor** son tres columnas: escribir, ver cómo queda y la ficha. Los campos
+—título, artista, categoría, lista, visibilidad, capo, enlaces— iban antes
+apilados arriba y empujaban el editor y la vista previa fuera de la pantalla,
+cuando escribir la partitura es el grueso del trabajo y el título se toca una
+vez. Ahora la hoja se lleva el alto de la ventana y la ficha va al lado, en su
+columna, con los botones al pie. Las tres se alinean porque comparten
+estructura —rótulo de alto fijo y debajo una caja del mismo alto, gobernada por
+`--alto-editor`— y no por coincidencia de medidas: la ficha llevaba el fondo en
+el propio panel, rótulo incluido, así que su caja arrancaba donde las otras dos
+tenían el suyo, 38 px más arriba.
+
+La ficha **hace su propio scroll**: sigue siendo columna mientras quepa (hasta
+1000 px) y solo por debajo baja a lo ancho. Antes se apilaba ya en 1200, y
+entonces para tocar la categoría o el capo había que recorrer la página entera
+—en un portátil de 1280, o con la ventana sin maximizar, ese era el caso
+normal—. Con la ventana baja los botones se ponen en fila: en columna se comían
+156 px de los 390 disponibles y la ficha se veía por una rendija.
+
 El editor trae **detección automática de acordes** (marca las líneas que solo llevan acordes envolviéndolos en `{X}`), **capo por botones** de 0 a 12 y un campo para la **URL de la partitura original**, que aparece como enlace en el visor.
 
 Los editores y administradores tienen además una pestaña **Administración**: copia de seguridad y restauración en ZIP (se hace entera en el navegador), repaso de partituras sin vídeo y categorías automáticas.
+
+Solo el **administrador** ve ahí el interruptor de **altas de cuenta**. Con las
+altas cerradas nadie puede registrarse: la web deja de ofrecer «crear una
+cuenta» y, sobre todo, `POST /auth/register` responde `403` — esconder un botón
+no impide un `curl`. Quien ya tiene cuenta sigue entrando. La única excepción es
+la instalación vacía: el primer usuario puede darse de alta aunque estén
+cerradas, porque si no, cerrarlas antes de que exista administrador dejaría la
+instalación sin dueño y sin forma de volver a abrirlas. El estado vive en la
+tabla `settings` de D1.
 
 > El antiguo panel `/admin` con token compartido **se ha retirado**, junto con las rutas `/list`, `/object`, `/bodies` y `/delete`. Se saltaban el modelo de permisos: con un único token se leía, sobrescribía y borraba el texto de cualquier partitura, incluidas las privadas de otras cuentas. Lo que valía la pena de aquel panel vive ahora en la pestaña Administración, bajo la sesión y los roles.
 
@@ -227,6 +455,60 @@ Para indexar en la base de datos las partituras que ya estaban en R2 (quedan a t
 curl -X POST "$URL/admin/migrate?visibility=public" -H "Authorization: Bearer $JWT"
 ```
 
+### Dominio propio (`accordio.site`)
+
+La web y la API son el mismo Worker, así que basta con apuntarle el dominio. En
+`worker/wrangler.toml` están declarados como **custom domains**:
+
+```toml
+[[routes]]
+pattern = "accordio.site"
+custom_domain = true
+
+[[routes]]
+pattern = "www.accordio.site"
+custom_domain = true
+```
+
+Requisito previo (una vez, en el panel de Cloudflare): tener la zona
+`accordio.site` dada de alta en la **misma cuenta** que el Worker, con los
+*nameservers* del registrador apuntando a Cloudflare y la zona en estado
+**Active**. Con eso hecho, `npx wrangler deploy` crea solo el registro DNS y el
+certificado TLS; no hay que añadir ningún CNAME a mano.
+
+`www` **redirige al apex con un 301** (conservando ruta y query). Un solo host
+canónico no es un capricho: la sesión de la web vive en el almacenamiento local
+del navegador, y con dos orígenes entrar por uno u otro daría dos sesiones
+distintas.
+
+**HTTP también redirige a HTTPS**, y en el mismo salto (301 en las lecturas, 308
+en lo demás: un 301 sobre un POST se reenvía como GET y perdería el cuerpo). Un dominio propio de
+Cloudflare atiende igualmente el puerto 80, y allí la petición viaja en claro:
+quien comparta red ve el token de sesión de la cabecera `Authorization`. Además,
+toda respuesta por HTTPS lleva `Strict-Transport-Security: max-age=31536000;
+includeSubDomains`, así que tras la primera visita el navegador ya no vuelve a
+pedir el sitio en claro (ese primer salto sí viaja sin cifrar; por eso conviene
+lo de abajo). Va sin `preload`: obliga a que todo subdominio futuro hable HTTPS y
+salirse de la lista lleva meses.
+
+En `localhost` no se hace ninguna de las dos cosas: `wrangler dev` sirve por HTTP
+y un HSTS ahí dejaría el navegador convencido de que `localhost` es siempre
+HTTPS, rompiendo cualquier otro proyecto en el mismo puerto.
+
+Conviene además activarlo **en la zona**, que corta en el borde sin llegar a
+ejecutar el Worker: *SSL/TLS → Edge Certificates → **Always Use HTTPS*** (y
+**Minimum TLS Version** 1.2). Con un token de API que tenga `Zone Settings:Edit`:
+
+```bash
+curl -X PATCH "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/settings/always_use_https" \
+  -H "Authorization: Bearer $CF_API_TOKEN" -H "Content-Type: application/json" \
+  --data '{"value":"on"}'
+```
+
+La dirección `*.workers.dev` sigue funcionando, así que las instalaciones
+antiguas de la app no se quedan colgadas. Las nuevas ya vienen apuntando a
+`https://accordio.site` de fábrica (`SyncPrefs` y `UPDATE_BASE_URL`).
+
 ### API
 
 | Ruta | Acceso |
@@ -234,6 +516,9 @@ curl -X POST "$URL/admin/migrate?visibility=public" -H "Authorization: Bearer $J
 | `POST /auth/register`, `POST /auth/login` | pública |
 | `GET /auth/me` | sesión |
 | `GET /api/songs/public[?owner=<id>\|all]` | pública (catálogo del admin por defecto) |
+| `GET /api/songs/:id/related` | como la partitura de origen (devuelve solo catálogo público) |
+| `GET /api/settings` | pública (hoy solo `registrationOpen`) |
+| `PUT /api/settings` | **solo administrador** |
 | `GET /api/songs`, `POST /api/songs` | sesión |
 | `GET /api/songs/:id` | pública si la partitura es pública; si no, dueño o admin |
 | `PUT`/`DELETE /api/songs/:id` | dueño, editor si es pública, o admin |
@@ -258,6 +543,8 @@ curl -X POST "$URL/admin/migrate?visibility=public" -H "Authorization: Bearer $J
 | `PUT /api/songs/:id/favorite` | dueño |
 | `GET /api/songs?trash=1`, `POST /api/songs/:id/restore` | dueño (papelera) |
 | `DELETE /api/songs/:id?hard=1` | dueño, y solo desde la papelera |
+
+Los tres listados de partituras (`/api/songs/public`, `/api/songs` y `/api/songs?trash=1`) aceptan `?limit=` (tope 500), `?offset=` y `?q=`. `q` busca en título y artista sin distinguir mayúsculas ni tildes, y escapa los comodines de `LIKE`: buscar `%` no devuelve el catálogo entero.
 
 Cada partitura es `private` o `public`. **Publicar es un acto editorial**: quien la sube no marca la casilla, la propone.
 
@@ -341,7 +628,7 @@ No confundir con `/api/chords`, que es el blob de acordes **personales** de cada
 
 ### La app móvil usa la misma cuenta
 
-En **Ajustes → Sincronización** se introduce la dirección del servidor y se entra con email y contraseña (o se crea la cuenta desde ahí). A partir de ahí no hay que volver a esa pantalla: la sincronización es **automática**.
+En **Ajustes → Sincronización** se entra con email y contraseña (o se crea la cuenta desde ahí). La dirección del servidor viene puesta de fábrica (`https://accordio.site`) y solo hay que tocarla si el Worker está desplegado en otra cuenta. A partir de ahí no hay que volver a esa pantalla: la sincronización es **automática**.
 
 Cómo funciona:
 

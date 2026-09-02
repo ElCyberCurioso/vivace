@@ -21,7 +21,14 @@
 export const GLOBAL_CHORDS_KEY = "chords/global-chords.json";
 
 /** Tantos acordes como para cubrir cualquier repertorio sin que el blob se desmande. */
-const MAX_CHORDS = 3000;
+/*
+ * Tope de acordes del diccionario global. Eran 3.000, que se quedaba corto en
+ * cuanto se siembra la biblioteca completa (guitar-chords-db-json: ~8.700
+ * acordes, y el doble contando los alias en bemoles). El tope sigue estando
+ * para que un PUT no pueda dejar cualquier cosa ahí dentro, solo que ahora a la
+ * altura de la biblioteca que el propio Worker sirve.
+ */
+const MAX_CHORDS = 20000;
 const MAX_POSITIONS = 12;
 const MAX_FRET = 24;
 const CUERDAS = 6;

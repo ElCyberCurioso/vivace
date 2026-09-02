@@ -22,3 +22,20 @@ database_id = "1830ca34-43f6-429a-812d-5156287e90f1"
 #
 # SYNC_TOKEN ya no se usa: las rutas de token compartido y el panel /admin se
 # retiraron porque se saltaban el modelo de permisos.
+
+# --- Dominio propio -----------------------------------------------------------
+# La web y la API se sirven desde el mismo Worker, así que basta con apuntar el
+# dominio a él. Con `custom_domain = true` wrangler crea en el despliegue el
+# registro DNS y el certificado; el requisito es que la zona `accordio.site` ya
+# esté dada de alta en la misma cuenta de Cloudflare (nameservers apuntando a
+# Cloudflare y estado "Active").
+#
+# El subdominio *.workers.dev sigue funcionando; el canónico es el apex, y el
+# Worker redirige www -> apex con un 301.
+[[routes]]
+pattern = "accordio.site"
+custom_domain = true
+
+[[routes]]
+pattern = "www.accordio.site"
+custom_domain = true

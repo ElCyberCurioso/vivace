@@ -1,0 +1,87 @@
+/* Accordio — design tokens (web)
+   Derivado del board de marca. Todo valor de color, tipografía, espacio y radio
+   debe salir de estas variables. */
+:root{
+  /* Marca */
+  --ac-primary:#1A535C;
+  --ac-coral:#FF6B6B;
+  --ac-turquoise:#4ECDC4;
+  --ac-yellow:#FFE66D;
+
+  /* Rampas */
+  --ac-primary-100:#E3EEF0; --ac-primary-200:#BCD6DA; --ac-primary-300:#8DB6BD;
+  --ac-primary-400:#4E8A94; --ac-primary-500:#1A535C; --ac-primary-600:#154650;
+  --ac-primary-700:#113941; --ac-primary-800:#0D2B31; --ac-primary-900:#081D21;
+
+  --ac-coral-100:#FFE9E9; --ac-coral-200:#FFCCCC; --ac-coral-300:#FFA8A8;
+  --ac-coral-400:#FF8888; --ac-coral-500:#FF6B6B; --ac-coral-600:#EE5253;
+  --ac-coral-700:#C93B3C; --ac-coral-800:#9E2B2C; --ac-coral-900:#701F1F;
+
+  --ac-turquoise-100:#E6F9F7; --ac-turquoise-200:#C2F0EB; --ac-turquoise-300:#94E4DD;
+  --ac-turquoise-400:#6DD9D0; --ac-turquoise-500:#4ECDC4; --ac-turquoise-600:#37AFA6;
+  --ac-turquoise-700:#2A8A83; --ac-turquoise-800:#1F6660; --ac-turquoise-900:#164742;
+
+  --ac-yellow-100:#FFFBE6; --ac-yellow-200:#FFF6C4; --ac-yellow-300:#FFF09E;
+  --ac-yellow-400:#FFEA82; --ac-yellow-500:#FFE66D; --ac-yellow-600:#F2CE3D;
+  --ac-yellow-700:#C9A317; --ac-yellow-800:#96780F; --ac-yellow-900:#6B550A;
+
+  /* Superficies y texto */
+  --ac-bg:#F7EFE3;            /* fondo crema del lienzo */
+  --ac-bg-alt:#F3E3CD;        /* crema más cálida (columnas / bandas) */
+  --ac-surface:#F2FAF6;       /* tarjeta menta-blanca */
+  --ac-surface-2:#FFFFFF;     /* tarjeta blanca pura */
+  --ac-ink:#12363D;           /* titulares */
+  --ac-body:#3F5257;          /* texto corrido */
+  --ac-muted:#7B8E92;         /* texto secundario */
+  --ac-line:#DCE8E5;          /* borde suave */
+  --ac-line-strong:#1A535C;   /* trazo de diagramas */
+  --ac-fretboard:#6B4226;     /* madera del mástil */
+  --ac-fretboard-2:#8A5A34;
+
+  /* Tipografía */
+  --ac-font-heading:'Montserrat', system-ui, sans-serif;
+  --ac-font-body:'Poppins', system-ui, sans-serif;
+  --ac-fs-display:clamp(2.5rem,4.5vw,4rem);
+  --ac-fs-h1:2.25rem; --ac-fs-h2:1.75rem; --ac-fs-h3:1.3125rem;
+  --ac-fs-lg:1.125rem; --ac-fs-base:1rem; --ac-fs-sm:.875rem; --ac-fs-xs:.75rem;
+  --ac-lh-tight:1.15; --ac-lh-base:1.6;
+  --ac-fw-body:400; --ac-fw-medium:500; --ac-fw-semibold:600; --ac-fw-bold:700;
+  --ac-tracking-display:-.02em; --ac-tracking-label:.04em;
+
+  /* Espacio (escala 4px) */
+  --ac-space-1:4px; --ac-space-2:8px; --ac-space-3:12px; --ac-space-4:16px;
+  --ac-space-5:20px; --ac-space-6:24px; --ac-space-8:32px; --ac-space-10:40px;
+  --ac-space-12:48px; --ac-space-16:64px; --ac-space-20:80px;
+
+  /* Radios */
+  --ac-radius-sm:8px; --ac-radius-md:12px; --ac-radius-lg:20px;
+  --ac-radius-xl:28px; --ac-radius-pill:999px; --ac-radius-app-icon:22%;
+
+  /* Sombras */
+  --ac-shadow-sm:0 1px 2px rgba(18,54,61,.06), 0 2px 6px rgba(18,54,61,.05);
+  --ac-shadow-md:0 4px 10px rgba(18,54,61,.07), 0 12px 28px rgba(18,54,61,.07);
+  --ac-shadow-lg:0 10px 24px rgba(18,54,61,.10), 0 28px 60px rgba(18,54,61,.10);
+
+  /* Movimiento */
+  --ac-ease:cubic-bezier(.2,.8,.2,1);
+  --ac-dur-fast:120ms; --ac-dur:200ms; --ac-dur-slow:360ms;
+
+  /* Roles semánticos */
+  --ac-action:var(--ac-primary);
+  --ac-action-hover:var(--ac-primary-600);
+  --ac-highlight:var(--ac-coral);
+  --ac-highlight-hover:var(--ac-coral-600);
+  --ac-active:var(--ac-turquoise);
+  --ac-pending:var(--ac-yellow);
+  --ac-focus:var(--ac-turquoise-700);
+
+  /* Pares texto-sobre-relleno y recursos por tema */
+  --ac-on-action:#F2FAF6;
+  --ac-on-highlight:#FFFFFF;
+  --ac-nav-bg:var(--ac-primary);
+  --ac-nav-fg:#F2FAF6;
+  --ac-pattern:url("../patterns/music-tile.svg");
+  --ac-hero-band:url("../patterns/hero-band.svg");
+  --ac-logo-lockup:url("../logo/lockup-horizontal.svg");
+  --ac-icon-color:var(--ac-primary-500);
+}

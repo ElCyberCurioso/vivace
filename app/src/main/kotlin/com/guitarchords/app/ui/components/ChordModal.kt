@@ -45,6 +45,7 @@ import com.guitarchords.app.chords.ChordDiagram
 import com.guitarchords.app.chords.ChordLibrary
 import com.guitarchords.app.chords.CustomChords
 import com.guitarchords.app.chords.MusicTheory
+import com.guitarchords.app.ui.icons.AccordioIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -107,7 +108,7 @@ fun ChordModal(
                     AssistChip(
                         onClick = { editing = null to null },
                         label = { Text(stringResource(R.string.add_custom_shape)) },
-                        leadingIcon = { Icon(Icons.Default.Add, null) }
+                        leadingIcon = { Icon(AccordioIcons.mas(), null) }
                     )
                 }
                 Spacer(Modifier.height(16.dp))
@@ -138,7 +139,7 @@ fun ChordModal(
                     IconButton(
                         onClick = { if (safe < total - 1) index = safe + 1 },
                         enabled = safe < total - 1
-                    ) { Icon(Icons.Default.ChevronRight, stringResource(R.string.next)) }
+                    ) { Icon(AccordioIcons.siguiente(), stringResource(R.string.next)) }
                 }
                 Spacer(Modifier.height(8.dp))
                 FilledTonalButton(onClick = { player.strum(shape.frets) }) {
@@ -173,7 +174,7 @@ fun ChordModal(
                         AssistChip(
                             onClick = { editing = null to null },
                             label = { Text(stringResource(R.string.add_custom_shape)) },
-                            leadingIcon = { Icon(Icons.Default.Add, null) }
+                            leadingIcon = { Icon(AccordioIcons.mas(), null) }
                         )
                         if (shape.customId != null) {
                             AssistChip(

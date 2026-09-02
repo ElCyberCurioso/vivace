@@ -23,19 +23,36 @@ private fun variableFont(resId: Int, weight: FontWeight) = Font(
 )
 
 /**
- * Tipografía de interfaz del paquete de marca: Space Grotesk.
- * Va empaquetada (OFL); ver `app/licenses/`.
+ * Titulares: Montserrat, la del paquete Accordio. Es variable, así que un solo
+ * fichero da todos los pesos. Va empaquetada (OFL); ver `app/licenses/`.
  */
-val VivaceSans = FontFamily(
-    variableFont(R.font.space_grotesk, FontWeight.Normal),
-    variableFont(R.font.space_grotesk, FontWeight.Medium),
-    variableFont(R.font.space_grotesk, FontWeight.SemiBold),
-    variableFont(R.font.space_grotesk, FontWeight.Bold)
+val AccordioHeading = FontFamily(
+    variableFont(R.font.montserrat, FontWeight.SemiBold),
+    variableFont(R.font.montserrat, FontWeight.Bold),
+    variableFont(R.font.montserrat, FontWeight.ExtraBold)
 )
 
 /**
- * Monoespaciada de la marca (JetBrains Mono), **solo para cifras**: BPM,
- * trastes, compases, hercios del afinador, XP. El resto va en [VivaceSans].
+ * Texto: Poppins. Aquí NO hay fichero variable —Poppins se distribuye en pesos
+ * sueltos—, así que van los tres que gasta la interfaz y ninguno más: cada peso
+ * son 160 KB en el APK.
+ */
+val AccordioBody = FontFamily(
+    Font(R.font.poppins_regular, FontWeight.Normal),
+    Font(R.font.poppins_medium, FontWeight.Medium),
+    Font(R.font.poppins_semibold, FontWeight.SemiBold)
+)
+
+/** Nombre anterior de la familia de texto; se mantiene para no romper llamadas. */
+val VivaceSans = AccordioBody
+
+/**
+ * Monoespaciada (JetBrains Mono) para la HOJA de partitura y las cifras: BPM,
+ * trastes, compases, hercios del afinador, XP.
+ *
+ * No sale del paquete Accordio, que no trae monoespaciada, y es la única
+ * concesión: sin ancho fijo los acordes dejan de caer sobre su sílaba. Es la
+ * misma decisión que en la web.
  */
 val VivaceMono = FontFamily(
     variableFont(R.font.jetbrains_mono, FontWeight.Normal),
@@ -43,89 +60,91 @@ val VivaceMono = FontFamily(
 )
 
 /**
- * Escala tipográfica de la app. Parte de la escala Material 3 y ajusta pesos
- * y tracking a la marca: títulos con tracking negativo, etiquetas en 500.
+ * Escala tipográfica de la app. Parte de la escala Material 3 y la ajusta al
+ * paquete: titulares en Montserrat 700 con tracking −0,02 em, texto en Poppins
+ * 400/500. La regla 4 del kit es no mezclarlas, así que aquí no hay ningún
+ * estilo a medio camino.
  */
 val AppTypography = Typography(
     displayLarge = TextStyle(
-        fontFamily = VivaceSans,
-        fontWeight = FontWeight.SemiBold,
+        fontFamily = AccordioHeading,
+        fontWeight = FontWeight.Bold,
         fontSize = 57.sp,
         lineHeight = 64.sp,
-        letterSpacing = (-1.1).sp
+        letterSpacing = (-1.14).sp
     ),
     headlineMedium = TextStyle(
-        fontFamily = VivaceSans,
-        fontWeight = FontWeight.SemiBold,
+        fontFamily = AccordioHeading,
+        fontWeight = FontWeight.Bold,
         fontSize = 28.sp,
         lineHeight = 36.sp,
-        letterSpacing = (-0.5).sp
+        letterSpacing = (-0.56).sp
     ),
     headlineSmall = TextStyle(
-        fontFamily = VivaceSans,
-        fontWeight = FontWeight.SemiBold,
+        fontFamily = AccordioHeading,
+        fontWeight = FontWeight.Bold,
         fontSize = 24.sp,
         lineHeight = 32.sp,
-        letterSpacing = (-0.4).sp
+        letterSpacing = (-0.48).sp
     ),
     titleLarge = TextStyle(
-        fontFamily = VivaceSans,
-        fontWeight = FontWeight.SemiBold,
+        fontFamily = AccordioHeading,
+        fontWeight = FontWeight.Bold,
         fontSize = 22.sp,
         lineHeight = 28.sp,
-        letterSpacing = (-0.2).sp
+        letterSpacing = (-0.44).sp
     ),
     titleMedium = TextStyle(
-        fontFamily = VivaceSans,
-        fontWeight = FontWeight.SemiBold,
+        fontFamily = AccordioHeading,
+        fontWeight = FontWeight.Bold,
         fontSize = 16.sp,
         lineHeight = 24.sp,
-        letterSpacing = 0.15.sp
+        letterSpacing = (-0.16).sp
     ),
     titleSmall = TextStyle(
-        fontFamily = VivaceSans,
-        fontWeight = FontWeight.SemiBold,
+        fontFamily = AccordioHeading,
+        fontWeight = FontWeight.Bold,
         fontSize = 14.sp,
         lineHeight = 20.sp,
         letterSpacing = 0.1.sp
     ),
     bodyLarge = TextStyle(
-        fontFamily = VivaceSans,
+        fontFamily = AccordioBody,
         fontWeight = FontWeight.Normal,
         fontSize = 16.sp,
         lineHeight = 24.sp,
         letterSpacing = 0.5.sp
     ),
     bodyMedium = TextStyle(
-        fontFamily = VivaceSans,
+        fontFamily = AccordioBody,
         fontWeight = FontWeight.Normal,
         fontSize = 14.sp,
         lineHeight = 20.sp,
         letterSpacing = 0.25.sp
     ),
     bodySmall = TextStyle(
-        fontFamily = VivaceSans,
+        fontFamily = AccordioBody,
         fontWeight = FontWeight.Normal,
         fontSize = 12.sp,
         lineHeight = 16.sp,
         letterSpacing = 0.4.sp
     ),
     labelLarge = TextStyle(
-        fontFamily = VivaceSans,
+        fontFamily = AccordioBody,
         fontWeight = FontWeight.Medium,
         fontSize = 14.sp,
         lineHeight = 20.sp,
         letterSpacing = 0.1.sp
     ),
     labelMedium = TextStyle(
-        fontFamily = VivaceSans,
+        fontFamily = AccordioBody,
         fontWeight = FontWeight.Medium,
         fontSize = 12.sp,
         lineHeight = 16.sp,
         letterSpacing = 0.5.sp
     ),
     labelSmall = TextStyle(
-        fontFamily = VivaceSans,
+        fontFamily = AccordioBody,
         fontWeight = FontWeight.Medium,
         fontSize = 11.sp,
         lineHeight = 16.sp,

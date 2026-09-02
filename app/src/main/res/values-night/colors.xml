@@ -1,17 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Vivace · tokens de marca, modo oscuro ("Nocturno", el modo por defecto). -->
+<!--
+  Accordio · modo oscuro, de `tokens.dark.css` del paquete.
+
+  La marca no se invierte: las cuatro rampas son las mismas. Lo que cambia es
+  quién hace de acción — el teal no contrasta contra el fondo oscuro, pasa a
+  titular y la acción la toma el turquesa.
+-->
 <resources>
-    <color name="vv_bg">#0F1113</color>
-    <color name="vv_surface">#17191C</color>
-    <color name="vv_surface_alt">#1E2124</color>
-    <color name="vv_border">#2B2D31</color>
-    <color name="vv_border_strong">#3A3D42</color>
-    <color name="vv_text">#F2EFE9</color>
-    <color name="vv_text_muted">#A7ABB2</color>
-    <color name="vv_text_subtle">#8B8F96</color>
-    <color name="vv_accent">#E8B04B</color>
-    <color name="vv_accent_strong">#C2762B</color>
-    <color name="vv_on_accent">#0F1113</color>
-    <color name="vv_beat">#7FB2A0</color>
-    <color name="vv_danger">#E0654B</color>
+    <color name="ac_bg">#0F2429</color>
+    <color name="ac_bg_alt">#122E34</color>
+    <color name="ac_surface">#163A41</color>
+    <color name="ac_surface_2">#1C464E</color>
+    <color name="ac_ink">#F2FAF6</color>
+    <color name="ac_body">#C6DCDE</color>
+    <color name="ac_muted">#8CA6AA</color>
+    <color name="ac_line">#26545C</color>
+    <color name="ac_action">#4ECDC4</color>
+    <color name="ac_on_action">#08262B</color>
+    <color name="ac_highlight">#FF8A8A</color>
+    <color name="ac_active">#6DD9D0</color>
+    <color name="ac_pending">#FFE66D</color>
+    <color name="ac_nav_bg">#0B1D21</color>
+    <color name="ac_nav_fg">#F2FAF6</color>
+
+    <!-- Nombres anteriores, apuntando a la paleta nueva. -->
+    <color name="vv_bg">#0F2429</color>
+    <color name="vv_surface">#163A41</color>
+    <color name="vv_surface_alt">#1C464E</color>
+    <color name="vv_border">#26545C</color>
+    <color name="vv_border_strong">#2F636B</color>
+    <color name="vv_text">#F2FAF6</color>
+    <color name="vv_text_muted">#A9C3C6</color>
+    <color name="vv_text_subtle">#8CA6AA</color>
+    <color name="vv_accent">#4ECDC4</color>
+    <color name="vv_accent_strong">#94E4DD</color>
+    <color name="vv_on_accent">#08262B</color>
+    <color name="vv_beat">#6DD9D0</color>
+    <color name="vv_danger">#FF8A8A</color>
 </resources>

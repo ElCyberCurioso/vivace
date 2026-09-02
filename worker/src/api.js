@@ -2,6 +2,9 @@
  * Vivace · API multiusuario (la usan la web y, desde la fase 3, la app Android).
  *
  *   POST /auth/register   { email, password, name }  -> { token, user }
+ *                         (cerrado si el admin apagó las altas)
+ *   GET  /api/settings    -> ajustes públicos de la instalación
+ *   PUT  /api/settings    { registrationOpen }  -> solo administrador
  *   POST /auth/login      { email, password }        -> { token, user }
  *   GET  /auth/me                                    -> { user }
  *
@@ -9,6 +12,7 @@
  *   GET    /api/songs/public[?owner=] -> catálogo publicado (por defecto, admin)
  *   POST   /api/songs                 { title, artist, …, content }
  *   GET    /api/songs/:id             -> ficha + contenido (según permisos)
+ *   GET    /api/songs/:id/related     -> recomendadas (mismo artista, o estilo)
  *   PUT    /api/songs/:id             -> actualiza metadatos y/o contenido
  *   DELETE /api/songs/:id             -> a la papelera
  *
@@ -27,6 +31,7 @@ import {
   findSongById, findUserByEmail, findUserById, findVersionById, insertProposal,
   insertSong, insertVersion, isValidSort, listOwnSongs, listProposals,
   listPublicGenres, listPublicSongs, listUsers, listVersions, publicProposal,
+  listRelatedSongs, registrationOpen, writeSetting, SETTING_REGISTRATION,
   publicSong, publicUser, publicVersion, resolveProposal, softDeleteSong,
   softDeleteVersion, updateSongMeta, updateUserRole, updateVersionMeta, uuid,
   nextVersionPositionFor, stmtInsertVersion, stmtResolveProposal, stmtUpdateSongMeta,
@@ -34,7 +39,7 @@ import {
 } from "./db.js";
 import {
   canAddVersion, canComment, canDeleteComment, canRate,
-  canEdit, canEditChords, canManageRoles, canPropose, canReview,
+  canEdit, canEditChords, canManageRoles, canManageSettings, canPropose, canReview,
   canManageTrashed, canSetVisibility, canView, canWithdrawProposal, editDenialReason, isEditor,
   isValidRole, isValidVisibility
 } from "./permissions.js";
@@ -42,6 +47,7 @@ import {
   ChordError, mergeSeed, readGlobalChords, sanitizeDictionary, writeGlobalChords
 } from "./chords.js";
 import { CHORD_SEED } from "./chords-seed.js";
+import { expandirChordDb } from "./chords-db.js";
 import { FALLBACK_GENRE, guessGenre } from "./genres.js";
 import { isValidYoutube, youtubeSearch } from "./youtube.js";
 import { handleSync } from "./sync.js";
@@ -119,7 +125,19 @@ async function register(request, env, cors) {
     return fail("ese email ya está registrado", cors, 409);
   }
   // El primer usuario que se da de alta administra la instalación.
-  const role = (await countUsers(env.DB)) === 0 ? "admin" : "user";
+  const primerUsuario = (await countUsers(env.DB)) === 0;
+  /*
+   * Interruptor de altas. El corte va AQUÍ y no solo en la web: esconder el
+   * botón de «crear cuenta» no impide llamar a la API con curl.
+   *
+   * La instalación vacía es la excepción, y tiene que serlo: si no, cerrar las
+   * altas antes de que exista el administrador dejaría la instalación sin dueño
+   * y sin forma de volver a abrirlas.
+   */
+  if (!primerUsuario && !(await registrationOpen(env.DB))) {
+    return fail("las altas de cuenta están cerradas ahora mismo", cors, 403);
+  }
+  const role = primerUsuario ? "admin" : "user";
   const user = await createUser(env.DB, {
     email: body.email.trim(),
     name: body.name || "",
@@ -272,11 +290,12 @@ async function catalogOwnerId(env, url) {
   return admin?.id || null;
 }
 
-/** ?limit= y ?offset= de la URL, ya acotados por clampPage. */
+/** ?limit=, ?offset= y ?q= de la URL. limit y offset los acota clampPage. */
 function paginaDe(url) {
   return {
     limit: url.searchParams.get("limit"),
-    offset: url.searchParams.get("offset")
+    offset: url.searchParams.get("offset"),
+    q: url.searchParams.get("q") || ""
   };
 }
 
@@ -287,7 +306,10 @@ async function publicCatalog(env, cors, url) {
   const ownerId = await catalogOwnerId(env, url);
   const pagina = paginaDe(url);
   const { items, hasMore } = await listPublicSongs(env.DB, ownerId, { genre, sort, ...pagina });
-  return json({ songs: items.map(publicSong), sort, genre, hasMore, offset: pagina.offset }, cors);
+  return json(
+    { songs: items.map(publicSong), sort, genre, q: pagina.q, hasMore, offset: pagina.offset },
+    cors
+  );
 }
 
 /* ---------------------------- versiones ---------------------------- */
@@ -539,7 +561,15 @@ export async function handleApi(request, env, url, cors) {
     if (!user) return fail("inicia sesión", cors, 401);
     if (!canEditChords(user)) return fail("hace falta ser editor", cors, 403);
     const actual = await readGlobalChords(env);
-    const { chords, added, kept } = mergeSeed(actual.chords, sanitizeDictionary(CHORD_SEED));
+    /*
+     * Dos fuentes, y en este orden: primero la semilla curada (348 acordes de
+     * uso diario, revisados) y detrás la biblioteca completa de
+     * guitar-chords-db-json. `mergeSeed` solo añade lo que falta, así que ni la
+     * biblioteca pisa a la semilla ni ninguna de las dos pisa lo que el
+     * administrador haya editado a mano.
+     */
+    const biblioteca = { ...expandirChordDb(), ...CHORD_SEED };
+    const { chords, added, kept } = mergeSeed(actual.chords, sanitizeDictionary(biblioteca));
     const guardado = await writeGlobalChords(env, chords);
     return json({ ok: true, added, kept, count: Object.keys(chords).length, updatedAt: guardado.updatedAt }, cors);
   }
@@ -625,9 +655,45 @@ export async function handleApi(request, env, url, cors) {
     }, cors);
   }
 
+  /*
+   * Ajustes de la instalación. La lectura es pública porque la pantalla de
+   * entrada la necesita para no ofrecer un «crear cuenta» que va a fallar; solo
+   * devuelve lo que ya se nota probando, nada de configuración interna.
+   */
+  if (path === "/api/settings" && method === "GET") {
+    return json({ registrationOpen: await registrationOpen(env.DB) }, cors);
+  }
+  if (path === "/api/settings" && method === "PUT") {
+    if (!user) return fail("inicia sesión", cors, 401);
+    if (!canManageSettings(user)) return fail("solo el administrador", cors, 403);
+    const body = await readJson(request);
+    if (!body || typeof body.registrationOpen !== "boolean") {
+      return fail("registrationOpen tiene que ser true o false", cors, 400);
+    }
+    await writeSetting(env.DB, SETTING_REGISTRATION, body.registrationOpen ? "1" : "0");
+    return json({ registrationOpen: body.registrationOpen }, cors);
+  }
+
   // Categorías con partituras publicadas, para el filtro del catálogo.
   if (path === "/api/genres" && method === "GET") {
     return json({ genres: await listPublicGenres(env.DB, await catalogOwnerId(env, url)) }, cors);
+  }
+
+  /*
+   * Recomendadas a partir de la que se está leyendo. Se ve si se ve la
+   * partitura de origen (una privada propia también recomienda), pero lo que
+   * devuelve es SIEMPRE catálogo público: recomendar algo que quien lo lee no
+   * puede abrir no es recomendar, es enseñar un 404.
+   */
+  const relacionadasDe = path.match(/^\/api\/songs\/([A-Za-z0-9-]+)\/related$/);
+  if (relacionadasDe && method === "GET") {
+    const song = await findSongById(env.DB, relacionadasDe[1]);
+    if (!canView(user, song)) return fail("no encontrada", cors, 404);
+    const { items, motivo } = await listRelatedSongs(env.DB, song, {
+      ownerId: await catalogOwnerId(env, url),
+      limit: url.searchParams.get("limit")
+    });
+    return json({ songs: items.map((s) => publicSong(s)), reason: motivo }, cors);
   }
 
   // Versiones de una partitura: se ven con las mismas reglas que ella.

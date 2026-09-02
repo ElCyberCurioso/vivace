@@ -45,6 +45,7 @@ import com.guitarchords.app.ui.training.exercises.EarTrainingExercise
 import com.guitarchords.app.ui.training.exercises.RhythmTapExercise
 import com.guitarchords.app.ui.training.exercises.ScaleNotesExercise
 import com.guitarchords.app.ui.training.exercises.TheoryQuizExercise
+import com.guitarchords.app.ui.theme.accordioTopBarColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -67,6 +68,7 @@ fun ExerciseRunnerScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = accordioTopBarColors(),
                 title = {
                     Text(
                         spec?.let { stringResource(it.titleRes, *it.titleArgs.toTypedArray()) }

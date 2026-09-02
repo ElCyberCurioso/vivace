@@ -1,111 +1,97 @@
-feat: roles, versiones, propuestas y social en la web
+feat: dominio propio, marca Accordio y buscador en el servidor
 
-Segunda tanda sobre la web del Worker: el catálogo deja de ser una lista
-plana con un dueño y pasa a tener equipo editorial, versiones, revisión,
-comentarios y valoraciones. La app Android no se toca.
+Todo lo que va aquí es lo que hay sin subir desde `8e550df`. La web ya está
+desplegada hasta «papel como documento»; la app está publicada como 2.0 en
+`/update`. Lo que sigue pendiente de desplegar se anota en CONTEXTO.md.
 
-Roles y publicación revisada:
-- Tres roles en `permissions.js` (lógica pura): `user` crea lo suyo y
-  propone; `editor` cuida el catálogo —edita y despublica lo público,
-  resuelve propuestas y mantiene el diccionario de acordes—; `admin`
-  además reparte roles. Un editor NO toca las privadas de nadie: manda
-  sobre el catálogo, no sobre el cajón de cada uno.
-- `visibility` deja de ser cosa de quien sube la partitura. Pedirla al
-  crear o editar se ignora en silencio si no eres editor, en vez de
-  rechazar la edición entera y perder el trabajo por un campo.
-- Pestaña «Usuarios» y `-PromoteAdmin -Role editor` para repartir roles
-  sin entrar en la web.
+Dominio y transporte:
+- `accordio.site` como dominio propio del Worker (apex y `www`), declarado en
+  `wrangler.toml` con `custom_domain`: wrangler crea el DNS y el certificado.
+- Un solo host y siempre cifrado: `www` va al apex y HTTP a HTTPS, en el mismo
+  salto. 301 en las lecturas y 308 en el resto —un 301 sobre un POST el
+  navegador lo reenvía como GET y perdería el cuerpo—. Con dos orígenes la
+  sesión, que vive en el almacenamiento local, se partiría en dos.
+- HSTS de un año en todas las respuestas HTTPS. `localhost` queda exento: un
+  HSTS ahí deja el navegador convencido de que localhost es siempre HTTPS y
+  rompe cualquier otro proyecto en el mismo puerto.
+- La app apunta a `https://accordio.site` de fábrica (`SyncPrefs` y
+  `UPDATE_BASE_URL`), así que ya no hace falta configurar nada para actualizar.
 
-Versiones y propuestas:
-- `song_versions` calcado al modelo de la app: el contenido propio es el
-  «Original» y los arreglos cuelgan de él, con nombre, capo,
-  URL y orden. Gestión completa: crear, editar y borrar (lógico).
-- `proposals` con dos tipos: publicar lo propio y aportar una versión a
-  algo ya publicado. El texto propuesto vive en su objeto de R2 y no
-  toca nada hasta que alguien aprueba; al aprobar, el crédito es
-  de quien la propuso, no del revisor. Rechazo con motivo visible
-  y retirada por el autor mientras siga pendiente.
-- Cola de revisión para editores, historial propio para el resto.
+Buscar deja de ser cosa del navegador:
+- `?q=` en los tres listados (`db.js`), sobre título y artista, sin distinguir
+  mayúsculas ni tildes: `LOWER()` de SQLite solo baja ASCII, así que las vocales
+  acentuadas se sustituyen en SQL y el navegador normaliza igual.
+- Antes solo se filtraba lo ya descargado —la primera página de 60—, así que una
+  partitura que cayera más atrás no existía para el buscador hasta pulsar
+  «Cargar más» las veces que hiciera falta.
+- Se busca a partir de 3 letras o cifras y se piden todos los resultados de una
+  vez: un resultado de búsqueda paginado es el problema de partida. Los
+  comodines de `LIKE` se escapan, que buscar `%` devolvía el catálogo entero.
 
-Comentarios y valoraciones:
-- Hilo plano por partitura, con borrado lógico. Escribe quien pueda ver
-  la partitura; borra su autor o un editor.
-- Estrellas POR VERSIÓN, con clave primaria (song_id, version_id,
-  user_id): un voto por persona y versión, y el upsert sale gratis. El
-  «Original» es la cadena vacía, porque con NULL la clave única no
-  funcionaría —un NULL no es igual a otro.
+Recomendadas y altas de cuenta:
+- `GET /api/songs/:id/related`: primero más del mismo artista y, solo si no hay,
+  del mismo estilo. Dos consultas y no un `OR`, porque no es un filtro sino una
+  prioridad. Nunca la que se está viendo, y solo catálogo público: recomendar
+  algo que quien lo lee no puede abrir es enseñar un 404.
+- Interruptor de altas en Administración, solo para el administrador (tabla
+  `settings`, nueva). El corte está en `/auth/register`, no en la interfaz:
+  esconder el botón no impide un `curl`. La instalación vacía es la excepción, o
+  cerrar las altas antes de que exista administrador la dejaría sin dueño.
 
-Categorías, orden y búsqueda:
-- Categoría por partitura con filtro y orden (título, más recientes, más
-  antiguas) en el catálogo; el filtro ofrece lo que hay delante: las
-  públicas en el catálogo y las propias —privadas incluidas— en «Mis
-  partituras».
-- `genres.js` propone una categoría por artista y, si no, por palabras
-  del título, con «Varios» de reserva. Se aplica con `-Categorize`, que
-  enseña el recuento en seco antes de escribir. Adivinar el estilo es
-  aproximado: las reglas están a la vista para corregirlas.
+Diccionario de acordes:
+- 8.669 acordes (~14.400 nombres con los alias en bemoles) de
+  guitar-chords-db-json (MIT), en `src/chords-db.js` y sembrados desde
+  «Importar diccionario base». El repo son 36 MB en 9.072 ficheros:
+  `tools/generar-chords-db.mjs` lo reduce a una cadena compacta que solo se
+  expande al sembrar.
+- Y el fallo que destapó la importación: el origen da los trastes ABSOLUTOS y el
+  diccionario los quiere RELATIVOS al traste base. El dibujante de la web los
+  trataba como absolutos, así que todo acorde con traste base mayor que 1
+  —cejillas y posiciones altas, media biblioteca— salía con los puntos corridos
+  o sin ellos.
 
-Vídeo de YouTube:
-- Enlace por partitura y reproductor a la derecha de la hoja. Se aceptan
-  las formas habituales del enlace y se valida en cliente Y servidor:
-  sin eso, un `javascript:` acabaría en el src de un iframe.
-- Se incrusta desde youtube-nocookie y el iframe solo se crea si hay
-  vídeo, así que una partitura sin él no carga nada de YouTube. Repintar
-  no reinicia la reproducción y cerrar el visor la para.
+Marca Accordio en la web (paquete claro + oscuro):
+- Los tokens `--ac-*` del kit son la única fuente de color y medida, y encima va
+  una capa semántica `--vv-*` que cuelga de los ROLES del kit, que son los que
+  cambian de tema. En oscuro el teal no contrasta y pasa a titular: la acción la
+  toma el turquesa.
+- Montserrat y Poppins; JetBrains Mono se queda para la hoja y las cifras, que
+  sin ancho fijo los acordes dejan de caer sobre su sílaba.
+- Iconos del kit como `<symbol>`, botones con superficie —sobre el crema, un
+  borde pálido no se leía como algo pulsable—, avisos y diálogos propios.
 
-Visor y editor:
-- Los mandos y el listado de versiones pasan a dos recuadros en una
-  columna a la izquierda. Se centra el CONJUNTO y no la hoja dentro del
-  hueco sobrante: los mandos quedan a 32 px de la partitura en vez de
-  a 334.
-- Cabecera: autor – título centrado, y el capo al lado en ámbar.
-- Acordes pulsables en la letra, con globo de digitaciones al pasar por
-  encima.
-- Editor: detección de acordes (la misma del panel /admin, ver abajo),
-  capo y traste base por botones, URL de la original, categoría
-  y candado.
+Móvil:
+- Cabecera del visor en una línea de 49 px, con las acciones en un menú; los
+  mandos en un panel que sube desde abajo, y las versiones al final de la
+  partitura. Se mueven los MISMOS nodos según el ancho, no copias.
+- La partitura entra de ancho al abrirla: se mide la línea más larga y el ancho
+  real de un carácter, y se elige el mayor tamaño que quepa. El suelo son 13 px
+  y es de legibilidad, no de encaje.
 
-Correcciones:
-- El candado no estaba implementado en la web pese a existir en la base.
-  Ahora se pone desde el editor y solo se enseña donde sirve: «Mis
-  partituras» y el editor, no el catálogo.
-- Título largo desbordando la tarjeta: `.card` es un <button> y heredaba
-  `white-space:nowrap`.
-- Al salir de la sesión con el editor abierto, «Entrar» seguía enseñando
-  el editor: cada pantalla se escondía a sí misma sin tocar a las demás.
-  Ahora `showView` es el único dueño de qué sección se ve.
-- El panel de versiones salía vacío a partir de la segunda partitura
-  abierta: `closeViewer` escondía la lista y nadie volvía a mostrarla.
-- Dos barras de desplazamiento con el visor abierto: la página de detrás
-  conservaba la suya.
-- Paneles del editor desalineados: cabeceras de distinta altura,
-  distinto relleno y distinta altura de línea (20,3 px contra 18,9).
-- El desplegable de categorías se pedía solo al arrancar, así que
-  una categoría nueva no aparecía hasta recargar.
-- `listPublicGenres` miraba todas las públicas mientras el catálogo
-  enseña solo las de su dueño: podía ofrecer un filtro sin resultados.
+Editor y papel:
+- Editor a tres columnas —escribir, ver, la ficha—, alineadas porque comparten
+  estructura y no por coincidencia de medidas. La ficha hace su propio scroll.
+- La impresión pasa a ser un documento A4 con marca, título y artista arriba y
+  «Página N de M» abajo. Las páginas se reparten midiendo: en Chrome un
+  `position:fixed` no se repite por hoja y `counter(page)` devuelve 0 fuera de
+  un margen con nombre, que no está implementado. Una línea de acordes y su
+  letra viajan juntas.
+- El capo no salía NUNCA en el PDF: la expresión que lo leía del rótulo vivía en
+  un literal de plantilla, donde `\D` no es un escape válido, así que al
+  navegador le llegaba `/D+/`. Ahora se toma del dato, no del texto en pantalla.
 
-Deduplicación y herramientas:
-- La detección de acordes se muda a `client-lib.js` y el panel /admin
-  pasa a usarla: había una sola implementación probada y duplicarla era
-  garantizar que divergieran. `test-detect.mjs` prueba ahora la
-  compartida, así que cubre las dos páginas.
-- El parser de YouTube sí está duplicado a la fuerza (un Worker no puede
-  ejecutar el texto de client-lib); un test compara ambas con 18
-  formas de enlace para que no se separen.
-- `deploy.ps1`: `-ApplySchema` (schema + migrations, tolerando el
-  "duplicate column name" al repetir), `-Categorize`, `-Role`, sesión de
-  editor compartida, y un 404 de la API que ahora explica que hay que
-  desplegar el Worker en vez de soltar el error crudo.
+App Android, misma imagen (versión 2.0, ya publicada):
+- Paleta, tipografías, formas e iconos del kit; barra superior teal en las 23
+  pantallas vía `accordioTopBarColors()`. Color dinámico apagado: el de Android
+  12+ pinta la app con el fondo de pantalla y deja de ser Accordio.
+- Los iconos se construyen en Kotlin con los colores del tema, no como
+  drawables: los del kit tienen dos tonos y el coral cambia entre claro y
+  oscuro; con `tint` se aplana el icono entero.
+- Nombre visible «Accordio»; el `applicationId` no se toca, que cambiarlo
+  desinstalaría la app de todo el mundo.
 
-Notas de migración:
-- Tablas nuevas (`song_versions`, `proposals`, `comments`, `ratings`) e
-  índices en schema.sql; `songs.youtube_url` en migrations.sql,
-  aparte porque SQLite no tiene ADD COLUMN IF NOT EXISTS.
-- La app Android manda `visibility` al sincronizar y el servidor ya
-  no le hace caso salvo que la cuenta sea editora: una marcada como
-  pública en el móvil deja de publicarse sola. Pendiente adaptar la app.
-
-Tests del worker: 111 (eran 36).
+Sin subir a propósito: `accordio_claro_oscuro.zip` (2,4 MB) sigue sin seguir en
+la raíz. Decidir si se ignora o se guarda; lo que se usa de él ya está copiado
+en `worker/brand/`.
 
 Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>

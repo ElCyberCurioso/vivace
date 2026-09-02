@@ -6,6 +6,14 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 
 /**
+ * Servidor de Vivace por defecto. La web y la API son el mismo Worker, así que
+ * esta URL vale tanto para el navegador como para la app; sigue siendo
+ * editable en la pantalla de sincronización por si alguien despliega el Worker
+ * en su propia cuenta.
+ */
+const val VIVACE_BASE_URL = "https://accordio.site"
+
+/**
  * Persists the Worker endpoint, auth token and last-sync timestamp.
  *
  * El token se guarda en [EncryptedSharedPreferences] (AES-256). Si el keystore
@@ -44,7 +52,7 @@ class SyncPrefs(context: Context) {
         }
 
     var baseUrl: String
-        get() = sp.getString(KEY_URL, "").orEmpty()
+        get() = sp.getString(KEY_URL, VIVACE_BASE_URL).orEmpty()
         set(value) { sp.edit().putString(KEY_URL, value).apply() }
 
     var token: String

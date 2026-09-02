@@ -54,6 +54,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.guitarchords.app.R
 import com.guitarchords.app.data.Playlist
 import com.guitarchords.app.ui.components.EmptyState
+import com.guitarchords.app.ui.theme.accordioTopBarColors
+import com.guitarchords.app.ui.icons.AccordioIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -81,6 +83,7 @@ fun PlaylistsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = accordioTopBarColors(),
                 title = { Text(stringResource(R.string.playlists)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -89,7 +92,7 @@ fun PlaylistsScreen(
                 },
                 actions = {
                     IconButton(onClick = onOpenSearch) {
-                        Icon(Icons.Default.Search, stringResource(R.string.search_songs))
+                        Icon(AccordioIcons.buscar(), stringResource(R.string.search_songs))
                     }
                     IconButton(onClick = {
                         importLauncher.launch(arrayOf("application/zip", "*/*"))
@@ -101,13 +104,13 @@ fun PlaylistsScreen(
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { showFabChooser = true }) {
-                Icon(Icons.Default.Add, stringResource(R.string.add))
+                Icon(AccordioIcons.mas(), stringResource(R.string.add))
             }
         }
     ) { pv ->
         if (playlists.isEmpty() && unassignedCount == 0) {
             EmptyState(
-                icon = Icons.Default.LibraryMusic,
+                icon = AccordioIcons.partitura(),
                 title = stringResource(R.string.empty_playlists_title),
                 subtitle = stringResource(R.string.empty_playlists_subtitle),
                 actionLabel = stringResource(R.string.create_playlist),
@@ -155,7 +158,7 @@ fun PlaylistsScreen(
                             .padding(vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Default.LibraryMusic, null)
+                        Icon(AccordioIcons.partitura(), null)
                         Spacer(Modifier.size(12.dp))
                         Text(stringResource(R.string.new_playlist), style = MaterialTheme.typography.bodyLarge)
                     }
@@ -169,7 +172,7 @@ fun PlaylistsScreen(
                             .padding(vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Default.MusicNote, null)
+                        Icon(AccordioIcons.notas(), null)
                         Spacer(Modifier.size(12.dp))
                         Text(stringResource(R.string.new_song), style = MaterialTheme.typography.bodyLarge)
                     }
@@ -234,7 +237,7 @@ private fun UnassignedRow(count: Int, onClick: () -> Unit) {
                 .fillMaxWidth()
                 .padding(12.dp)
         ) {
-            Icon(Icons.Default.MusicNote, null)
+            Icon(AccordioIcons.notas(), null)
             Spacer(Modifier.size(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -277,7 +280,7 @@ private fun PlaylistRow(
                 .fillMaxWidth()
                 .padding(12.dp)
         ) {
-            Icon(Icons.Default.LibraryMusic, null)
+            Icon(AccordioIcons.partitura(), null)
             Spacer(Modifier.size(12.dp))
             Text(
                 playlist.name,

@@ -47,6 +47,7 @@ import com.guitarchords.app.ui.training.exercises.ChordQuizExercise
 import com.guitarchords.app.ui.training.exercises.RhythmTapExercise
 import com.guitarchords.app.ui.training.exercises.ScaleNotesExercise
 import com.guitarchords.app.ui.training.exercises.TheoryQuizExercise
+import com.guitarchords.app.ui.theme.accordioTopBarColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,6 +61,7 @@ fun PlacementScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = accordioTopBarColors(),
                 title = { Text(stringResource(R.string.training_placement_invite_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

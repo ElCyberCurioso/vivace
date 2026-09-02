@@ -40,6 +40,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.guitarchords.app.R
 import com.guitarchords.app.data.Playlist
+import com.guitarchords.app.ui.icons.AccordioIcons
 
 /**
  * Holds the set of selected song ids for a list screen. Long-press starts a
@@ -90,8 +91,8 @@ fun SelectionTopBar(
         actions = {
             IconButton(onClick = onSelectAll) { Icon(Icons.Default.SelectAll, stringResource(R.string.select_all)) }
             IconButton(onClick = onFavorite) {
-                if (favoriteIsRemove) Icon(Icons.Default.StarBorder, stringResource(R.string.remove_from_favorites))
-                else Icon(Icons.Default.Star, stringResource(R.string.mark_favorite))
+                if (favoriteIsRemove) Icon(AccordioIcons.estrellaHueca(), stringResource(R.string.remove_from_favorites))
+                else Icon(AccordioIcons.estrella(), stringResource(R.string.mark_favorite))
             }
             IconButton(onClick = onMove) { Icon(Icons.AutoMirrored.Filled.DriveFileMove, stringResource(R.string.move_to_list)) }
             IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, stringResource(R.string.delete)) }
@@ -121,11 +122,11 @@ fun BulkMoveDialog(
                 ) {
                     if (includeUnassigned) {
                         item {
-                            PickRow(icon = Icons.Default.MusicNote, label = stringResource(R.string.no_playlist)) { onPick(null) }
+                            PickRow(icon = AccordioIcons.notas(), label = stringResource(R.string.no_playlist)) { onPick(null) }
                         }
                     }
                     items(targets, key = { it.id }) { p ->
-                        PickRow(icon = Icons.Default.LibraryMusic, label = p.name) { onPick(p.id) }
+                        PickRow(icon = AccordioIcons.partitura(), label = p.name) { onPick(p.id) }
                     }
                 }
             }
@@ -159,11 +160,11 @@ fun MoveSongDialog(
                 ) {
                     if (includeUnassigned) {
                         item {
-                            PickRow(icon = Icons.Default.MusicNote, label = stringResource(R.string.no_playlist)) { onPick(null) }
+                            PickRow(icon = AccordioIcons.notas(), label = stringResource(R.string.no_playlist)) { onPick(null) }
                         }
                     }
                     items(targets, key = { it.id }) { p ->
-                        PickRow(icon = Icons.Default.LibraryMusic, label = p.name) { onPick(p.id) }
+                        PickRow(icon = AccordioIcons.partitura(), label = p.name) { onPick(p.id) }
                     }
                 }
             }

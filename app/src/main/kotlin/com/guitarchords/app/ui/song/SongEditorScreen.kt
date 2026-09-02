@@ -64,6 +64,8 @@ import com.guitarchords.app.R
 import com.guitarchords.app.chords.ChordParser
 import com.guitarchords.app.data.Playlist
 import com.guitarchords.app.ui.components.ChordPickerDialog
+import com.guitarchords.app.ui.theme.accordioTopBarColors
+import com.guitarchords.app.ui.icons.AccordioIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -95,6 +97,7 @@ fun SongEditorScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = accordioTopBarColors(),
                 title = { Text(if (songId == 0L) stringResource(R.string.new_song) else stringResource(R.string.edit)) },
                 navigationIcon = {
                     IconButton(onClick = onDone) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
@@ -174,12 +177,12 @@ fun SongEditorScreen(
                 AssistChip(
                     onClick = { playlistPickerOpen = true },
                     label = { Text(stringResource(R.string.playlist_label, plName)) },
-                    leadingIcon = { Icon(Icons.Default.LibraryMusic, null) }
+                    leadingIcon = { Icon(AccordioIcons.partitura(), null) }
                 )
                 AssistChip(
                     onClick = { pickerOpen = true },
                     label = { Text(stringResource(R.string.insert_chord)) },
-                    leadingIcon = { Icon(Icons.Default.MusicNote, null) }
+                    leadingIcon = { Icon(AccordioIcons.notas(), null) }
                 )
                 AssistChip(
                     onClick = {
@@ -217,7 +220,7 @@ fun SongEditorScreen(
                 IconButton(
                     onClick = { vm.updateCapo(song.capo + 1) },
                     enabled = song.capo < 12
-                ) { Icon(Icons.Default.Add, stringResource(R.string.capo_up)) }
+                ) { Icon(AccordioIcons.mas(), stringResource(R.string.capo_up)) }
             }
             Spacer(Modifier.height(8.dp))
             Text(stringResource(R.string.lyrics_and_chords), style = MaterialTheme.typography.labelMedium)
@@ -315,7 +318,7 @@ private fun PlaylistPickerDialog(
                             .clickable { onPick(null) }
                             .padding(vertical = 10.dp, horizontal = 4.dp)
                     ) {
-                        Icon(Icons.Default.MusicNote, null)
+                        Icon(AccordioIcons.notas(), null)
                         Spacer(Modifier.size(12.dp))
                         Text(
                             stringResource(R.string.no_playlist) + if (currentId == null) " ✓" else "",
@@ -330,7 +333,7 @@ private fun PlaylistPickerDialog(
                             .clickable { onPick(p.id) }
                             .padding(vertical = 10.dp, horizontal = 4.dp)
                     ) {
-                        Icon(Icons.Default.LibraryMusic, null)
+                        Icon(AccordioIcons.partitura(), null)
                         Spacer(Modifier.size(12.dp))
                         Text(
                             p.name + if (currentId == p.id) " ✓" else "",

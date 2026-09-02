@@ -26,13 +26,18 @@ android {
         applicationId = "com.guitarchords.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        /*
+         * versionCode es lo ÚNICO que mira la app para saber si hay versión
+         * nueva (UpdateManager.check lo compara con BuildConfig.VERSION_CODE),
+         * así que sube en cada publicación aunque el nombre no cambie.
+         */
+        versionCode = 2
+        versionName = "2.0"
         vectorDrawables { useSupportLibrary = true }
         // URL base del Worker para la auto-actualización. Vacío = se usa la URL
-        // de sincronización configurada en la app. Rellénalo aquí para que las
-        // actualizaciones funcionen sin necesidad de configurar la sync.
-        buildConfigField("String", "UPDATE_BASE_URL", "\"\"")
+        // de sincronización configurada en la app. Con el dominio propio ya no
+        // hace falta configurar nada: las actualizaciones funcionan de salida.
+        buildConfigField("String", "UPDATE_BASE_URL", "\"https://accordio.site\"")
     }
 
     signingConfigs {

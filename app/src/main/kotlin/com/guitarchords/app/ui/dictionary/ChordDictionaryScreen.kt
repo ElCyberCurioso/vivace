@@ -47,6 +47,7 @@ import com.guitarchords.app.ui.components.ChordModal
 import com.guitarchords.app.ui.components.EmptyState
 import com.guitarchords.app.ui.responsive.WidthClass
 import com.guitarchords.app.ui.responsive.rememberWidthClass
+import com.guitarchords.app.ui.theme.accordioTopBarColors
 
 private val QUALITY_LABEL = mapOf(
     "" to "maj",
@@ -87,6 +88,7 @@ fun ChordDictionaryScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = accordioTopBarColors(),
                 title = {
                     Text(
                         when (tab) {

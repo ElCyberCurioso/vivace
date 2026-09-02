@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import com.guitarchords.app.R
 import com.guitarchords.app.training.Gamification
 import com.guitarchords.app.training.TrainingArea
+import com.guitarchords.app.ui.icons.AccordioIcons
 
 /** Recurso de string del nombre visible de cada área. */
 val TrainingArea.titleRes: Int
@@ -46,15 +47,19 @@ val TrainingArea.titleRes: Int
         TrainingArea.EAR -> R.string.training_area_ear
     }
 
-/** Icono de cada área. */
+/**
+ * Icono de cada área. Es `@Composable` porque los del paquete Accordio se
+ * construyen con los colores del tema (ver [AccordioIcons]); los que siguen
+ * siendo de Material no lo necesitan, pero comparten propiedad.
+ */
 val TrainingArea.icon: ImageVector
-    get() = when (this) {
-        TrainingArea.CHORDS -> Icons.Default.Piano
+    @Composable get() = when (this) {
+        TrainingArea.CHORDS -> AccordioIcons.guitarra()
         TrainingArea.CHANGES -> Icons.Default.SwapHoriz
         TrainingArea.RHYTHM -> Icons.Default.Timer
-        TrainingArea.SCALES -> Icons.Default.MusicNote
+        TrainingArea.SCALES -> AccordioIcons.notas()
         TrainingArea.TECHNIQUE -> Icons.Default.School
-        TrainingArea.THEORY -> Icons.Default.LibraryMusic
+        TrainingArea.THEORY -> AccordioIcons.partitura()
         TrainingArea.EAR -> Icons.Default.Hearing
     }
 

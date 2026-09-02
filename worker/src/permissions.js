@@ -74,6 +74,12 @@ export const canEditChords = (user) => isEditor(user);
 /** Repartir roles es cosa del administrador. */
 export const canManageRoles = (user) => isAdmin(user);
 
+/*
+ * Abrir y cerrar las altas es cosa SOLO del administrador, no de los editores:
+ * un editor revisa partituras, no decide quién entra en la instalación.
+ */
+export const canManageSettings = (user) => isAdmin(user);
+
 /**
  * Motivo por el que se rechaza una edición, o null si se permite.
  * El candado (`locked`) no bloquea en el servidor: la app y la web piden

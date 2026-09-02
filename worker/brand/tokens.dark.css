@@ -1,0 +1,87 @@
+/* Accordio — modo oscuro
+   Cargar DESPUÉS de tokens.css. Se activa de dos formas:
+     · automática  → media query prefers-color-scheme
+     · manual      → <html data-theme="dark">  (y data-theme="light" fuerza el claro)
+   Solo redefine roles: las rampas de marca no cambian. */
+
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ac-bg:#0F2429;
+    --ac-bg-alt:#122E34;
+    --ac-surface:#163A41;
+    --ac-surface-2:#1C464E;
+    --ac-ink:#F2FAF6;
+    --ac-body:#C6DCDE;
+    --ac-muted:#8CA6AA;
+    --ac-line:#26545C;
+    --ac-line-strong:#94E4DD;
+    --ac-fretboard:#4A2D1A;
+    --ac-fretboard-2:#6B4226;
+
+    --ac-primary:#94E4DD;
+    --ac-coral:#FF8A8A;
+    --ac-turquoise:#6DD9D0;
+    --ac-yellow:#FFEA82;
+
+    --ac-action:#4ECDC4;
+    --ac-action-hover:#94E4DD;
+    --ac-highlight:#FF8A8A;
+    --ac-highlight-hover:#FFA8A8;
+    --ac-active:#6DD9D0;
+    --ac-pending:#FFE66D;
+    --ac-focus:#94E4DD;
+
+    --ac-shadow-sm:0 1px 2px rgba(0,0,0,.30), 0 2px 6px rgba(0,0,0,.24);
+    --ac-shadow-md:0 4px 10px rgba(0,0,0,.34), 0 12px 28px rgba(0,0,0,.30);
+    --ac-shadow-lg:0 10px 24px rgba(0,0,0,.40), 0 28px 60px rgba(0,0,0,.36);
+
+    --ac-on-action:#08262B;
+    --ac-on-highlight:#3B0E0E;
+    --ac-nav-bg:#0B1D21;
+    --ac-nav-fg:#F2FAF6;
+    --ac-pattern:url("../patterns/music-tile-dark.svg");
+    --ac-hero-band:url("../patterns/hero-band-dark.svg");
+    --ac-logo-lockup:url("../logo/lockup-horizontal-light.svg");
+    --ac-icon-color:#DCECEE;
+  }
+}
+
+:root[data-theme="dark"]{
+  --ac-bg:#0F2429;
+  --ac-bg-alt:#122E34;
+  --ac-surface:#163A41;
+  --ac-surface-2:#1C464E;
+  --ac-ink:#F2FAF6;
+  --ac-body:#C6DCDE;
+  --ac-muted:#8CA6AA;
+  --ac-line:#26545C;
+  --ac-line-strong:#94E4DD;
+  --ac-fretboard:#4A2D1A;
+  --ac-fretboard-2:#6B4226;
+
+  --ac-primary:#94E4DD;
+  --ac-coral:#FF8A8A;
+  --ac-turquoise:#6DD9D0;
+  --ac-yellow:#FFEA82;
+
+  --ac-action:#4ECDC4;
+  --ac-action-hover:#94E4DD;
+  --ac-highlight:#FF8A8A;
+  --ac-highlight-hover:#FFA8A8;
+  --ac-active:#6DD9D0;
+  --ac-pending:#FFE66D;
+  --ac-focus:#94E4DD;
+
+  --ac-shadow-sm:0 1px 2px rgba(0,0,0,.30), 0 2px 6px rgba(0,0,0,.24);
+  --ac-shadow-md:0 4px 10px rgba(0,0,0,.34), 0 12px 28px rgba(0,0,0,.30);
+  --ac-shadow-lg:0 10px 24px rgba(0,0,0,.40), 0 28px 60px rgba(0,0,0,.36);
+
+  --ac-on-action:#08262B;
+  --ac-on-highlight:#3B0E0E;
+  --ac-nav-bg:#0B1D21;
+  --ac-nav-fg:#F2FAF6;
+  --ac-pattern:url("../patterns/music-tile-dark.svg");
+  --ac-hero-band:url("../patterns/hero-band-dark.svg");
+  --ac-logo-lockup:url("../logo/lockup-horizontal-light.svg");
+  --ac-icon-color:#DCECEE;
+}

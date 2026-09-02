@@ -38,6 +38,7 @@ import com.guitarchords.app.R
 import com.guitarchords.app.data.Song
 import com.guitarchords.app.ui.components.EmptyState
 import com.guitarchords.app.ui.trash.TrashViewModel.Companion.TRASH_MAX_AGE_MILLIS
+import com.guitarchords.app.ui.theme.accordioTopBarColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,6 +53,7 @@ fun TrashScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = accordioTopBarColors(),
                 title = { Text(stringResource(R.string.trash_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

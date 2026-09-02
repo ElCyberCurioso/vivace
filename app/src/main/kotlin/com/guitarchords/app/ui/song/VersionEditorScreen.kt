@@ -58,6 +58,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.guitarchords.app.R
 import com.guitarchords.app.chords.ChordParser
 import com.guitarchords.app.ui.components.ChordPickerDialog
+import com.guitarchords.app.ui.theme.accordioTopBarColors
+import com.guitarchords.app.ui.icons.AccordioIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -88,6 +90,7 @@ fun VersionEditorScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = accordioTopBarColors(),
                 title = { Text(stringResource(R.string.edit_version)) },
                 navigationIcon = {
                     IconButton(onClick = onDone) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
@@ -162,7 +165,7 @@ fun VersionEditorScreen(
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                 )
                 IconButton(onClick = { vm.updateCapo(v.capo + 1) }, enabled = v.capo < 12) {
-                    Icon(Icons.Default.Add, stringResource(R.string.capo_up))
+                    Icon(AccordioIcons.mas(), stringResource(R.string.capo_up))
                 }
             }
             Spacer(Modifier.height(8.dp))
@@ -175,7 +178,7 @@ fun VersionEditorScreen(
                 AssistChip(
                     onClick = { chordPicker = true },
                     label = { Text(stringResource(R.string.insert_chord)) },
-                    leadingIcon = { Icon(Icons.Default.MusicNote, null) }
+                    leadingIcon = { Icon(AccordioIcons.notas(), null) }
                 )
                 AssistChip(
                     onClick = {

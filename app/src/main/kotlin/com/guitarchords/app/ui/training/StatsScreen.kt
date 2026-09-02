@@ -48,6 +48,7 @@ import com.guitarchords.app.ui.training.components.titleRes
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import com.guitarchords.app.ui.theme.accordioTopBarColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -67,6 +68,7 @@ fun StatsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = accordioTopBarColors(),
                 title = { Text(stringResource(R.string.training_stats)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

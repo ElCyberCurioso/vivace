@@ -38,6 +38,42 @@ export function publicUser(user) {
   return { id: user.id, email: user.email, name: user.name, role: user.role };
 }
 
+// ---- ajustes de la instalación ----
+
+/*
+ * Tabla clave -> valor. Lo que no está guardado vale su valor por defecto, así
+ * que una instalación nueva (o una que aún no ha pasado la migración) se
+ * comporta como siempre: con las altas abiertas, que es como entra el primer
+ * administrador.
+ *
+ * Se lee en cada alta, no se cachea: son cuatro bytes y un interruptor que se
+ * apaga precisamente cuando hay prisa por cerrar el grifo.
+ */
+export async function readSetting(db, key, porDefecto = null) {
+  try {
+    const fila = await db.prepare("SELECT value FROM settings WHERE key = ?").bind(key).first();
+    return fila ? fila.value : porDefecto;
+  } catch (e) {
+    // La tabla puede no existir todavía (despliegue nuevo, migración sin pasar).
+    // Quedarse sin ajustes no puede tumbar el registro ni la web.
+    return porDefecto;
+  }
+}
+
+export async function writeSetting(db, key, value) {
+  await db.prepare(
+    `INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`
+  ).bind(key, String(value), Date.now()).run();
+}
+
+/** Clave del interruptor de altas y su lectura como booleano. */
+export const SETTING_REGISTRATION = "registration_open";
+
+export async function registrationOpen(db) {
+  return (await readSetting(db, SETTING_REGISTRATION, "1")) !== "0";
+}
+
 // ---- partituras ----
 export async function findSongById(db, id) {
   return db.prepare("SELECT * FROM songs WHERE id = ?").bind(id).first();
@@ -64,6 +100,47 @@ export function clampPage({ limit, offset } = {}) {
   };
 }
 
+/*
+ * Búsqueda por texto. Se compara en minúsculas y SIN TILDES por los dos lados,
+ * porque nadie teclea «Bulería» con el acento puesto en el buscador. LOWER() de
+ * SQLite solo baja ASCII, así que las vocales acentuadas se quitan a mano; la
+ * eñe se deja, que sí se escribe.
+ *
+ * Se busca en título y artista, que es lo que el usuario ve en la tarjeta.
+ */
+const VOCALES = [["á","a"],["à","a"],["é","e"],["è","e"],["í","i"],["ì","i"],
+                 ["ó","o"],["ò","o"],["ú","u"],["ù","u"],["ü","u"]];
+
+function sinTildesSql(columna) {
+  return VOCALES.reduce(
+    (sql, [con, sin]) => `REPLACE(${sql},'${con}','${sin}')`,
+    `LOWER(${columna})`
+  );
+}
+
+/** La misma normalización, para el texto que llega del buscador. */
+export function normalizarBusqueda(q) {
+  let t = String(q == null ? "" : q).trim().toLowerCase();
+  for (const [con, sin] of VOCALES) t = t.split(con).join(sin);
+  return t;
+}
+
+/**
+ * Añade la condición LIKE del buscador a la consulta, si hay texto que buscar.
+ * Los comodines del propio LIKE se escapan: sin esto, buscar "%" lo devolvería
+ * todo y "_" haría de comodín de un carácter.
+ */
+function filtroBusqueda(q, condiciones, valores, prefijo = "") {
+  const texto = normalizarBusqueda(q);
+  if (!texto) return;
+  const patron = "%" + texto.replace(/[\\%_]/g, "\\$&") + "%";
+  condiciones.push(
+    `(${sinTildesSql(prefijo + "title")} LIKE ? ESCAPE '\\' OR ` +
+    `${sinTildesSql(prefijo + "artist")} LIKE ? ESCAPE '\\')`
+  );
+  valores.push(patron, patron);
+}
+
 /** Corta la fila sobrante y dice si había más. */
 function paginar(filas, limit) {
   const hasMore = filas.length > limit;
@@ -73,10 +150,13 @@ function paginar(filas, limit) {
 /** Partituras del usuario (activas), por título. */
 export async function listOwnSongs(db, ownerId, pagina = {}) {
   const { limit, offset } = clampPage(pagina);
+  const condiciones = ["owner_id = ?", "deleted_at = 0"];
+  const valores = [ownerId];
+  filtroBusqueda(pagina.q, condiciones, valores);
   const { results } = await db.prepare(
-    `SELECT * FROM songs WHERE owner_id = ? AND deleted_at = 0
+    `SELECT * FROM songs WHERE ${condiciones.join(" AND ")}
      ORDER BY title COLLATE NOCASE ASC LIMIT ? OFFSET ?`
-  ).bind(ownerId, limit + 1, offset).all();
+  ).bind(...valores, limit + 1, offset).all();
   return paginar(results || [], limit);
 }
 
@@ -109,12 +189,63 @@ export async function listPublicSongs(db, ownerId = null, opciones = {}) {
   const valores = [];
   if (ownerId) { condiciones.push("s.owner_id = ?"); valores.push(ownerId); }
   if (genre) { condiciones.push("LOWER(s.genre) = ?"); valores.push(String(genre).toLowerCase()); }
+  filtroBusqueda(opciones.q, condiciones, valores, "s.");
   const { limit, offset } = clampPage(opciones);
   const sql = `SELECT s.*, u.name AS owner_name FROM songs s JOIN users u ON u.id = s.owner_id
      WHERE ${condiciones.join(" AND ")} ORDER BY ${orden} LIMIT ? OFFSET ?`;
   valores.push(limit + 1, offset);
   const { results } = await db.prepare(sql).bind(...valores).all();
   return paginar(results || [], limit);
+}
+
+/**
+ * Recomendaciones para quien está leyendo una partitura: primero **del mismo
+ * artista**, y si no hay, **del mismo estilo**. En dos consultas y no en una con
+ * OR porque el criterio no es un filtro, es una prioridad: mezclarlos daría
+ * media lista de cada cosa, y lo que se quiere es «más de este artista» y, solo
+ * cuando no existe, «más de este palo».
+ *
+ * Solo entran partituras publicadas y nunca la que se está viendo. El artista se
+ * compara sin tildes ni mayúsculas, igual que el buscador: «Jarabe de palo» y
+ * «Jarabe de Palo» son el mismo grupo.
+ *
+ * Devuelve además [motivo] para que la web pueda titular la sección con la
+ * verdad («Más de David Bisbal» / «Más flamenco»), en vez de un genérico.
+ */
+export async function listRelatedSongs(db, cancion, opciones = {}) {
+  if (!cancion) return { items: [], motivo: "" };
+  const limite = Math.min(Math.max(Number(opciones.limit) || 6, 1), 12);
+  const ownerId = opciones.ownerId || null;
+
+  const comunes = ["s.visibility = 'public'", "s.deleted_at = 0", "s.id <> ?"];
+  const base = [cancion.id];
+  if (ownerId) { comunes.push("s.owner_id = ?"); base.push(ownerId); }
+
+  const consulta = async (condicion, valores) => {
+    const sql = `SELECT s.*, u.name AS owner_name FROM songs s JOIN users u ON u.id = s.owner_id
+       WHERE ${comunes.concat(condicion).join(" AND ")}
+       ORDER BY s.title COLLATE NOCASE ASC LIMIT ?`;
+    const { results } = await db.prepare(sql).bind(...base, ...valores, limite).all();
+    return results || [];
+  };
+
+  const artista = normalizarBusqueda(cancion.artist);
+  if (artista) {
+    const mismos = await consulta([`${sinTildesSql("s.artist")} = ?`], [artista]);
+    if (mismos.length) return { items: mismos, motivo: "artist" };
+  }
+
+  const genero = String(cancion.genre || "").trim().toLowerCase();
+  if (genero) {
+    // Se descarta el mismo artista: si estuviera, ya habría salido por arriba.
+    const delPalo = await consulta(
+      ["LOWER(s.genre) = ?", `${sinTildesSql("s.artist")} <> ?`],
+      [genero, artista]
+    );
+    if (delPalo.length) return { items: delPalo, motivo: "genre" };
+  }
+
+  return { items: [], motivo: "" };
 }
 
 /** Categorías con al menos una partitura publicada, para poblar el filtro. */
@@ -231,9 +362,13 @@ export async function restoreSong(db, id) {
 /** Papelera del usuario, lo borrado primero. */
 export async function listTrashedSongs(db, ownerId, pagina = {}) {
   const { limit, offset } = clampPage(pagina);
+  const condiciones = ["owner_id = ?", "deleted_at > 0"];
+  const valores = [ownerId];
+  filtroBusqueda(pagina.q, condiciones, valores);
   const { results } = await db.prepare(
-    "SELECT * FROM songs WHERE owner_id = ? AND deleted_at > 0 ORDER BY deleted_at DESC LIMIT ? OFFSET ?"
-  ).bind(ownerId, limit + 1, offset).all();
+    `SELECT * FROM songs WHERE ${condiciones.join(" AND ")}
+     ORDER BY deleted_at DESC LIMIT ? OFFSET ?`
+  ).bind(...valores, limit + 1, offset).all();
   return paginar(results || [], limit);
 }
 

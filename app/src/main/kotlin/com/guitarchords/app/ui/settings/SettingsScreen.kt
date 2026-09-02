@@ -38,6 +38,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.guitarchords.app.R
 import com.guitarchords.app.ui.theme.ThemeController
 import com.guitarchords.app.ui.theme.ThemeMode
+import com.guitarchords.app.ui.theme.accordioTopBarColors
+import com.guitarchords.app.ui.icons.AccordioIcons
 
 private data class SettingRow(
     val title: String,
@@ -109,6 +111,7 @@ private fun SettingsContent(rows: List<SettingRow>, onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = accordioTopBarColors(),
                 title = { Text(stringResource(R.string.settings_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
@@ -154,7 +157,7 @@ private fun SettingsContent(rows: List<SettingRow>, onBack: () -> Unit) {
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
-                        Icon(Icons.Default.ChevronRight, contentDescription = null)
+                        Icon(AccordioIcons.siguiente(), contentDescription = null)
                     }
                 }
             }

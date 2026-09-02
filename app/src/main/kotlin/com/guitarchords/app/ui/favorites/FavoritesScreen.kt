@@ -46,6 +46,8 @@ import com.guitarchords.app.ui.components.SongSortMenu
 import com.guitarchords.app.ui.components.rememberSongSelection
 import com.guitarchords.app.ui.components.rememberTrashedMessage
 import com.guitarchords.app.ui.components.rememberUndoSnackbar
+import com.guitarchords.app.ui.theme.accordioTopBarColors
+import com.guitarchords.app.ui.icons.AccordioIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,6 +94,7 @@ fun FavoritesScreen(
                 )
             } else {
                 TopAppBar(
+                    colors = accordioTopBarColors(),
                     title = { Text(stringResource(R.string.favorites_title)) },
                     navigationIcon = {
                         IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
@@ -100,7 +103,7 @@ fun FavoritesScreen(
                         IconButton(onClick = {
                             searchOpen = !searchOpen
                             if (!searchOpen) query = ""
-                        }) { Icon(Icons.Default.Search, stringResource(R.string.search_songs)) }
+                        }) { Icon(AccordioIcons.buscar(), stringResource(R.string.search_songs)) }
                         SongSortMenu(current = sort, onPick = { vm.setSort(it) })
                     }
                 )
@@ -117,7 +120,7 @@ fun FavoritesScreen(
             }
             if (allItems.isEmpty()) {
                 EmptyState(
-                    icon = Icons.Outlined.StarOutline,
+                    icon = AccordioIcons.estrellaHueca(),
                     title = stringResource(R.string.empty_favorites_title),
                     subtitle = stringResource(R.string.empty_favorites_subtitle),
                     modifier = Modifier.fillMaxSize()
@@ -147,7 +150,7 @@ fun FavoritesScreen(
                             leading = {
                                 IconButton(onClick = { vm.toggleFavorite(fav.song) }) {
                                     Icon(
-                                        Icons.Default.Star,
+                                        AccordioIcons.estrella(),
                                         stringResource(R.string.remove_favorite),
                                         tint = MaterialTheme.colorScheme.primary
                                     )

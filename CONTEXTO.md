@@ -1,14 +1,21 @@
-# Vivace · contexto del proyecto
+# Accordio · contexto del proyecto
 
 Documento de traspaso: qué es el proyecto, cómo está montado hoy, **por qué** se
 tomaron ciertas decisiones (para no deshacerlas sin querer) y qué queda
 pendiente.
 
-Última actualización: 2026-08-26 · Rama `master`.
+Última actualización: 2026-09-02 · Rama `master` · último commit `8e550df`.
+
+> **El proyecto se llama Accordio** en todo lo que ve el usuario: la web, el
+> dominio (`accordio.site`) y la app. «Vivace» era el nombre anterior y sobrevive
+> en nombres internos que no ve nadie —`VivaceClient`, `GuitarChordsTheme`, las
+> claves `vivace_*` de `localStorage`, el directorio del proyecto—. **No se
+> renombran**: las claves de almacenamiento cerrarían la sesión a todo el mundo y
+> el `applicationId` (`com.guitarchords.app`) desinstalaría la app.
 
 ---
 
-## 1. Qué es Vivace
+## 1. Qué es Accordio
 
 Sistema para tocar la guitarra con partituras (letra + acordes), con tres piezas
 que comparten datos:
@@ -17,7 +24,7 @@ que comparten datos:
 |---|---|---|
 | **App Android** | `app/` | Kotlin + Jetpack Compose. Repertorio, visor, herramientas y entrenamiento. |
 | **Worker + API** | `worker/` | Cloudflare Worker: API multiusuario, almacén (D1 + R2) y la propia web. |
-| **Web Vivace** | `worker/src/web-html.js` | Servida por el Worker en `/`: catálogo, visor y editor desde el navegador. |
+| **Web Accordio** | `worker/src/web-html.js` | Servida por el Worker en `/`: catálogo, visor y editor desde el navegador. |
 
 El **formato de partitura es el mismo en todas partes**: cabeceras `#clave: valor`,
 separador `---` y cuerpo con acordes entre llaves.
@@ -65,21 +72,24 @@ separador `---` y cuerpo con acordes entre llaves.
 | `src/permissions.js` | Reglas de acceso (lógica pura). |
 | `src/db.js` | Consultas a D1. |
 | `src/migrate.js` | Indexado de lo que ya existía en R2, con backfill de carpetas/favoritos. |
-| `src/web-html.js` | Web de Vivace: `WEB_HTML`, `WEB_CSS` y `WEB_APP_JS`. |
+| `src/web-html.js` | Web de Accordio: `WEB_HTML`, `WEB_CSS` y `WEB_APP_JS`. |
 | `src/client-lib.js` | JS de navegador compartido, servido en `/static/vivace.js`. |
+| `src/chords-db.js` | Biblioteca de acordes (generada; ver `tools/generar-chords-db.mjs`). |
+| `src/chords-seed.js` | Semilla curada de 348 acordes, anterior a la biblioteca. |
 
 `src/admin-html.js` **se ha borrado** junto con las rutas de token compartido.
 
 ### Rutas del Worker
 | Ruta | Acceso |
 |---|---|
-| `GET /` | Web Vivace (pública) |
+| `GET /` | Web Accordio (pública) |
 | `GET /static/vivace.css`, `/static/vivace-app.js`, `/static/vivace.js` | Público, cacheado con ETag |
 | `POST /auth/register`, `POST /auth/login` | Público (con límite de intentos) |
 | `GET /auth/me` | Sesión |
 | `GET /api/songs/public[?owner=<id>\|all]` | Público (por defecto, lo del admin) |
 | `GET`/`POST /api/songs` | Sesión (`?trash=1` para la papelera) |
 | `GET /api/songs/:id` | Público si la partitura lo es; si no, dueño o admin |
+| `GET /api/songs/:id/related` | Como la de origen (devuelve solo catálogo público) |
 | `PUT`/`DELETE /api/songs/:id` | Dueño, editor si es pública, o admin |
 | `DELETE /api/songs/:id?hard=1` | Dueño, y solo desde la papelera |
 | `PUT /api/songs/:id/favorite`, `POST /api/songs/:id/restore` | Dueño |
@@ -88,13 +98,25 @@ separador `---` y cuerpo con acordes entre llaves.
 | `GET`/`PUT /api/chords` | Sesión (blob de acordes por usuario) |
 | `GET /api/chords/global` | Público · `PUT` y `seed`: editor o admin |
 | `POST /admin/migrate?visibility=public[&backfill=1]` | Solo admin |
+| `GET /api/settings` | Público (hoy solo `registrationOpen`) |
+| `PUT /api/settings` | **Solo administrador** |
 | `GET /update`, `GET /update/apk` | Público (auto-actualización de la app) |
+
+Los tres listados de partituras (`/api/songs/public`, `/api/songs` y
+`/api/songs?trash=1`) aceptan `?limit=` (tope 500), `?offset=` y `?q=`.
 
 Las rutas heredadas con token compartido (`/list`, `/object`, `/bodies`,
 `/delete`) y el panel `/admin` **ya no existen**.
 
+**Transporte**: el Worker atiende `accordio.site` y `www.accordio.site` como
+dominios propios (`custom_domain` en `wrangler.toml`). Antes de mirar la ruta,
+`canonicalRedirect` manda todo a HTTPS y al apex —301 en GET/HEAD, 308 en el
+resto— y `conHsts` añade HSTS de un año a lo que salga por HTTPS. `localhost`
+está exento de las dos cosas.
+
 ### Almacenamiento
-- **D1** (`vivace`): usuarios, metadatos de partituras y permisos.
+- **D1** (`vivace`): usuarios, metadatos de partituras, permisos y la tabla
+  `settings` (clave→valor; hoy solo `registration_open`).
 - **R2** (`guitarchords`): el **texto** de cada partitura (`songs/*.txt`), el blob
   de acordes por usuario (`users/<id>/chords.json`) y el APK (`app/`).
 - `songs.r2_key` apunta a la clave original: **la migración no mueve ficheros**.
@@ -103,133 +125,82 @@ Las rutas heredadas con token compartido (`/list`, `/object`, `/bodies`,
 
 ## 3. Trabajo realizado en la última sesión
 
-Objetivo: que editar una partitura propia funcione igual desde el móvil y desde
-la web, que administrar el catálogo se haga desde la web con la sesión, y que la
-sincronización deje de depender de que alguien pulse un botón.
+Objetivo: dominio propio, la marca Accordio en la web y en la app, y que buscar,
+recomendar e imprimir dejen de ser aproximaciones.
 
-### 3.1 Seguridad
-- **`AUTH_SECRET` deja de caer a `SYNC_TOKEN`.** Ese respaldo iba en todas las
-  instalaciones antiguas de la app: quien lo tuviera podía firmar un JWT con el
-  `sub` de cualquiera, administrador incluido. Si falta el secreto, la API
-  responde 503 en todo lo que emita o acepte sesión (una lectura pública anónima
-  sigue funcionando, y a quien llama sin token le toca 401, como antes).
-- **Retiradas las rutas de token compartido** (`/list`, `/object`, `/bodies`,
-  `/delete`) y el panel `/admin`. Se saltaban el modelo de permisos entero.
-- **Límite de intentos** en `/auth/login` y `/auth/register` (10 por email+IP cada
-  15 minutos, tabla `auth_attempts`). La decisión vive en `limits.js/rateDecision`,
-  que es pura y está testeada.
-- **Topes de entrada**: contenido ≤ 512 KB, campos ≤ 200 caracteres, blob de
-  acordes ≤ 1 MB y validado como JSON (antes se guardaba `request.text()` crudo).
-- **CORS** abierto solo en las lecturas públicas; el resto, al propio origen.
-- `approveProposal` pasa a `db.batch()`: el efecto y el «resuelta» ya no pueden
-  quedar a medias.
+**Nada de esto está commiteado**: 58 ficheros modificados y ~19 sin seguir. El
+mensaje de commit ya redactado está en `COMMIT_MESSAGE.txt`.
 
-### 3.2 Esquema y API de sincronización
-- D1: tabla `playlists`; `songs` gana `rev`, `favorite`, `position` y
-  `playlist_id`; `song_versions` gana `rev`. Índices por `(owner_id, updated_at, id)`.
-- **`rev` lo incrementa el servidor** en cada escritura. Es lo que permite
-  detectar un conflicto: `updated_at` no sirve porque lo pisa cualquiera y dos
-  relojes distintos no se pueden comparar.
-- `GET /api/sync/changes`: un cursor por flujo (`<updated_at>:<id>`), lápidas
-  incluidas y texto incrustado. `POST /api/sync/push`: lote con `baseRev` por
-  partitura; lo que choca vuelve marcado como conflicto con la copia del servidor.
-- Papelera de verdad en la API: `?trash=1`, `/restore` y `?hard=1`.
-- Listados **paginados** (`limit`/`offset`, `hasMore`).
-- `migrate.js` gana `backfill=1`: rescata `#playlist:`/`#favorite:` de las
-  cabeceras y los pasa a columnas.
+### 3.1 Dominio propio y transporte
+- `accordio.site` como dominio del Worker (apex y `www`), declarado con
+  `custom_domain`: wrangler crea el DNS y el certificado al desplegar. La zona ya
+  estaba activa en la misma cuenta de Cloudflare.
+- Un solo host y siempre cifrado (ver §2, «Transporte»). El `www` y el HTTP se
+  arreglan **en el mismo salto**.
+- Conviene activar además **Always Use HTTPS** en la zona (SSL/TLS → Edge
+  Certificates): corta en el borde sin llegar a ejecutar el Worker.
+- La app apunta a `https://accordio.site` de fábrica. **Ojo**: la 1.0 que había
+  publicada se compiló con `UPDATE_BASE_URL` vacío, así que consulta la URL que
+  cada uno tenga en Sincronización; quien no la tenga configurada no verá la
+  actualización y tendrá que instalar la 2.0 a mano una vez.
 
-### 3.3 App: cola offline y sincronización automática
-- **Todas** las mutaciones marcan `dirty`. Antes, favorito, mover de carpeta,
-  reordenar y papelera escribían directas en el DAO y **no se subían nunca**.
-- **`pending_deletes`**: el borrado definitivo deja lápida antes de que la fila
-  desaparezca. Sin eso, la partitura seguía viva en el servidor y volvía a bajar
-  como nueva. La purga de la papelera a 90 días solo toca lo ya confirmado.
-- **`SyncWorker`** (WorkManager) hace el trabajo: sobrevive a cerrar la app y al
-  reinicio. Disparadores: cambio local (agrupado 5 s), reconexión, arranque y
-  repaso cada 6 h. Se usa `ExistingWorkPolicy.KEEP`, no `REPLACE`: REPLACE
-  cancelaría también la pasada en curso. El hueco que deja KEEP lo cierra
-  `doWork`, que pide otra vuelta si al terminar sigue habiendo pendientes.
-- **Conflicto = versión.** Gana el servidor como Original y lo local se guarda
-  como «Conflicto · fecha», marcado para subir. Con sync en segundo plano no hay
-  a quién preguntar, y perder una edición en silencio no es aceptable.
-- **`ChordSyncManager`, dos fallos de pérdida de datos corregidos**: (1) un error
-  de red al leer el blob se trataba como «remoto vacío» y el push posterior
-  borraba del servidor los acordes de los demás; (2) `clearDirtyAll()` limpiaba
-  también lo editado *durante* la pasada, que se perdía sin subirse.
-- `SongTextFormat.encode()` deja de escribir `#playlist:` y `#favorite:` (ya son
-  campos); `decode()` los sigue leyendo por los ficheros antiguos.
+### 3.2 Buscar, recomendar y altas de cuenta
+- **Buscar es del servidor** (`?q=` en los tres listados). Antes solo se filtraba
+  lo ya descargado —la primera página de 60—, así que una partitura más atrás no
+  existía para el buscador hasta pulsar «Cargar más» varias veces. Sin distinguir
+  mayúsculas ni tildes por los dos lados, y con los comodines de `LIKE` escapados.
+- **Recomendadas** al pie del visor: primero del mismo artista y, si no hay, del
+  mismo estilo. Dos consultas y no un `OR`, porque es una prioridad, no un filtro.
+- **Interruptor de altas** en Administración, solo administrador. El corte está
+  en `/auth/register`; la instalación vacía es la excepción a propósito.
 
-### 3.4 Web
-- **Listas, favoritos y papelera**, que solo existían en el móvil.
-- Pestaña **Administración** (editor/admin): copia y restauración en ZIP
-  —portadas del panel retirado—, «sin vídeo» y categorías automáticas.
-- **Impresión** en el visor, con el tono y la cejilla que se están viendo.
-- **Conmutador de tema**: los tokens de `[data-theme=light]` existían y no había
-  forma de llegar a ellos.
-- **Accesibilidad**: `role="dialog"` + `aria-modal` + trampa de foco y devolución
-  del foco en los cuatro modales; `<label>` real en los filtros;
-  `autocomplete="new-password"` al registrarse; `minlength` en la contraseña.
-- **Errores visibles**: versiones y comentarios ya no se tragan el fallo en
-  silencio dejando la sección vacía.
-- **CSS y JS fuera del HTML** (`/static/vivace.css`, `/static/vivace-app.js`) con
-  ETag y caché: la página pasa de ~114 KB sin cachear a 16 KB.
-- **Visor, tres arreglos medidos en navegador**:
-  - El scroll se heredaba entre partituras: al abrir la segunda se entraba por
-    el final de la primera. `openSong` sí hacía `vBody.scrollTop = 0`, pero
-    ANTES de mostrar el visor; con `#viewer` en `display:none` el elemento no
-    tiene caja y esa asignación no hace nada. Movido a después de `.add("on")`.
-  - **Ancho estándar** para todas: `.sheet` era `width:max-content` con
-    `margin:0 auto`, así que cada partitura medía lo que midiera su línea más
-    larga y las cortas salían centradas. Ahora hay un token `--vv-sheet:68ch`.
-    En `ch` a propósito: al cambiar el tamaño de letra la hoja mantiene el
-    mismo número de columnas.
-  - `scrollbar-gutter:stable` en `#vBody` y desplazamiento lateral DENTRO de
-    `.sheet`: sin lo primero el borde izquierdo bailaba 8 px entre una canción
-    con barra y otra sin ella; sin lo segundo, una tablatura ancha movía de
-    lado también los comentarios.
+### 3.3 Diccionario de acordes
+- 8.669 acordes (~14.400 nombres con alias en bemoles) de
+  **guitar-chords-db-json** (MIT), en `src/chords-db.js`, sembrados con «Importar
+  diccionario base». Se regenera con `node tools/generar-chords-db.mjs <repo> 4`.
+- El sembrado **solo añade**: no pisa la semilla curada ni lo editado a mano.
+- Destapó un fallo de fondo: el origen da los trastes **absolutos** y el
+  diccionario los quiere **relativos** al traste base. El dibujante de la web los
+  trataba como absolutos, así que todo acorde con traste base > 1 salía mal.
 
-### 3.5 Herramientas
-- `tools/deploy.sh` para Linux/macOS (antes solo había PowerShell): `preflight`,
-  `backend`, `release`, `catalog`, `app`, `verify` y `rollback`, con verificación
-  del despliegue incluida.
-- `tools/deploy.ps1`: `-Backfill`, aplica `migrations.sql` y ya no pide `SYNC_TOKEN`.
-  Además el esquema se aplica DENTRO de `Publish-Worker`: antes `-All` publicaba
-  el Worker sin migrar, y ninguna combinación de parámetros debe poder dejar el
-  código nuevo contra una base vieja.
+### 3.4 Marca Accordio en la web
+- Paquete `accordio_claro_oscuro.zip` (claro + oscuro). Los tokens `--ac-*` son
+  la única fuente de color y medida; encima, la capa `--vv-*` cuelga de los
+  **roles** del kit, que son los que cambian con el tema.
+- Montserrat + Poppins; JetBrains Mono se queda para la hoja y las cifras.
+- Iconos del kit como `<symbol>`; avisos y diálogos propios (se retiraron
+  `alert`/`confirm`/`prompt`, que bloquean la página y desentonan).
+- Lo que se usa del kit está copiado en `worker/brand/`, con un README que dice
+  qué se cogió y qué no. **El Worker no lee esa carpeta**: los recursos van
+  embebidos en `web-html.js`.
 
-**Tests: 149 en el worker (eran 111)** y **106 JVM en la app**, incluidos 14 de
-recorrido completo por `src/index.js` (registro, edición web, sync móvil,
-conflicto, borrado, lápida, papelera, idempotencia de la migración) y un D1 de
-mentira con estado en `test/fake-d1.mjs`.
+### 3.5 Móvil y editor
+- Visor: cabecera de una línea con menú de acciones, mandos en panel que sube
+  desde abajo, versiones al final de la partitura. Se **mueven los mismos nodos**
+  según el ancho, no se duplican.
+- La partitura entra de ancho al abrirla (mide la línea más larga y el ancho real
+  de un carácter). Suelo de 13 px: es de legibilidad, no de encaje.
+- Editor a tres columnas —escribir, ver, la ficha—, alineadas porque comparten
+  estructura. La ficha hace su propio scroll y es columna hasta 1000 px.
 
-### 3.6 Despliegue a producción (hecho)
+### 3.6 Impresión
+- El PDF pasa a ser un **documento A4**: marca, título y artista arriba,
+  «Página N de M» abajo, repetidos en cada hoja.
+- Las páginas **se reparten midiendo** desde JS. En Chrome un `position:fixed` no
+  se repite por hoja y `counter(page)` devuelve `0` fuera de un margen con
+  nombre, que no está implementado.
+- El capo **no salía nunca**: la expresión que lo leía del rótulo vivía en un
+  literal de plantilla, donde `\D` no es escape válido. Ahora sale del dato.
 
-Está **desplegado y verificado** en
-`https://guitarchords-sync.elcybercurioso.workers.dev`.
+### 3.7 App Android con la misma imagen (2.0, publicada)
+- Paleta, tipografías, formas e iconos del kit; barra teal en las 23 pantallas
+  vía `accordioTopBarColors()`. Color dinámico apagado.
+- Los iconos se construyen en Kotlin con los colores del tema (`ui/icons/`): los
+  del kit tienen dos tonos y el coral cambia entre claro y oscuro.
+- Nombre visible «Accordio». `versionCode 2` / `2.0`, firmada con la clave de
+  siempre y **ya publicada** en `/update`.
 
-Salieron dos cosas por el camino, las dos ya arregladas:
-
-1. **Falsos negativos por propagación.** `verify` corría justo después de
-   `wrangler deploy` y pillaba la versión anterior: 5 comprobaciones en rojo con
-   el despliegue correcto. Ahora espera hasta un minuto a que la URL responda
-   con el código nuevo. Las dos rutas que lo distinguen sin sesión son
-   `/api/sync/changes` (antes 404, ahora 401) y `/list` (antes 401, ahora 404).
-2. **`migrations.sql` se aplicó a medias, y eso sí rompió producción.** El
-   fichero empieza por el `ALTER` de `youtube_url`, que ya existía; D1 aborta el
-   fichero entero al primer error, así que los 5 `ALTER` nuevos no llegaron a
-   ejecutarse. El script vio «duplicate column name», lo dio por «ya estaba
-   todo» y publicó igual: con el código nuevo en vivo y sin `rev`/`favorite`/
-   `position`/`playlist_id`, **dejó de poder escribirse ninguna partitura**.
-   Ahora las migraciones van una a una y, después, se le pregunta a la base si
-   las columnas están de verdad; si falta alguna, no se publica.
-
-También se corrigió que `r2 object put` recibía `--remote`, que no existe en
-wrangler 3 (allí lo remoto es lo predeterminado; en la 4 hay que pedirlo). El
-script mira la ayuda en vez de suponerlo.
-
-**La app está publicada**: `versionCode 1 / versionName 1.0`, 13,3 MB, firmada
-con la clave de release (no la de depuración) y servida en `/update/apk`. Se
-comprobó que lo que baja el cliente es idéntico byte a byte al APK local.
+---
 
 ## 4. Decisiones de diseño que conviene respetar
 
@@ -245,18 +216,34 @@ comprobó que lo que baja el cliente es idéntico byte a byte al APK local.
    confirmación. El servidor NO lo comprueba: si hiciera falta impedir de verdad
    una edición, el sitio es `permissions.js`.
 6. **La práctica desde una canción no puntúa**; el progreso es solo del curriculum.
-7. **`dynamic color` está desactivado** a propósito: la paleta propia garantiza el
-   contraste de acordes y texto en claro y oscuro.
-8. **La piel es el paquete de marca Vivace («Nocturno»)** y los tokens se llaman
-   igual en los tres sitios: `--vv-*` en la web (`worker/src/web-html.js`),
-   `vv_*` en `app/src/main/res/values*/colors.xml` y los mismos valores en
-   `ui/theme/Theme.kt`. Reglas que no hay que romper: el ámbar cambia de tono
-   entre modos (#E8B04B oscuro / #B8791F claro, nunca el claro sobre fondo
-   claro), el verde `beat` es solo tempo y estado positivo (entra por
-   `ExtendedColors.success`, no como adorno), y las cifras (BPM, hercios,
-   cents) van en JetBrains Mono vía `VivaceMono`. Las dos fuentes van
-   empaquetadas en `res/font/` en su versión variable, con la OFL en
-   `app/licenses/`.
+7. **`dynamic color` está desactivado** a propósito: el color dinámico de Android
+   12+ pinta la app con el fondo de pantalla del móvil y deja de ser Accordio,
+   que es justo lo que se quiere reconocer entre la web y el teléfono.
+8. **La piel es el paquete de marca Accordio**, el mismo en la web y en la app.
+   Los valores salen de `tokens.css` / `tokens.dark.css` (copia en
+   `worker/brand/`) y viven en tres sitios: `--ac-*` en `web-html.js`, `ac_*` en
+   `res/values*/colors.xml` y `ui/theme/Theme.kt`. Encima va una capa semántica
+   (`--vv-*` en la web, `ExtendedColors` en la app).
+
+   Lo que **no** hay que romper:
+   - **Los `--vv-*` cuelgan de los ROLES del kit** (`--ac-action`, `--ac-active`,
+     `--ac-highlight`, `--ac-pending`, `--ac-nav-*`), no de las rampas. Son los
+     roles los que cambian con el tema: la marca no se invierte, lo que cambia es
+     quién hace de acción. En oscuro el teal no contrasta y pasa a titular; la
+     acción la toma el turquesa.
+   - **Un solo acento por bloque**: coral llama a la acción, turquesa indica
+     estado. **El amarillo es solo estado** (capo, valoración, pendiente), nunca
+     adorno.
+   - **Texto corrido sobre coral o amarillo, jamás**: para leer van las rampas
+     `coral-700` / `yellow-900`. El coral de marca sobre crema da 2,4:1.
+   - Dos contrastes suben respecto al kit, y en los dos casos sube el **rol**, no
+     el token: el texto secundario sobre tarjeta clara (`#7B8E92` da 3,2:1) y
+     sobre oscura (`#8CA6AA`, 3,6:1).
+   - **Montserrat** titulares, **Poppins** texto, y **JetBrains Mono** para la
+     hoja y las cifras: el kit no trae monoespaciada y sin ancho fijo los acordes
+     dejan de caer sobre su sílaba. Empaquetadas en `res/font/`, con la OFL en
+     `app/licenses/`.
+   - **El papel va siempre en claro** aunque se lea en oscuro, y sin el mosaico.
 9. **Migraciones Room**: columna con `NOT NULL DEFAULT` en la migración y **sin**
    `@ColumnInfo(defaultValue=…)` en la entidad (patrón usado en todo el proyecto).
 10. **La sincronización no pregunta nada.** Corre en segundo plano: no hay nadie
@@ -275,6 +262,13 @@ comprobó que lo que baja el cliente es idéntico byte a byte al APK local.
     editor, en vez de rechazar la edición entera y perder el trabajo.
 14. **Carpeta y favorito son campos de la API, no cabeceras del texto.** Volver a
     esconderlos en el `.txt` deja a la web sin poder enseñarlos.
+15. **Buscar y recomendar los resuelve el servidor.** Filtrar en el navegador
+    solo alcanza a lo ya descargado, que es de donde venía el buscador roto.
+16. **Los diagramas usan trastes RELATIVOS al traste base**, la convención de
+    chords-db, en la app y en la web. Si algún día se mezclan con absolutos,
+    todo acorde con cejilla saldrá con los puntos corridos.
+17. **El diccionario global solo se amplía**: sembrar añade lo que falta y nunca
+    pisa lo editado a mano ni la semilla curada.
 
 ---
 
@@ -284,22 +278,26 @@ comprobó que lo que baja el cliente es idéntico byte a byte al APK local.
 # Worker · no hace falta cuenta de Cloudflare
 cd worker
 npm run check     # sintaxis de los módulos y del JS que se sirve
-npm test          # 149 tests
+npm test          # 187 tests
+npm run dev       # servidor local en https (ver §8: adopta el host del dominio)
 ```
 
 ```bash
-# App Android · Linux
-export JAVA_HOME=$HOME/jdks/jdk-17.0.20.1+1
+# App Android · Linux (el JDK del sistema ya vale: se instaló openjdk-21-jdk)
 export ANDROID_HOME=$HOME/Android/Sdk ANDROID_SDK_ROOT=$HOME/Android/Sdk
 ./gradlew testDebugUnitTest     # 106 tests
 ./gradlew assembleDebug         # APK en app/build/outputs/apk/debug/
 ./gradlew assembleRelease       # APK firmado (necesita keystore.properties)
 ```
 
-**El entorno de compilación ya está montado en esta máquina** (ver §9). El JDK
-del sistema NO sirve: es solo JRE y le falta `jlink`, que AGP necesita para
-`core-for-system-modules.jar`. Da un error que no menciona el JDK por ningún
-lado.
+**El entorno de compilación ya está montado en esta máquina** (ver §9). Durante
+un tiempo solo hubo JRE y la app no compilaba: AGP necesita `jlink`, y el error
+que da no menciona el JDK por ningún lado. Se instaló `openjdk-21-jdk` y quedó
+resuelto (ver §8 si tras actualizar Java falla AAPT2).
+
+Añadidos en la última sesión: dominio y HSTS, búsqueda, recomendadas, altas de
+cuenta y la biblioteca de acordes —incluida la paridad entre el navegador y el
+servidor al normalizar y al dibujar—.
 
 Cobertura de tests (lógica pura): transposición, biblioteca de acordes, audio de
 acordes, extracción de acordes de una canción, orden y filtrado de listas, formato
@@ -316,14 +314,19 @@ Modo avión → editar una partitura, moverla de carpeta y marcarla favorita →
 **cerrar la app del todo** → recuperar la conexión → los tres cambios tienen que
 subir solos, sin abrir la pantalla de sincronización.
 
-**Esto es lo único importante que NO se ha probado todavía**: la app compila y
-sus tests pasan, pero nadie la ha ejecutado en un dispositivo.
+**Esto sigue sin probarse**: la app compila y sus tests pasan, pero nadie la ha
+ejecutado en un dispositivo. La 2.0 está publicada sin haberse visto correr.
+
+La web sí se ha verificado a fondo en navegador (Chromium por CDP): capturas en
+claro y oscuro, viewport de móvil con detección de solapes, y la impresión
+comprobada generando el PDF de verdad y leyéndolo con `pypdf`.
 
 ---
 
 ## 6. Despliegue
 
-Ya está hecho. Para las siguientes veces, desde Linux/macOS:
+Web y app están desplegadas, pero **hay cambios de web sin subir** (§7). Desde
+Linux/macOS:
 
 ```bash
 ./tools/deploy.sh preflight     # comprueba todo sin tocar nada
@@ -336,7 +339,17 @@ Ya está hecho. Para las siguientes veces, desde Linux/macOS:
 `release` hace, EN ESTE ORDEN y sin poder separarse: comprobaciones previas
 (sesión de Cloudflare, que el `database_id` exista, que `AUTH_SECRET` esté),
 `npm run check`, tests, `schema.sql`, `migrations.sql` una a una, comprobación de
-que las columnas están, `wrangler deploy` y verificación de lo publicado.
+que las columnas **y las tablas** están, `wrangler deploy` y verificación de lo
+publicado (que incluye el 301 de HTTP y la cabecera HSTS en un dominio propio).
+
+**El próximo despliegue crea la tabla `settings`**, así que la base va antes que
+el código: `release` ya lo hace en ese orden. Un `wrangler deploy` a secas
+publicaría el código sin la tabla; el interruptor de altas cae a «abiertas» y no
+rompe nada, pero conviene no dejarlo así.
+
+Para publicar la app: `./tools/deploy.sh app <apk> --url https://accordio.site`.
+Lee `versionCode`/`versionName` de `build.gradle.kts`, rechaza un APK firmado con
+la clave de depuración y exige que el código suba respecto a lo publicado.
 
 Desde Windows, lo equivalente es `tools/deploy.ps1` (además prepara la cadena de
 compilación de Android y firma el APK).
@@ -345,34 +358,50 @@ Estado actual de producción:
 
 | | |
 |---|---|
-| URL | `https://guitarchords-sync.elcybercurioso.workers.dev` |
+| URL | `https://accordio.site` (canónica; `www` → 301 al apex) |
+| URL anterior | `https://guitarchords-sync.elcybercurioso.workers.dev` (sigue viva) |
 | D1 | `vivace` · `1830ca34-43f6-429a-812d-5156287e90f1` |
 | R2 | `guitarchords` |
 | Secreto | `AUTH_SECRET` puesto (obligatorio; sin él la API responde 503) |
 | Datos | 1 usuario (admin) · 426 partituras |
-| App | `versionCode 1` / `1.0` publicada en `/update` |
+| App | `versionCode 2` / `2.0` publicada en `/update`, firmada con la clave de siempre (SHA-256 `e6a53587…`) |
+| Diccionario | biblioteca completa sembrada en el diccionario global (14.424 nombres) |
+| Estilo web | paquete de marca Accordio (claro + oscuro); fuentes en `worker/brand/` |
+| Estilo app | mismo paquete: paleta, Montserrat+Poppins, formas, barra teal e iconos del kit |
+| Altas de cuenta | interruptor en Administración (solo admin); estado en la tabla `settings` |
 
 ---
 
 ## 7. Pendiente
 
 **Lo primero de todo**
-- [ ] **COMMIT.** Hay ~53 ficheros modificados y sin commitear. Todo lo descrito
-      en §3 vive solo en el árbol de trabajo: si se pierde, se pierde entero.
-      El último commit del repositorio sigue siendo `d38bbca`.
+- [ ] **COMMIT.** 58 ficheros modificados y ~19 sin seguir. Todo lo de §3 vive
+      solo en el árbol de trabajo. El mensaje está escrito en
+      `COMMIT_MESSAGE.txt`; el último commit del repositorio es `8e550df`.
+- [ ] **Desplegar la web.** Lo desplegado llega hasta «el papel como documento».
+      Sin subir: el capo en el PDF, el editor a tres columnas y su alineación, el
+      scroll del panel lateral y el logo en la cabecera del papel.
+      `cd worker && npx wrangler deploy`.
 - [ ] **Copia de seguridad de la clave de firma** fuera de esta máquina (§9).
       Sin ella no se puede volver a actualizar la app nunca.
-- [ ] **Probar la app en un dispositivo real.** Compila y sus 106 tests pasan,
-      pero no se ha instalado ni ejecutado. Lo más importante que hay que mirar:
-      la migración de Room 16 → 17 sobre una base con datos, y la prueba manual
-      del modo avión (§5).
+- [ ] **Probar la app 2.0 en un dispositivo real.** Compila y sus 106 tests
+      pasan, pero **no se ha visto ejecutándose**: aquí no hay emulador. Mirar la
+      migración de Room 16 → 17 sobre una base con datos, la prueba del modo
+      avión (§5) y que la imagen nueva se vea bien.
+- [ ] Decidir qué hacer con `accordio_claro_oscuro.zip` (2,4 MB, sin seguir en la
+      raíz): ignorarlo o guardarlo. Lo que se usa ya está en `worker/brand/`.
+
+**Convendría, sin prisa**
+- [ ] Activar **Always Use HTTPS** y **Minimum TLS 1.2** en la zona de Cloudflare
+      (SSL/TLS → Edge Certificates). El Worker ya redirige, pero eso corta antes.
+- [ ] El token OAuth de wrangler caducó una vez a mitad de sesión (`9109 Invalid
+      access token`): si falla algo de Cloudflare, `npx wrangler login`.
+- [ ] Sembrar el diccionario en producción si no se ha hecho: pestaña Acordes →
+      **Importar diccionario base** (una vez; solo añade).
 
 **Mejoras identificadas y no abordadas**
-- [ ] La web no cambia de URL al navegar (`showView` alterna `.hidden`): no se
-      puede enlazar a una partitura ni usar el botón «atrás».
 - [ ] Sincronizar el progreso del entrenamiento (mismo patrón que los acordes).
 - [ ] Niveles 4-5 del curriculum en el resto de áreas.
-- [ ] Diagramas de acorde en la web (hoy solo en la app).
 - [ ] El parser de cabeceras está tres veces: `SongTextFormat.kt`, `vParseSong`
       y `migrate.js`. El de YouTube, dos (cliente y servidor), con un test que
       compara ambas para que no se separen.
@@ -380,11 +409,12 @@ Estado actual de producción:
       `<script>` mínimo en `<head>` para aplicar el tema sin parpadeo.
 - [ ] i18n de `ui/dictionary/TheoryGuide.kt` (contenido largo en español).
 - [ ] Layout de tablet tipo lista-detalle.
+- [ ] Quedan emoji en la web (`🔒` de bloqueada, `♩`, `♦`, `▶`): el kit tiene
+      iconos para casi todos.
 - [ ] `wrangler` está en la 3.114 y hay 4.x. Actualizar en su momento, no justo
       antes de un despliegue.
 
 ---
-
 ## 8. Trampas conocidas
 
 - **No editar ficheros `.kt` con scripts de PowerShell** (`Get-Content -Raw` +
@@ -398,8 +428,20 @@ Estado actual de producción:
   tras desplegar, un Ctrl+F5 evita sorpresas.
 - **El JS de la web va dentro de un template literal** (`WEB_APP_JS`). Un acento
   grave o un `${` sin escapar rompe el módulo entero; `npm run check` lo detecta.
+- **Y lo que `npm run check` NO detecta, del mismo literal: los escapes.** `\D`,
+  `\n`, `\s`… no son escapes válidos de plantilla, así que la barra se pierde y
+  al navegador le llega otra cosa. Esto ya rompió dos veces: `/\D+/` llegó como
+  `/D+/` y el capo no salió nunca en el PDF, y un `join("\n")` llegó partido en
+  dos líneas. **Hay que escribirlos dobles** (`\\D`) y, ante la duda, comparar el
+  fuente con lo que sirve el Worker:
+  `node --input-type=module -e 'const m=await import("./src/web-html.js"); …'`
 - **La app no compila sin SDK de Android**, y tampoco con el JDK del sistema si
   es solo JRE: AGP necesita `jlink` y el error que da no menciona el JDK.
+- **Si Java se actualiza con el daemon de Gradle vivo, AAPT2 deja de arrancar**:
+  «Daemon startup failed» y, tres excepciones más abajo, «Failed to exec spawn
+  helper». No es aapt2 ni los recursos —el binario arranca a mano—: es que
+  `jspawnhelper` valida su versión contra la JVM en memoria. Se arregla con
+  `./gradlew --stop` y matando los daemons.
 - **Tras `wrangler deploy`, la propagación tarda unos segundos.** Verificar al
   instante da falsos negativos que parecen un despliegue roto.
 - **`wrangler r2 object put` no acepta `--remote` en la 3.x** (allí lo remoto es
@@ -424,6 +466,15 @@ Estado actual de producción:
 - El APK de depuración **no sirve** para probar la auto-actualización (va firmado
   con la clave de debug).
 - `wrangler.toml` tiene un `database_id` de marcador que **hay que reemplazar**.
+- **En impresión, Chrome no repite un `position:fixed` por página** ni resuelve
+  `counter(page)` fuera de un margen con nombre de `@page`, que no implementa. Si
+  se toca la impresión, no volver a intentarlo por ahí: el reparto de páginas se
+  hace midiendo desde JS (`GUION_PAGINAR`).
+- **En un contenedor flex, un hijo con `overflow` necesita `min-height:0`** o no
+  encoge por debajo de su contenido: la caja crece, el scroll no llega a
+  activarse y acaba desplazándose la página entera. Pasó con la ficha del editor.
+- **`wrangler dev` adopta el host del `custom_domain`**, así que en local también
+  redirige a HTTPS. Por eso `npm run dev` usa `--local-protocol https`.
 
 ---
 
@@ -433,8 +484,8 @@ Montado en esta máquina durante la última sesión (no estaba nada):
 
 | Qué | Dónde |
 |---|---|
-| SDK de Android | `~/Android/Sdk` (platform 35, build-tools 35.0.0, platform-tools) |
-| JDK 17 | `~/jdks/jdk-17.0.20.1+1` (Temurin) |
+| SDK de Android | `~/Android/Sdk` (platform 35, build-tools 34 y 35, platform-tools) |
+| JDK | `openjdk-21-jdk` del sistema (antes solo estaba el JRE y no compilaba) |
 | `local.properties` | en la raíz, con `sdk.dir` · ignorado por git |
 | Clave de release | `~/vivace-release.jks` · alias `vivace` · RSA 4096, 10000 días |
 | `keystore.properties` | en la raíz · ignorado por git · **la contraseña está ahí** |
@@ -442,10 +493,11 @@ Montado en esta máquina durante la última sesión (no estaba nada):
 **La contraseña no se escribe en este documento a propósito**: `CONTEXTO.md` sí
 va a git. Está en `keystore.properties`, que no.
 
-Sobre la clave: es la **primera** publicación, así que esa clave es la
-definitiva. Android solo instala una actualización si va firmada con la misma.
+Sobre la clave: con ella van firmadas la 1.0 y la 2.0, y Android solo instala una
+actualización si va firmada con la misma (SHA-256 `e6a5358757105ae231dae6c526d42d04…`).
 Si se pierde el `.jks` o su contraseña, no se puede volver a actualizar la app:
 habría que desinstalar y reinstalar, y cada usuario perdería sus datos locales.
+**Sigue sin haber copia fuera de esta máquina** (§7).
 Cópiala fuera de esta máquina.
 
 Como la contraseña llegó a aparecer en una conversación, si preocupa se puede

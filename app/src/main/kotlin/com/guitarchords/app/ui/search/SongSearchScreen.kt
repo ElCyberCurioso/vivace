@@ -46,6 +46,8 @@ import com.guitarchords.app.ui.components.SongSortMenu
 import com.guitarchords.app.ui.components.rememberSongSelection
 import com.guitarchords.app.ui.components.rememberTrashedMessage
 import com.guitarchords.app.ui.components.rememberUndoSnackbar
+import com.guitarchords.app.ui.theme.accordioTopBarColors
+import com.guitarchords.app.ui.icons.AccordioIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -83,6 +85,7 @@ fun SongSearchScreen(
                 )
             } else {
                 TopAppBar(
+                    colors = accordioTopBarColors(),
                     title = { Text(stringResource(R.string.search_songs)) },
                     navigationIcon = {
                         IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
@@ -103,7 +106,7 @@ fun SongSearchScreen(
                 onValueChange = vm::setQuery,
                 singleLine = true,
                 placeholder = { Text(stringResource(R.string.search_placeholder)) },
-                leadingIcon = { Icon(Icons.Default.Search, null) },
+                leadingIcon = { Icon(AccordioIcons.buscar(), null) },
                 trailingIcon = {
                     if (query.isNotEmpty()) {
                         IconButton(onClick = { vm.setQuery("") }) {
@@ -116,12 +119,12 @@ fun SongSearchScreen(
             Spacer(Modifier.height(12.dp))
             when {
                 query.isBlank() -> EmptyState(
-                    icon = Icons.Default.Search,
+                    icon = AccordioIcons.buscar(),
                     title = stringResource(R.string.search_hint_title),
                     subtitle = stringResource(R.string.search_hint_subtitle)
                 )
                 hits.isEmpty() -> EmptyState(
-                    icon = Icons.Default.Search,
+                    icon = AccordioIcons.buscar(),
                     title = stringResource(R.string.no_results),
                     subtitle = stringResource(R.string.try_another_search)
                 )
@@ -192,7 +195,7 @@ private fun HitRow(
         leading = {
             // Aquí la estrella es solo un indicador (no se puede alternar).
             if (hit.song.favorite) {
-                Icon(Icons.Default.Star, null, tint = MaterialTheme.colorScheme.primary)
+                Icon(AccordioIcons.estrella(), null, tint = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.padding(horizontal = 4.dp))
             }
         }

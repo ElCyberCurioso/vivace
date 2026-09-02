@@ -244,7 +244,25 @@ EOF_COLUMNAS
   if [ -n "$faltan" ]; then
     error "la base NO tiene estas columnas tras migrar:$faltan · no se publica código que las necesita"
   fi
-  ok "la base tiene todas las columnas que el código espera"
+
+  # Las tandas nuevas también crean TABLAS (settings, p. ej.), y un CREATE que no
+  # llegara a ejecutarse no lo delata ninguna columna: se comprueba aparte.
+  local tabla sinTabla=""
+  while IFS= read -r tabla; do
+    [ -n "$tabla" ] || continue
+    if ! (cd "$WORKER" && npx --no-install wrangler d1 execute vivace --remote --yes \
+            --command "SELECT name FROM sqlite_master WHERE type='table' AND name='$tabla'" 2>/dev/null) \
+          | grep -q "\"$tabla\""; then
+      sinTabla="$sinTabla $tabla"
+    fi
+  done <<EOF_TABLAS
+$(sentencias_de "$WORKER/migrations.sql" \
+   | sed -n 's/^CREATE TABLE IF NOT EXISTS \([a-z_]*\).*/\1/p')
+EOF_TABLAS
+  if [ -n "$sinTabla" ]; then
+    error "la base NO tiene estas tablas tras migrar:$sinTabla · no se publica código que las necesita"
+  fi
+  ok "la base tiene todas las columnas y tablas que el código espera"
 }
 
 # Parte un .sql en sentencias de una línea: quita comentarios y líneas en blanco
@@ -272,7 +290,14 @@ release() {
   local salida
   salida="$( (cd "$WORKER" && npx --no-install wrangler deploy) 2>&1 | tee /dev/stderr )"
   local publicada
-  publicada="$(printf '%s' "$salida" | grep -oE 'https://[a-zA-Z0-9._-]+\.workers\.dev' | head -1)"
+  # Con dominio propio wrangler imprime las dos: la de workers.dev y la custom.
+  # Manda el dominio propio (y de sus dos entradas, el apex, no el www: la web
+  # redirige www -> apex y la comprobación seguiría un 301 sin necesidad).
+  publicada="$(printf '%s' "$salida" \
+    | grep -oE 'https://[a-zA-Z0-9._-]+ \(custom domain\)' \
+    | grep -v '://www\.' | head -1 | cut -d" " -f1)"
+  [ -n "$publicada" ] || \
+    publicada="$(printf '%s' "$salida" | grep -oE 'https://[a-zA-Z0-9._-]+\.workers\.dev' | head -1)"
   if [ -z "$BASE_URL" ]; then
     BASE_URL="$publicada"
     [ -n "$BASE_URL" ] && nota "URL publicada: $BASE_URL"
@@ -391,6 +416,26 @@ verify() {
   else
     comprobacion "sesiones firmadas" 401 "$login"
   fi
+
+  # Nada de servir la web en claro: por el puerto 80 viajaría el token de sesión
+  # a la vista. Solo se comprueba en un dominio propio; *.workers.dev ya es
+  # HTTPS y solo HTTPS.
+  case "$BASE_URL" in
+    https://*.workers.dev) : ;;
+    https://*)
+      local sinTls hsts
+      sinTls="http://${BASE_URL#https://}"
+      comprobacion "HTTP redirige a HTTPS" 301 "$(codigo_de "$sinTls/")"
+      hsts="$(curl -s -D - -o /dev/null --max-time 20 "$BASE_URL/" 2>/dev/null \
+              | tr -d '\r' | sed -n 's/^[Ss]trict-[Tt]ransport-[Ss]ecurity: //p' | head -1)"
+      if [ -n "$hsts" ]; then
+        ok "HSTS puesto ($hsts)"
+      else
+        aviso "las respuestas no llevan Strict-Transport-Security"
+        FALLOS=$((FALLOS + 1))
+      fi
+      ;;
+  esac
 
   # La caché de los estáticos: revalidar con la ETag tiene que dar 304.
   local etag rev

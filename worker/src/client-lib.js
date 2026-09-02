@@ -9,6 +9,41 @@
 export const CLIENT_JS = `
 "use strict";
 
+/* ---------- búsqueda ---------- */
+
+/*
+ * La misma normalización que hace el Worker en SQL (normalizarBusqueda en
+ * db.js): minúsculas y sin tildes. Tiene que coincidir carácter a carácter,
+ * porque el servidor filtra y luego el navegador vuelve a filtrar lo que ya
+ * tiene cargado: si uno quitara tildes y el otro no, los resultados del
+ * servidor desaparecerían al pintarlos.
+ */
+var V_VOCALES = [["á","a"],["à","a"],["é","e"],["è","e"],["í","i"],["ì","i"],
+                 ["ó","o"],["ò","o"],["ú","u"],["ù","u"],["ü","u"]];
+
+function vNormalizarBusqueda(q) {
+  var t = String(q == null ? "" : q).trim().toLowerCase();
+  for (var i = 0; i < V_VOCALES.length; i++) {
+    t = t.split(V_VOCALES[i][0]).join(V_VOCALES[i][1]);
+  }
+  return t;
+}
+
+/**
+ * Cuántas letras o cifras tiene el texto. Es el umbral para ir al servidor: con
+ * "a" o "la" se buscaría media base de datos, y los espacios y signos no
+ * cuentan como escribir.
+ */
+function vLetrasYCifras(q) {
+  var t = String(q == null ? "" : q);
+  var n = 0;
+  for (var i = 0; i < t.length; i++) {
+    var c = t[i];
+    if (c.toLowerCase() !== c.toUpperCase() || (c >= "0" && c <= "9")) n++;
+  }
+  return n;
+}
+
 /* ---------- render de partituras ---------- */
 
 function vEsc(s) {
@@ -115,6 +150,16 @@ function vSongChords(text) {
  * aire, N traste N contando desde baseFret. Los colores salen de las
  * variables de la marca, así que el diagrama sigue al tema claro/oscuro.
  */
+/*
+ * Diagrama de un acorde.
+ *
+ * Convención de los datos (la de chords-db, que es la que traen el diccionario y
+ * la app): "frets" son 6 valores de la 6ª a la 1ª cuerda, con -1 = muda, 0 = al
+ * aire y 1..5 = traste RELATIVO a "baseFret" (1 es el propio baseFret). "barres"
+ * también es relativo. Esto se dibujaba como si fuera absoluto, así que todo
+ * acorde con baseFret > 1 —media biblioteca: cejillas, posiciones altas— salía
+ * con los puntos corridos o directamente sin ellos.
+ */
 function vChordSvg(pos, ancho) {
   var W = ancho || 96;
   var cuerdas = 6, trastes = 5;
@@ -125,12 +170,20 @@ function vChordSvg(pos, ancho) {
   var dy = (gw * 1.15 - my * 0.2) / trastes;
   var base = pos.baseFret || 1;
   var partes = [];
+  // Medidas del kit Accordio (trazo 2,6 px y cejuela 6 px sobre un diagrama de
+  // 110 px), en proporción para que valgan igual en la tira pequeña del visor
+  // que en la rejilla del diccionario.
+  var trazo = W * 0.024;
+  var dedos = pos.fingers || [];
+  // El número del dedo solo cabe a partir de cierto tamaño; por debajo, punto liso.
+  var conDedos = W >= 84;
 
   partes.push('<svg viewBox="0 0 ' + W + ' ' + alto + '" width="' + W + '" height="' + alto +
               '" class="chordSvg" aria-hidden="true">');
   // Cejuela gruesa solo en primera posición: si empieza más arriba, no hay cejuela.
   if (base === 1) {
-    partes.push('<rect x="' + mx + '" y="' + (my - 3) + '" width="' + gw + '" height="3.4" fill="currentColor"/>');
+    partes.push('<rect x="' + mx + '" y="' + (my - W * 0.055) + '" width="' + gw +
+                '" height="' + (W * 0.055) + '" fill="currentColor"/>');
   } else {
     partes.push('<text x="' + (mx - 6) + '" y="' + (my + dy * 0.75) + '" text-anchor="end" ' +
                 'font-size="' + (W * 0.13) + '" fill="currentColor" opacity=".7">' + base + '</text>');
@@ -138,23 +191,23 @@ function vChordSvg(pos, ancho) {
   for (var c = 0; c < cuerdas; c++) {
     var x = mx + dx * c;
     partes.push('<line x1="' + x + '" y1="' + my + '" x2="' + x + '" y2="' + (my + dy * trastes) +
-                '" stroke="currentColor" stroke-width="1" opacity=".55"/>');
+                '" stroke="currentColor" stroke-width="' + trazo + '" opacity=".8"/>');
   }
   for (var f = 0; f <= trastes; f++) {
     var y = my + dy * f;
     partes.push('<line x1="' + mx + '" y1="' + y + '" x2="' + (mx + gw) + '" y2="' + y +
-                '" stroke="currentColor" stroke-width="1" opacity=".55"/>');
+                '" stroke="currentColor" stroke-width="' + trazo + '" opacity=".8"/>');
   }
 
   var frets = pos.frets || [];
   // Cejilla: se pinta como barra entre la primera y la última cuerda que la usan.
   var barres = pos.barres || [];
   for (var b = 0; b < barres.length; b++) {
-    var traste = barres[b] - base + 1;
+    var traste = barres[b];
     if (traste < 1 || traste > trastes) continue;
     var desde = -1, hasta = -1;
     for (var k = 0; k < cuerdas; k++) {
-      if (frets[k] - base + 1 === traste) { if (desde < 0) desde = k; hasta = k; }
+      if (frets[k] === traste) { if (desde < 0) desde = k; hasta = k; }
     }
     if (desde < 0 || hasta <= desde) continue;
     var yb = my + dy * (traste - 0.5);
@@ -175,10 +228,18 @@ function vChordSvg(pos, ancho) {
       partes.push('<circle cx="' + xs + '" cy="' + (my - W * 0.13) + '" r="' + (W * 0.038) +
                   '" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".65"/>');
     } else {
-      var rel = valor - base + 1;
+      var rel = valor;
       if (rel < 1 || rel > trastes) continue;
-      partes.push('<circle cx="' + xs + '" cy="' + (my + dy * (rel - 0.5)) + '" r="' + (dx * 0.28) +
-                  '" fill="currentColor"/>');
+      var cy = my + dy * (rel - 0.5);
+      partes.push('<circle cx="' + xs + '" cy="' + cy + '" r="' + (dx * 0.3) + '" fill="currentColor"/>');
+      // Dedo dentro del punto, en el color de la tarjeta: es lo que distingue
+      // "pisa aquí" de "pisa aquí CON ESTE dedo", que es lo que hace falta al
+      // aprender el acorde.
+      if (conDedos && dedos[s2] > 0) {
+        partes.push('<text x="' + xs + '" y="' + (cy + dx * 0.13) + '" text-anchor="middle" ' +
+                    'font-size="' + (dx * 0.38) + '" font-weight="600" fill="var(--ac-surface, #F2FAF6)">' +
+                    dedos[s2] + '</text>');
+      }
     }
   }
   partes.push("</svg>");

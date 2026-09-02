@@ -46,6 +46,7 @@ import com.guitarchords.app.ui.components.ChordModal
 import com.guitarchords.app.ui.components.FretboardInput
 import com.guitarchords.app.ui.components.StringStateRow
 import com.guitarchords.app.ui.components.rememberChordPlayer
+import com.guitarchords.app.ui.theme.accordioTopBarColors
 
 private const val STRINGS = 6
 
@@ -62,6 +63,7 @@ fun ChordFinderScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = accordioTopBarColors(),
                 title = { Text(stringResource(R.string.finder_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }

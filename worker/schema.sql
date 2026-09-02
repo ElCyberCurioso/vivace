@@ -145,3 +145,13 @@ CREATE TABLE IF NOT EXISTS auth_attempts (
 -- (updated_at, id), que es también el cursor.
 CREATE INDEX IF NOT EXISTS idx_songs_owner_updated   ON songs(owner_id, updated_at, id);
 CREATE INDEX IF NOT EXISTS idx_versions_song_updated ON song_versions(song_id, updated_at, id);
+
+-- Ajustes de la instalación (clave -> valor). De momento solo `registration_open`,
+-- el interruptor de altas de cuenta, que maneja el administrador desde la web.
+-- Lo que no está en la tabla vale su valor por defecto: una instalación recién
+-- creada admite registros, que es como se da de alta el primer administrador.
+CREATE TABLE IF NOT EXISTS settings (
+  key        TEXT PRIMARY KEY,
+  value      TEXT NOT NULL,
+  updated_at INTEGER NOT NULL
+);
