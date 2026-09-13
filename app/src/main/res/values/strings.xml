@@ -208,6 +208,25 @@
     <string name="mic_permission_msg">Para detectar las notas de la guitarra en tiempo real.</string>
     <string name="grant_permission">Conceder permiso</string>
     <string name="play_a_string">Toca una cuerda</string>
+    <!-- Instrumento y afinaciones -->
+    <string name="instrument">Instrumento</string>
+    <string name="instrument_guitar">Guitarra</string>
+    <string name="instrument_ukulele">Ukelele</string>
+    <string name="tuning">Afinación</string>
+    <string name="tuning_standard">Estándar</string>
+    <string name="tuning_drop_d">Drop D</string>
+    <string name="tuning_half_step_down">Medio tono abajo (Mi♭)</string>
+    <string name="tuning_full_step_down">Un tono abajo (Re)</string>
+    <string name="tuning_drop_c">Drop C</string>
+    <string name="tuning_dadgad">DADGAD</string>
+    <string name="tuning_open_g">Open G</string>
+    <string name="tuning_open_d">Open D</string>
+    <string name="tuning_open_e">Open E</string>
+    <string name="tuning_uke_standard">Estándar en do (sol reentrante)</string>
+    <string name="tuning_uke_low_g">Sol grave</string>
+    <string name="tuning_uke_baritone">Barítono</string>
+    <string name="tuning_uke_d">Afinación en re</string>
+    <string name="ukulele_no_dictionary">Digitaciones calculadas: el diccionario de ukelele todavía no viene con la app.</string>
 
     <!-- Búsqueda -->
     <string name="search_placeholder">Título, artista, género o letra…</string>

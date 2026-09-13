@@ -55,12 +55,12 @@ test("la búsqueda junta artista y título", () => {
 test("la copia del navegador dice lo mismo que la del servidor", () => {
   // Hay dos implementaciones a la fuerza: el Worker no puede ejecutar el texto
   // de client-lib. Esto es lo que evita que se separen sin que nadie se entere.
-  const vYoutubeId = new Function(CLIENT_JS + "\nreturn vYoutubeId;")();
-  const vEmbedUrl = new Function(CLIENT_JS + "\nreturn vEmbedUrl;")();
+  const acYoutubeId = new Function(CLIENT_JS + "\nreturn acYoutubeId;")();
+  const acEmbedUrl = new Function(CLIENT_JS + "\nreturn acEmbedUrl;")();
   for (const [entrada, esperado] of FORMAS) {
-    assert.equal(vYoutubeId(entrada), esperado,
+    assert.equal(acYoutubeId(entrada), esperado,
       "el navegador discrepa con " + JSON.stringify(entrada));
-    assert.equal(vEmbedUrl(entrada), youtubeEmbed(entrada),
+    assert.equal(acEmbedUrl(entrada), youtubeEmbed(entrada),
       "embed distinto para " + JSON.stringify(entrada));
   }
 });

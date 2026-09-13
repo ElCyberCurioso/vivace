@@ -5,6 +5,7 @@ import android.net.ConnectivityManager
 import android.net.Network
 import com.guitarchords.app.chords.ChordDb
 import com.guitarchords.app.chords.CustomChords
+import com.guitarchords.app.chords.InstrumentPrefs
 import com.guitarchords.app.data.AppDatabase
 import com.guitarchords.app.data.Repository
 import com.guitarchords.app.sync.ChordSyncManager
@@ -44,6 +45,7 @@ class GuitarChordsApp : Application() {
         )
         trainingRepo = TrainingRepository(db.trainingDao())
         ChordDb.init(this)
+        InstrumentPrefs.init(this)
         CustomChords.init(db.customChordDao())
         ThemeController.init(this)
 

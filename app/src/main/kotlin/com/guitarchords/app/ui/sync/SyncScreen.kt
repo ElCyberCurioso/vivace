@@ -44,7 +44,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.guitarchords.app.R
 import com.guitarchords.app.sync.ResolvedConflict
-import com.guitarchords.app.sync.VIVACE_BASE_URL
+import com.guitarchords.app.sync.ACCORDIO_BASE_URL
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -103,7 +103,7 @@ fun SyncScreen(
                 value = url,
                 onValueChange = { url = it },
                 label = { Text(stringResource(R.string.sync_worker_url)) },
-                placeholder = { Text(VIVACE_BASE_URL) },
+                placeholder = { Text(ACCORDIO_BASE_URL) },
                 singleLine = true,
                 enabled = !running && account.isBlank(),
                 modifier = Modifier.fillMaxWidth()

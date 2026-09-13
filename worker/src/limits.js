@@ -1,5 +1,5 @@
 /*
- * Vivace · topes de entrada y límite de intentos.
+ * Accordio · topes de entrada y límite de intentos.
  *
  * Antes no había ninguno: `content` entraba en R2 sin medir, el blob de acordes
  * personales se guardaba con `request.text()` en crudo (sin comprobar siquiera

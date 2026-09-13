@@ -1,3 +1,6 @@
+# El Worker se sigue llamando "guitarchords-sync": renombrarlo aquí no renombra
+# nada, crea OTRO Worker, y habría que mover a mano el dominio y retirar el
+# viejo. El nombre no sale de la consola de Cloudflare.
 name = "guitarchords-sync"
 main = "src/index.js"
 compatibility_date = "2024-09-23"
@@ -8,7 +11,13 @@ compatibility_date = "2024-09-23"
 binding = "BUCKET"
 bucket_name = "guitarchords"
 
-# Base de datos de Vivace (usuarios, permisos y metadatos de partituras).
+# Base de datos de Accordio (usuarios, permisos y metadatos de partituras).
+#
+# Se sigue llamando "vivace" y NO se renombra: `database_name` no es una
+# etiqueta, es el nombre real de la base en Cloudflare. Cambiarlo aquí no
+# renombra nada — apuntaría a una base que no existe. Renombrarla de verdad
+# sería crear otra D1, volcar los datos y cortar el servicio mientras tanto,
+# todo por una palabra que no ve nadie.
 # Crear una vez con:  npx wrangler d1 create vivace
 # y pegar aquí el database_id que imprime el comando.
 [[d1_databases]]

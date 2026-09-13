@@ -1,97 +1,83 @@
-feat: dominio propio, marca Accordio y buscador en el servidor
+feat: rutas con guardia, ukelele, afinaciones y renombrado a Accordio
 
-Todo lo que va aquí es lo que hay sin subir desde `8e550df`. La web ya está
-desplegada hasta «papel como documento»; la app está publicada como 2.0 en
-`/update`. Lo que sigue pendiente de desplegar se anota en CONTEXTO.md.
+Todo lo que va aquí es lo que hay sin subir desde `9e9eaa9`. Al desplegar, la
+base va ANTES que el código: hay una columna nueva (`songs.chord_variants`, en
+migrations.sql) en la que el código escribe al guardar una partitura.
+`tools/deploy.sh release` ya lo hace en ese orden.
 
-Dominio y transporte:
-- `accordio.site` como dominio propio del Worker (apex y `www`), declarado en
-  `wrangler.toml` con `custom_domain`: wrangler crea el DNS y el certificado.
-- Un solo host y siempre cifrado: `www` va al apex y HTTP a HTTPS, en el mismo
-  salto. 301 en las lecturas y 308 en el resto —un 301 sobre un POST el
-  navegador lo reenvía como GET y perdería el cuerpo—. Con dos orígenes la
-  sesión, que vive en el almacenamiento local, se partiría en dos.
-- HSTS de un año en todas las respuestas HTTPS. `localhost` queda exento: un
-  HSTS ahí deja el navegador convencido de que localhost es siempre HTTPS y
-  rompe cualquier otro proyecto en el mismo puerto.
-- La app apunta a `https://accordio.site` de fábrica (`SyncPrefs` y
-  `UPDATE_BASE_URL`), así que ya no hace falta configurar nada para actualizar.
+Web: cada pantalla es una ruta, y la ruta es la única puerta:
+- `#/`, `#/mias`, `#/papelera`, `#/propuestas`, `#/acordes`, `#/usuarios`,
+  `#/admin`, `#/entrar`, `#/cancion/<id>`, `#/nueva` y `#/editar/<id>`. Antes
+  las pantallas se abrían llamándose entre ellas, una encima de otra: al editor
+  se llegaba sin sesión y «atrás» con el ratón llevaba a sitios que no tocaban.
+- Cada ruta declara su permiso y el guardia se aplica al resolver la URL: al
+  arrancar, al navegar, con atrás/adelante y al cerrar sesión. Editar comprueba
+  además la ficha (dueño o admin), no solo que haya sesión.
+- Guardar y borrar REEMPLAZAN la entrada del historial, para que «atrás» no
+  devuelva a un formulario muerto. Sin sesión se recuerda el destino y, al
+  entrar, se vuelve allí.
 
-Buscar deja de ser cosa del navegador:
-- `?q=` en los tres listados (`db.js`), sobre título y artista, sin distinguir
-  mayúsculas ni tildes: `LOWER()` de SQLite solo baja ASCII, así que las vocales
-  acentuadas se sustituyen en SQL y el navegador normaliza igual.
-- Antes solo se filtraba lo ya descargado —la primera página de 60—, así que una
-  partitura que cayera más atrás no existía para el buscador hasta pulsar
-  «Cargar más» las veces que hiciera falta.
-- Se busca a partir de 3 letras o cifras y se piden todos los resultados de una
-  vez: un resultado de búsqueda paginado es el problema de partida. Los
-  comodines de `LIKE` se escapan, que buscar `%` devolvía el catálogo entero.
+Las privadas no salían hasta pulsar «Cargar más» varias veces:
+- «Solo privadas», favoritas, carpeta, categoría y orden se filtraban en el
+  navegador sobre la página ya descargada. Ahora van a SQL en `/api/songs` y en
+  la papelera (`?visibility=`, `?favorite=1`, `?playlist=<id>|none`, `?genre=`,
+  `?sort=`). En el navegador queda solo el recorte tecla a tecla del buscador.
 
-Recomendadas y altas de cuenta:
-- `GET /api/songs/:id/related`: primero más del mismo artista y, solo si no hay,
-  del mismo estilo. Dos consultas y no un `OR`, porque no es un filtro sino una
-  prioridad. Nunca la que se está viendo, y solo catálogo público: recomendar
-  algo que quien lo lee no puede abrir es enseñar un 404.
-- Interruptor de altas en Administración, solo para el administrador (tabla
-  `settings`, nueva). El corte está en `/auth/register`, no en la interfaz:
-  esconder el botón no impide un `curl`. La instalación vacía es la excepción, o
-  cerrar las altas antes de que exista administrador la dejaría sin dueño.
+Digitación elegida por partitura:
+- Columna `songs.chord_variants` (`{"guitarra":{"F":2}}`) y botón «Digitaciones»
+  en el editor, con un carrusel por acorde. El visor, la tira de acordes y el
+  hover usan esa digitación en vez de la primera del diccionario.
+- La API solo la toca si el cliente la manda: la app no la conoce y envía la
+  ficha entera, así que guardar desde el móvil no borra lo elegido en la web.
 
-Diccionario de acordes:
-- 8.669 acordes (~14.400 nombres con los alias en bemoles) de
-  guitar-chords-db-json (MIT), en `src/chords-db.js` y sembrados desde
-  «Importar diccionario base». El repo son 36 MB en 9.072 ficheros:
-  `tools/generar-chords-db.mjs` lo reduce a una cadena compacta que solo se
-  expande al sembrar.
-- Y el fallo que destapó la importación: el origen da los trastes ABSOLUTOS y el
-  diccionario los quiere RELATIVOS al traste base. El dibujante de la web los
-  trataba como absolutos, así que todo acorde con traste base mayor que 1
-  —cejillas y posiciones altas, media biblioteca— salía con los puntos corridos
-  o sin ellos.
+Ukelele (la estructura; el diccionario llegará después):
+- Worker: un diccionario por instrumento, cada uno con su blob
+  (`chords/global-chords-ukelele.json`) y validado con sus cuerdas (4).
+  `?instrument=` en `/api/chords/global`; `seed` solo siembra guitarra.
+- Web: selector de instrumento en el visor y en Acordes, diagramas con tantas
+  cuerdas como trae la digitación e «Importar JSON…» para subir un diccionario.
+- App: `Instrument` (guitarra/ukelele), del que salen diccionario, diagrama y
+  sonido; selector en el diccionario y en el modal de acorde. Sin diccionario
+  las posturas se generan, y en ukelele sin exigir la fundamental en el bajo
+  (la afinación es reentrante): así salen C 0003, Am 2000, F 2010 y G 0232.
 
-Marca Accordio en la web (paquete claro + oscuro):
-- Los tokens `--ac-*` del kit son la única fuente de color y medida, y encima va
-  una capa semántica `--vv-*` que cuelga de los ROLES del kit, que son los que
-  cambian de tema. En oscuro el teal no contrasta y pasa a titular: la acción la
-  toma el turquesa.
-- Montserrat y Poppins; JetBrains Mono se queda para la hoja y las cifras, que
-  sin ancho fijo los acordes dejan de caer sobre su sílaba.
-- Iconos del kit como `<symbol>`, botones con superficie —sobre el crema, un
-  borde pálido no se leía como algo pulsable—, avisos y diálogos propios.
+Afinador de la app:
+- Afinaciones calculadas desde el nombre de la nota (La4 = 440 Hz). Guitarra:
+  estándar, Drop D, medio tono y un tono abajo, Drop C, DADGAD, Open G, D y E.
+  Ukelele: estándar, sol grave, barítono y en re. La cuerda más cercana se
+  busca en semitonos, no en hercios, y la elección se recuerda.
 
-Móvil:
-- Cabecera del visor en una línea de 49 px, con las acciones en un menú; los
-  mandos en un panel que sube desde abajo, y las versiones al final de la
-  partitura. Se mueven los MISMOS nodos según el ancho, no copias.
-- La partitura entra de ancho al abrirla: se mide la línea más larga y el ancho
-  real de un carácter, y se elige el mayor tamaño que quepa. El suelo son 13 px
-  y es de legibilidad, no de encaje.
+Editor web:
+- Escribir y ver a todo el ancho, con la ficha como barra superior en una
+  rejilla de columnas contadas. En escritorio la página no hace scroll: solo
+  los dos paneles. Capo como carrusel −/+, barras de scroll con los colores de
+  la marca, y la hoja del visor crece hasta no necesitar scroll lateral.
 
-Editor y papel:
-- Editor a tres columnas —escribir, ver, la ficha—, alineadas porque comparten
-  estructura y no por coincidencia de medidas. La ficha hace su propio scroll.
-- La impresión pasa a ser un documento A4 con marca, título y artista arriba y
-  «Página N de M» abajo. Las páginas se reparten midiendo: en Chrome un
-  `position:fixed` no se repite por hoja y `counter(page)` devuelve 0 fuera de
-  un margen con nombre, que no está implementado. Una línea de acordes y su
-  letra viajan juntas.
-- El capo no salía NUNCA en el PDF: la expresión que lo leía del rótulo vivía en
-  un literal de plantilla, donde `\D` no es un escape válido, así que al
-  navegador le llegaba `/D+/`. Ahora se toma del dato, no del texto en pantalla.
+Papel:
+- Marca de agua en cada hoja del PDF: el logo y «Accordio» en diagonal, al 7 %.
+- El PDF de la app es ahora el mismo documento que el de la web: `PrintAdapter`
+  portado medida a medida (A4, cabecera con píldoras de capo y tono, acordes en
+  línea, pie y marca de agua). Se retiran los diagramas, que la web no lleva.
 
-App Android, misma imagen (versión 2.0, ya publicada):
-- Paleta, tipografías, formas e iconos del kit; barra superior teal en las 23
-  pantallas vía `accordioTopBarColors()`. Color dinámico apagado: el de Android
-  12+ pinta la app con el fondo de pantalla y deja de ser Accordio.
-- Los iconos se construyen en Kotlin con los colores del tema, no como
-  drawables: los del kit tienen dos tonos y el coral cambia entre claro y
-  oscuro; con `tint` se aplana el icono entero.
-- Nombre visible «Accordio»; el `applicationId` no se toca, que cambiarlo
-  desinstalaría la app de todo el mundo.
+Renombrado Vivace → Accordio:
+- Código, comentarios, documentación, tokens CSS (`--vv-*` → `--ui-*`),
+  librería de cliente (`v*` → `ac*`), estáticos (`/static/accordio.*`, con las
+  rutas viejas como alias), `VivaceClient` → `AccordioClient` y
+  `rootProject.name`.
+- Claves de almacenamiento con mudanza al arrancar (`vivace_*` → `accordio_*`
+  en la web; `guitarchords_sync[_secure]` → `accordio_sync[_secure]` en el
+  móvil), para que nadie pierda la sesión. Los trabajos de WorkManager con el
+  nombre viejo se cancelan, o el periódico antiguo seguiría corriendo a la vez.
+- No se tocan, y se documenta por qué: la base D1 `vivace`, el Worker
+  `guitarchords-sync`, el bucket `guitarchords`, el `applicationId` y la clave
+  de firma.
 
-Sin subir a propósito: `accordio_claro_oscuro.zip` (2,4 MB) sigue sin seguir en
-la raíz. Decidir si se ignora o se guarda; lo que se usa de él ya está copiado
-en `worker/brand/`.
+Otros:
+- `npm test` pasa a `test/*.test.mjs`: `node --test test/` falla en Node 22.23.
+- Sale del repositorio `accordio_claro_oscuro.zip`: lo que se usa del kit ya
+  está en `worker/brand/`.
+
+Tests: worker 205 (19 nuevos), app 121 (15 nuevos).
 
 Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Jc97EgXdsu1zaH3MSbH98o

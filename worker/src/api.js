@@ -1,5 +1,5 @@
 /*
- * Vivace · API multiusuario (la usan la web y, desde la fase 3, la app Android).
+ * Accordio · API multiusuario (la usan la web y, desde la fase 3, la app Android).
  *
  *   POST /auth/register   { email, password, name }  -> { token, user }
  *                         (cerrado si el admin apagó las altas)
@@ -44,7 +44,8 @@ import {
   isValidRole, isValidVisibility
 } from "./permissions.js";
 import {
-  ChordError, mergeSeed, readGlobalChords, sanitizeDictionary, writeGlobalChords
+  ChordError, INSTRUMENTOS, encodeVariants, mergeSeed, normalizeInstrument,
+  readGlobalChords, sanitizeDictionary, writeGlobalChords
 } from "./chords.js";
 import { CHORD_SEED } from "./chords-seed.js";
 import { expandirChordDb } from "./chords-db.js";
@@ -204,7 +205,8 @@ async function createSong(request, env, cors, user) {
     title: body.title, artist: body.artist, genre: body.genre,
     capo: Number(body.capo) || 0, source_url: body.sourceUrl,
     youtube_url: String(body.youtubeUrl || "").trim(),
-    locked: !!body.locked, visibility
+    locked: !!body.locked, visibility,
+    chord_variants: encodeVariants(body.chordVariants)
   });
   return json({ song: publicSong(song, true) }, cors, 201);
 }
@@ -260,6 +262,13 @@ async function updateSong(request, env, cors, user, id) {
     favorite: !!song.favorite,
     position: song.position,
     playlist_id: playlistId,
+    /*
+     * Las variantes solo se tocan si el cliente las manda. La app Android no
+     * las conoce y envía la ficha entera al sincronizar: sin esta condición,
+     * guardar desde el móvil borraría las digitaciones elegidas en la web.
+     */
+    chord_variants: body.chordVariants !== undefined
+      ? encodeVariants(body.chordVariants) : (song.chord_variants || ""),
     visibility
   });
   return json({ song: publicSong(updated, true) }, cors);
@@ -290,12 +299,38 @@ async function catalogOwnerId(env, url) {
   return admin?.id || null;
 }
 
+/**
+ * Los instrumentos que el servidor conoce, para que el cliente pinte el
+ * selector con lo que hay de verdad y no con una lista repetida a mano.
+ */
+function instrumentosPublicos() {
+  return Object.keys(INSTRUMENTOS).map((clave) => ({
+    id: clave, name: INSTRUMENTOS[clave].nombre, strings: INSTRUMENTOS[clave].cuerdas
+  }));
+}
+
 /** ?limit=, ?offset= y ?q= de la URL. limit y offset los acota clampPage. */
 function paginaDe(url) {
   return {
     limit: url.searchParams.get("limit"),
     offset: url.searchParams.get("offset"),
     q: url.searchParams.get("q") || ""
+  };
+}
+
+/*
+ * Filtros de "Mis partituras" y de la papelera, tal como llegan en la URL.
+ * Se resuelven en SQL: aplicados en el navegador sobre una página ya recortada,
+ * una carpeta podía salir vacía hasta pulsar "Cargar más" varias veces.
+ */
+function filtrosDe(url) {
+  const visibilidad = url.searchParams.get("visibility") || "";
+  return {
+    visibility: visibilidad === "private" || visibilidad === "public" ? visibilidad : "",
+    favorite: url.searchParams.get("favorite") === "1",
+    playlist: url.searchParams.get("playlist") || "",
+    genre: url.searchParams.get("genre") || "",
+    sort: url.searchParams.get("sort") || "title"
   };
 }
 
@@ -524,7 +559,7 @@ export async function handleApi(request, env, url, cors) {
     // ?trash=1 enseña la papelera. El borrado lógico ya existía en la base,
     // pero no había forma de llegar a él desde la web: borrar era definitivo
     // para quien lo hacía aunque la fila siguiera ahí.
-    const pagina = paginaDe(url);
+    const pagina = { ...paginaDe(url), ...filtrosDe(url) };
     const { items, hasMore } = url.searchParams.get("trash") === "1"
       ? await listTrashedSongs(env.DB, user.id, pagina)
       : await listOwnSongs(env.DB, user.id, pagina);
@@ -535,8 +570,11 @@ export async function handleApi(request, env, url, cors) {
   // de leer la partitura, también sin cuenta) y solo lo escribe el admin.
   // Va ANTES de /api/chords para que la ruta más específica gane.
   if (path === "/api/chords/global" && method === "GET") {
-    const dict = await readGlobalChords(env);
-    return json(dict, cors);
+    // ?instrument=ukelele sirve el diccionario del ukelele; sin él, el de
+    // guitarra, que es lo que pedían los clientes anteriores.
+    const instrumento = normalizeInstrument(url.searchParams.get("instrument"));
+    const dict = await readGlobalChords(env, instrumento);
+    return json({ ...dict, instruments: instrumentosPublicos() }, cors);
   }
   if (path === "/api/chords/global" && method === "PUT") {
     if (!user) return fail("inicia sesión", cors, 401);
@@ -548,9 +586,16 @@ export async function handleApi(request, env, url, cors) {
       return fail("cuerpo JSON no válido", cors, 400);
     }
     try {
-      const limpio = sanitizeDictionary(body);
-      const guardado = await writeGlobalChords(env, limpio);
-      return json({ ok: true, count: Object.keys(limpio).length, updatedAt: guardado.updatedAt }, cors);
+      // El instrumento puede venir en la URL o dentro del propio JSON: quien
+      // sube un diccionario entero lo tiene más a mano ahí.
+      const instrumento = normalizeInstrument(
+        url.searchParams.get("instrument") || body.instrument);
+      const limpio = sanitizeDictionary(body, instrumento);
+      const guardado = await writeGlobalChords(env, limpio, instrumento);
+      return json({
+        ok: true, instrument: instrumento,
+        count: Object.keys(limpio).length, updatedAt: guardado.updatedAt
+      }, cors);
     } catch (e) {
       if (e instanceof ChordError) return fail(e.message, cors, 400);
       throw e;
@@ -560,6 +605,17 @@ export async function handleApi(request, env, url, cors) {
   if (path === "/api/chords/global/seed" && method === "POST") {
     if (!user) return fail("inicia sesión", cors, 401);
     if (!canEditChords(user)) return fail("hace falta ser editor", cors, 403);
+    /*
+     * La semilla que trae el Worker es de GUITARRA. El ukelele tiene su
+     * diccionario y su estructura, pero todavía no su contenido: sembrarlo con
+     * digitaciones de seis cuerdas sería meter basura de cuatro valores.
+     */
+    const instrumento = normalizeInstrument(url.searchParams.get("instrument"));
+    if (instrumento !== "guitarra") {
+      return fail(
+        `todavía no hay diccionario base de ${INSTRUMENTOS[instrumento].nombre}: ` +
+        "súbelo con PUT /api/chords/global?instrument=" + instrumento, cors, 400);
+    }
     const actual = await readGlobalChords(env);
     /*
      * Dos fuentes, y en este orden: primero la semilla curada (348 acordes de

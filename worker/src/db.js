@@ -1,9 +1,11 @@
 /*
- * Vivace · acceso a D1 (usuarios y metadatos de partituras).
+ * Accordio · acceso a D1 (usuarios y metadatos de partituras).
  * El texto de cada partitura vive en R2; aquí solo su ficha y permisos.
  */
 
 export const SONG_PREFIX = "songs/";
+
+import { decodeVariants } from "./chords.js";
 
 export function uuid() {
   return crypto.randomUUID();
@@ -147,15 +149,51 @@ function paginar(filas, limit) {
   return { items: hasMore ? filas.slice(0, limit) : filas, hasMore };
 }
 
-/** Partituras del usuario (activas), por título. */
+/*
+ * Añade a la consulta los filtros de "Mis partituras": privadas, favoritas,
+ * carpeta y categoría.
+ *
+ * Van en SQL y no en el navegador porque el listado viene POR PÁGINAS: con el
+ * filtro aplicado solo a lo ya descargado, una cuenta cuyas primeras treinta
+ * partituras estén publicadas enseñaba la carpeta vacía, y solo aparecía algo a
+ * base de pulsar "Cargar más" una vez por página. El filtro tiene que decidir
+ * sobre TODO el catálogo del usuario, y eso solo lo sabe la base.
+ */
+function filtrosPropios(opciones, condiciones, valores, prefijo = "") {
+  if (opciones.visibility === "private" || opciones.visibility === "public") {
+    condiciones.push(`${prefijo}visibility = ?`);
+    valores.push(opciones.visibility);
+  }
+  if (opciones.favorite) condiciones.push(`${prefijo}favorite = 1`);
+  if (opciones.genre) {
+    condiciones.push(`LOWER(${prefijo}genre) = ?`);
+    valores.push(String(opciones.genre).toLowerCase());
+  }
+  // "none" es "las que no están en ninguna carpeta", que no es lo mismo que
+  // "todas": sin este caso no había forma de pedirlo.
+  if (opciones.playlist === "none") condiciones.push(`${prefijo}playlist_id IS NULL`);
+  else if (opciones.playlist) {
+    condiciones.push(`${prefijo}playlist_id = ?`);
+    valores.push(opciones.playlist);
+  }
+}
+
+/** El ORDER BY del catálogo, servido también a las consultas sin alias de tabla. */
+function ordenDe(sort, prefijo = "") {
+  const clave = isValidSort(sort) ? sort : "title";
+  return ORDENES[clave].replace(/\bs\./g, prefijo);
+}
+
+/** Partituras del usuario (activas). Orden y filtros los resuelve SQL. */
 export async function listOwnSongs(db, ownerId, pagina = {}) {
   const { limit, offset } = clampPage(pagina);
   const condiciones = ["owner_id = ?", "deleted_at = 0"];
   const valores = [ownerId];
   filtroBusqueda(pagina.q, condiciones, valores);
+  filtrosPropios(pagina, condiciones, valores);
   const { results } = await db.prepare(
     `SELECT * FROM songs WHERE ${condiciones.join(" AND ")}
-     ORDER BY title COLLATE NOCASE ASC LIMIT ? OFFSET ?`
+     ORDER BY ${ordenDe(pagina.sort)} LIMIT ? OFFSET ?`
   ).bind(...valores, limit + 1, offset).all();
   return paginar(results || [], limit);
 }
@@ -303,13 +341,14 @@ export async function insertSong(db, song) {
   await db.prepare(
     `INSERT INTO songs (id, owner_id, r2_key, title, artist, genre, capo, source_url,
                         locked, visibility, created_at, updated_at, deleted_at, youtube_url,
-                        favorite, position, playlist_id, rev)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, 1)`
+                        favorite, position, playlist_id, chord_variants, rev)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, 1)`
   ).bind(
     id, song.owner_id, song.r2_key, song.title || "", song.artist || "", song.genre || "",
     song.capo || 0, song.source_url || "", song.locked ? 1 : 0,
     song.visibility || "private", song.created_at || now, now, song.youtube_url || "",
-    song.favorite ? 1 : 0, song.position || 0, song.playlist_id || null
+    song.favorite ? 1 : 0, song.position || 0, song.playlist_id || null,
+    song.chord_variants || ""
   ).run();
   return findSongById(db, id);
 }
@@ -324,14 +363,14 @@ export function stmtUpdateSongMeta(db, id, meta) {
   return db.prepare(
     `UPDATE songs SET title = ?, artist = ?, genre = ?, capo = ?, source_url = ?,
                       locked = ?, visibility = ?, youtube_url = ?,
-                      favorite = ?, position = ?, playlist_id = ?,
+                      favorite = ?, position = ?, playlist_id = ?, chord_variants = ?,
                       rev = rev + 1, updated_at = ?
      WHERE id = ?`
   ).bind(
     meta.title || "", meta.artist || "", meta.genre || "", meta.capo || 0,
     meta.source_url || "", meta.locked ? 1 : 0, meta.visibility || "private",
     meta.youtube_url || "", meta.favorite ? 1 : 0, meta.position || 0,
-    meta.playlist_id || null, Date.now(), id
+    meta.playlist_id || null, meta.chord_variants || "", Date.now(), id
   );
 }
 
@@ -365,6 +404,7 @@ export async function listTrashedSongs(db, ownerId, pagina = {}) {
   const condiciones = ["owner_id = ?", "deleted_at > 0"];
   const valores = [ownerId];
   filtroBusqueda(pagina.q, condiciones, valores);
+  filtrosPropios(pagina, condiciones, valores);
   const { results } = await db.prepare(
     `SELECT * FROM songs WHERE ${condiciones.join(" AND ")}
      ORDER BY deleted_at DESC LIMIT ? OFFSET ?`
@@ -410,6 +450,12 @@ export function publicSong(song, includeKey = false) {
     favorite: !!song.favorite,
     position: song.position || 0,
     playlistId: song.playlist_id || null,
+    /*
+     * Qué digitación usa cada acorde EN ESTA partitura, por instrumento. Viaja
+     * siempre (aunque esté vacío) para que el cliente no tenga que distinguir
+     * entre "sin elección" y "un servidor que aún no lo conoce".
+     */
+    chordVariants: decodeVariants(song.chord_variants),
     // `rev` lo lleva el servidor: el cliente lo devuelve como `baseRev` al
     // subir y así se detecta que alguien más tocó la partitura mientras tanto.
     rev: song.rev || 1,

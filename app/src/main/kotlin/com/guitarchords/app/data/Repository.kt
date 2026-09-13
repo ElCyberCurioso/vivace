@@ -282,7 +282,7 @@ class Repository(
     suspend fun songOnce(id: Long): Song? = songDao.getById(id)
     suspend fun dirtySongs(): List<Song> = songDao.dirtySongs()
 
-    // ---- sincronización con cuenta de usuario (API de Vivace) ----
+    // ---- sincronización con cuenta de usuario (API de Accordio) ----
     suspend fun songByRemoteId(remoteId: String): Song? = songDao.getByRemoteId(remoteId)
     suspend fun songsWithRemoteId(): List<Song> = songDao.songsWithRemoteId()
     suspend fun songsPendingRelink(): List<Song> = songDao.songsPendingRelink()

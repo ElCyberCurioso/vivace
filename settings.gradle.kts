@@ -13,5 +13,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Vivace"
+rootProject.name = "Accordio"
 include(":app")

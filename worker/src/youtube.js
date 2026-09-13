@@ -1,5 +1,5 @@
 /*
- * Vivace · vídeo de YouTube asociado a una partitura.
+ * Accordio · vídeo de YouTube asociado a una partitura.
  *
  * Se guarda la URL tal cual la pega quien edita (que es lo que reconocerá si
  * vuelve a mirarla) y el identificador se extrae al pintar. Se aceptan las

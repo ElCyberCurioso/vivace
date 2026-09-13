@@ -11,7 +11,7 @@ import kotlinx.serialization.Serializable
 data class Playlist(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
-    /** Id de la lista en la API de Vivace; null = aún no subida. */
+    /** Id de la lista en la API de Accordio; null = aún no subida. */
     @ColumnInfo(name = "remote_id") val remoteId: String? = null,
     @ColumnInfo(name = "position") val position: Int = 0,
     /** Hay cambios locales sin subir. */
@@ -53,7 +53,7 @@ data class Song(
     @ColumnInfo(name = "source_url") val sourceUrl: String = "",
     /** Clave del objeto en R2 (flujo antiguo con token compartido). */
     @ColumnInfo(name = "remote_key") val remoteKey: String? = null,
-    /** Id de la partitura en la API de Vivace (sincronización con cuenta). */
+    /** Id de la partitura en la API de Accordio (sincronización con cuenta). */
     @ColumnInfo(name = "remote_id") val remoteId: String? = null,
     /** 'private' o 'public': quién puede verla en la web. */
     val visibility: String = "private",

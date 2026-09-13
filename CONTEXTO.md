@@ -4,14 +4,26 @@ Documento de traspaso: qué es el proyecto, cómo está montado hoy, **por qué*
 tomaron ciertas decisiones (para no deshacerlas sin querer) y qué queda
 pendiente.
 
-Última actualización: 2026-09-02 · Rama `master` · último commit `8e550df`.
+Última actualización: 2026-09-13 · Rama `master` · último commit `9e9eaa9`.
 
-> **El proyecto se llama Accordio** en todo lo que ve el usuario: la web, el
-> dominio (`accordio.site`) y la app. «Vivace» era el nombre anterior y sobrevive
-> en nombres internos que no ve nadie —`VivaceClient`, `GuitarChordsTheme`, las
-> claves `vivace_*` de `localStorage`, el directorio del proyecto—. **No se
-> renombran**: las claves de almacenamiento cerrarían la sesión a todo el mundo y
-> el `applicationId` (`com.guitarchords.app`) desinstalaría la app.
+> **El proyecto se llama Accordio**, y desde el renombrado también por dentro:
+> código, comentarios, documentación, tokens de estilo, rutas de los estáticos y
+> claves de almacenamiento. «Vivace» era el nombre anterior.
+>
+> Las claves SÍ se renombraron, pero **con mudanza**: `vivace_*` → `accordio_*`
+> en `localStorage` y `guitarchords_sync` → `accordio_sync` en el móvil, con
+> código que copia lo viejo a lo nuevo al arrancar. Sin esa mudanza, el cambio
+> de nombre habría cerrado la sesión a todo el mundo.
+>
+> **Lo que sigue diciendo el nombre viejo, y por qué no se toca:**
+>
+> | Sigue igual | Motivo |
+> |---|---|
+> | `applicationId` y paquete `com.guitarchords.app` | Cambiarlo publica OTRA app: desinstala la instalada, se lleva sus datos y rompe la actualización. |
+> | Clave de firma `vivace-release.jks`, alias `vivace` | Es la clave con la que está firmada la app publicada. |
+> | Base D1 `vivace`, Worker `guitarchords-sync`, bucket `guitarchords` | Son nombres reales de recursos en Cloudflare: cambiarlos en `wrangler.toml` no los renombra, apuntan a otra cosa. Renombrarlos de verdad es migrar datos con corte de servicio. |
+> | `/static/vivace.*` | Se mantienen como **alias** de `/static/accordio.*` mientras caduca la caché de quien tenga la página vieja abierta. |
+> | El prefijo `v` de los ids del visor (`vTitle`, `vBody`…) | Ahí la `v` es de **visor**, no de Vivace. La librería de cliente sí pasó de `v*` a `ac*` (`acRenderSong`, `acChordSvg`…). |
 
 ---
 
@@ -53,9 +65,11 @@ separador `---` y cuerpo con acordes entre llaves.
   - v16 `songs.remote_id` + `songs.visibility` (sincronización con cuenta)
   - v17 `songs.remote_rev`; `remote_id`/`dirty`/`deleted_at` en `playlists` y
     `song_versions`; tabla `pending_deletes` (cola de borrados)
-- Paquetes: `data/` (Room, orden y filtros), `sync/` (cliente, motor y worker),
-  `chords/` (diccionario, transposición, audio), `training/` (lógica pura del
-  entrenamiento), `tuner/`, `metronome/`, `print/`, `update/`, `ui/`.
+- Paquetes: `data/` (Room, orden y filtros), `sync/` (cliente `AccordioClient`,
+  motor y worker), `chords/` (diccionario, instrumentos —`Instrument.kt`—,
+  transposición, audio), `training/` (lógica pura del entrenamiento), `tuner/`
+  (detector de tono y catálogo de afinaciones —`Tunings.kt`—), `metronome/`,
+  `print/` (PDF idéntico al de la web), `update/`, `ui/`.
 - Piezas de sincronización: `sync/SyncPlan.kt` (reglas puras), `sync/SyncEngine.kt`
   (pull → aplicar → push por lotes), `sync/SyncWorker.kt` (WorkManager) y
   `sync/ChordSyncManager.kt` (blob de acordes, aparte). `R2Client`, `SyncManager`,
@@ -73,7 +87,8 @@ separador `---` y cuerpo con acordes entre llaves.
 | `src/db.js` | Consultas a D1. |
 | `src/migrate.js` | Indexado de lo que ya existía en R2, con backfill de carpetas/favoritos. |
 | `src/web-html.js` | Web de Accordio: `WEB_HTML`, `WEB_CSS` y `WEB_APP_JS`. |
-| `src/client-lib.js` | JS de navegador compartido, servido en `/static/vivace.js`. |
+| `src/client-lib.js` | JS de navegador compartido, servido en `/static/accordio.js`. |
+| `src/chords.js` | Diccionarios globales por instrumento (guitarra/ukelele) y variantes de digitación por partitura. |
 | `src/chords-db.js` | Biblioteca de acordes (generada; ver `tools/generar-chords-db.mjs`). |
 | `src/chords-seed.js` | Semilla curada de 348 acordes, anterior a la biblioteca. |
 
@@ -83,7 +98,7 @@ separador `---` y cuerpo con acordes entre llaves.
 | Ruta | Acceso |
 |---|---|
 | `GET /` | Web Accordio (pública) |
-| `GET /static/vivace.css`, `/static/vivace-app.js`, `/static/vivace.js` | Público, cacheado con ETag |
+| `GET /static/accordio.css`, `/static/accordio-app.js`, `/static/accordio.js` (y los alias `/static/vivace.*`) | Público, cacheado con ETag |
 | `POST /auth/register`, `POST /auth/login` | Público (con límite de intentos) |
 | `GET /auth/me` | Sesión |
 | `GET /api/songs/public[?owner=<id>\|all]` | Público (por defecto, lo del admin) |
@@ -96,14 +111,18 @@ separador `---` y cuerpo con acordes entre llaves.
 | `GET /api/sync/changes`, `POST /api/sync/push` | Sesión |
 | `GET`/`POST /api/playlists`, `PUT`/`DELETE /api/playlists/:id` | Sesión |
 | `GET`/`PUT /api/chords` | Sesión (blob de acordes por usuario) |
-| `GET /api/chords/global` | Público · `PUT` y `seed`: editor o admin |
+| `GET /api/chords/global[?instrument=guitarra\|ukelele]` | Público · `PUT` y `seed`: editor o admin |
 | `POST /admin/migrate?visibility=public[&backfill=1]` | Solo admin |
 | `GET /api/settings` | Público (hoy solo `registrationOpen`) |
 | `PUT /api/settings` | **Solo administrador** |
 | `GET /update`, `GET /update/apk` | Público (auto-actualización de la app) |
 
 Los tres listados de partituras (`/api/songs/public`, `/api/songs` y
-`/api/songs?trash=1`) aceptan `?limit=` (tope 500), `?offset=` y `?q=`.
+`/api/songs?trash=1`) aceptan `?limit=` (tope 500), `?offset=`, `?q=`, `?sort=`
+(`title`|`recent`|`old`) y `?genre=`. Los propios y la papelera aceptan además
+`?visibility=private|public`, `?favorite=1` y `?playlist=<id>|none`: **todos los
+filtros se resuelven en SQL**, nunca en el navegador (ver §4). `POST` y `PUT
+/api/songs` aceptan `chordVariants`; en `PUT`, si no viene, se conserva.
 
 Las rutas heredadas con token compartido (`/list`, `/object`, `/bodies`,
 `/delete`) y el panel `/admin` **ya no existen**.
@@ -115,90 +134,81 @@ resto— y `conHsts` añade HSTS de un año a lo que salga por HTTPS. `localhost
 está exento de las dos cosas.
 
 ### Almacenamiento
-- **D1** (`vivace`): usuarios, metadatos de partituras, permisos y la tabla
+- **D1** (`vivace`, nombre real del recurso; ver la nota del principio): usuarios,
+  metadatos de partituras, permisos y la tabla
   `settings` (clave→valor; hoy solo `registration_open`).
 - **R2** (`guitarchords`): el **texto** de cada partitura (`songs/*.txt`), el blob
-  de acordes por usuario (`users/<id>/chords.json`) y el APK (`app/`).
+  de acordes por usuario (`users/<id>/chords.json`), los diccionarios globales
+  —`chords/global-chords.json` (guitarra) y `chords/global-chords-ukelele.json`
+  (ukelele, **vacío hasta que se suba**)— y el APK (`app/`).
 - `songs.r2_key` apunta a la clave original: **la migración no mueve ficheros**.
 
 ---
 
 ## 3. Trabajo realizado en la última sesión
 
-Objetivo: dominio propio, la marca Accordio en la web y en la app, y que buscar,
-recomendar e imprimir dejen de ser aproximaciones.
+Lo de la sesión anterior (dominio propio, marca Accordio, buscador en el
+servidor, biblioteca de acordes, papel A4 y app 2.0) **ya está commiteado** en
+`9e9eaa9`; el detalle, en el mensaje de ese commit.
 
-**Nada de esto está commiteado**: 58 ficheros modificados y ~19 sin seguir. El
-mensaje de commit ya redactado está en `COMMIT_MESSAGE.txt`.
+**Nada de lo que sigue está commiteado**: 60 ficheros con cambios y 7 nuevos. El
+mensaje ya redactado está en `COMMIT_MESSAGE.txt`.
 
-### 3.1 Dominio propio y transporte
-- `accordio.site` como dominio del Worker (apex y `www`), declarado con
-  `custom_domain`: wrangler crea el DNS y el certificado al desplegar. La zona ya
-  estaba activa en la misma cuenta de Cloudflare.
-- Un solo host y siempre cifrado (ver §2, «Transporte»). El `www` y el HTTP se
-  arreglan **en el mismo salto**.
-- Conviene activar además **Always Use HTTPS** en la zona (SSL/TLS → Edge
-  Certificates): corta en el borde sin llegar a ejecutar el Worker.
-- La app apunta a `https://accordio.site` de fábrica. **Ojo**: la 1.0 que había
-  publicada se compiló con `UPDATE_BASE_URL` vacío, así que consulta la URL que
-  cada uno tenga en Sincronización; quien no la tenga configurada no verá la
-  actualización y tendrá que instalar la 2.0 a mano una vez.
+### 3.1 Web: cada pantalla es una ruta
+- Antes las pantallas se abrían llamándose entre ellas y se apilaban: al editor
+  se llegaba **sin sesión** y «atrás» con el ratón llevaba a sitios que no
+  tocaban. Ahora hay rutas en el fragmento (`PANTALLAS` en `web-html.js`) y
+  `navegar()` / `aplicarUrl()` son la única puerta; ver §4.18.
+- Guardia al resolver la URL: sin sesión → `#/entrar` recordando el destino; sin
+  rango → catálogo con aviso; `#/editar/<id>` carga la ficha y exige dueño o
+  admin. Cerrar sesión con el editor abierto saca de él.
+- Guardar/borrar hacen `replaceState`; cerrar el visor o el editor vuelve atrás
+  solo si la entrada la puso la aplicación (`history.state.propia`).
+- `openSong()` ya **no** toca el historial: lo ejecuta la ruta.
 
-### 3.2 Buscar, recomendar y altas de cuenta
-- **Buscar es del servidor** (`?q=` en los tres listados). Antes solo se filtraba
-  lo ya descargado —la primera página de 60—, así que una partitura más atrás no
-  existía para el buscador hasta pulsar «Cargar más» varias veces. Sin distinguir
-  mayúsculas ni tildes por los dos lados, y con los comodines de `LIKE` escapados.
-- **Recomendadas** al pie del visor: primero del mismo artista y, si no hay, del
-  mismo estilo. Dos consultas y no un `OR`, porque es una prioridad, no un filtro.
-- **Interruptor de altas** en Administración, solo administrador. El corte está
-  en `/auth/register`; la instalación vacía es la excepción a propósito.
+### 3.2 Las privadas no salían: filtros al servidor
+- «Solo privadas» (activo por defecto), favoritas, carpeta, categoría y orden se
+  aplicaban en el navegador sobre la página descargada. Van a SQL
+  (`filtrosPropios` y `ordenDe` en `db.js`, `filtrosDe` en `api.js`).
 
-### 3.3 Diccionario de acordes
-- 8.669 acordes (~14.400 nombres con alias en bemoles) de
-  **guitar-chords-db-json** (MIT), en `src/chords-db.js`, sembrados con «Importar
-  diccionario base». Se regenera con `node tools/generar-chords-db.mjs <repo> 4`.
-- El sembrado **solo añade**: no pisa la semilla curada ni lo editado a mano.
-- Destapó un fallo de fondo: el origen da los trastes **absolutos** y el
-  diccionario los quiere **relativos** al traste base. El dibujante de la web los
-  trataba como absolutos, así que todo acorde con traste base > 1 salía mal.
+### 3.3 Digitación elegida por partitura
+- `songs.chord_variants` (migración en `migrations.sql`), `chordVariants` en la
+  API, botón **Digitaciones** en el editor (modal `#varModal`) y uso en visor,
+  tira de acordes, hover y ficha del acorde. Ver §4.20.
 
-### 3.4 Marca Accordio en la web
-- Paquete `accordio_claro_oscuro.zip` (claro + oscuro). Los tokens `--ac-*` son
-  la única fuente de color y medida; encima, la capa `--vv-*` cuelga de los
-  **roles** del kit, que son los que cambian con el tema.
-- Montserrat + Poppins; JetBrains Mono se queda para la hoja y las cifras.
-- Iconos del kit como `<symbol>`; avisos y diálogos propios (se retiraron
-  `alert`/`confirm`/`prompt`, que bloquean la página y desentonan).
-- Lo que se usa del kit está copiado en `worker/brand/`, con un README que dice
-  qué se cogió y qué no. **El Worker no lee esa carpeta**: los recursos van
-  embebidos en `web-html.js`.
+### 3.4 Instrumentos: ukelele
+- **Worker**: `INSTRUMENTOS` en `chords.js`, blob propio por instrumento,
+  `?instrument=` en `/api/chords/global`. El de ukelele **está vacío**.
+- **Web**: selector en el visor (`#vInstr`) y en Acordes (`#chordInstr`),
+  «Importar JSON…», `acChordSvg` dibuja las cuerdas que traiga la digitación.
+  La preferencia es del lector (`accordio_instrument`), no de la partitura.
+- **App**: `Instrument` + `InstrumentPrefs`; `ChordDb`, `ChordLibrary`,
+  `ChordDiagram`, `ChordAudio` y `ChordPlayer` por instrumento. Selector en el
+  diccionario y en `ChordModal`; la práctica de cambios sigue el instrumento y
+  los ejercicios de entrenamiento siguen siendo de guitarra. Ver §4.21–23.
 
-### 3.5 Móvil y editor
-- Visor: cabecera de una línea con menú de acciones, mandos en panel que sube
-  desde abajo, versiones al final de la partitura. Se **mueven los mismos nodos**
-  según el ancho, no se duplican.
-- La partitura entra de ancho al abrirla (mide la línea más larga y el ancho real
-  de un carácter). Suelo de 13 px: es de legibilidad, no de encaje.
-- Editor a tres columnas —escribir, ver, la ficha—, alineadas porque comparten
-  estructura. La ficha hace su propio scroll y es columna hasta 1000 px.
+### 3.5 Afinador de la app
+- `tuner/Tunings.kt`: 9 afinaciones de guitarra y 4 de ukelele, frecuencias
+  calculadas desde la nota, cuerda más cercana en semitonos, elección guardada
+  (`TunerPrefs`). En `TunerScreen`: pastillas de instrumento + desplegable.
 
-### 3.6 Impresión
-- El PDF pasa a ser un **documento A4**: marca, título y artista arriba,
-  «Página N de M» abajo, repetidos en cada hoja.
-- Las páginas **se reparten midiendo** desde JS. En Chrome un `position:fixed` no
-  se repite por hoja y `counter(page)` devuelve `0` fuera de un margen con
-  nombre, que no está implementado.
-- El capo **no salía nunca**: la expresión que lo leía del rótulo vivía en un
-  literal de plantilla, donde `\D` no es escape válido. Ahora sale del dato.
+### 3.6 Editor web
+- Escribir/ver a todo el ancho; la ficha es una barra superior (rejilla de
+  6→4→3→2→1 columnas por ancho). Desde 901 px la página queda fija al alto de la
+  ventana y solo hacen scroll los dos paneles (`#editSplit{flex:1 1 0}`).
+- Capo como carrusel −/+ (`#eCapoStep`, 0–12 con vuelta), barras de scroll con
+  los colores de la marca y hoja del visor que crece hasta evitar el scroll
+  lateral (`width:max-content`).
 
-### 3.7 App Android con la misma imagen (2.0, publicada)
-- Paleta, tipografías, formas e iconos del kit; barra teal en las 23 pantallas
-  vía `accordioTopBarColors()`. Color dinámico apagado.
-- Los iconos se construyen en Kotlin con los colores del tema (`ui/icons/`): los
-  del kit tienen dos tonos y el coral cambia entre claro y oscuro.
-- Nombre visible «Accordio». `versionCode 2` / `2.0`, firmada con la clave de
-  siempre y **ya publicada** en `/update`.
+### 3.7 Papel
+- Marca de agua en cada hoja del PDF web: logo y «Accordio» en diagonal, 7 %.
+- `print/PrintAdapter.kt` reescrito para dar **el mismo documento** que la web
+  (ver §4.26). `PrintAdapter.print()` recibe `semitones` para la píldora de tono.
+
+### 3.8 Renombrado Vivace → Accordio y carpeta
+- Ver la nota del principio. La carpeta del proyecto pasó de
+  `~/Desktop/projects/vivace` a **`~/Desktop/projects/accordio`**; hay que abrir
+  Android Studio desde la ruta nueva.
 
 ---
 
@@ -223,10 +233,10 @@ mensaje de commit ya redactado está en `COMMIT_MESSAGE.txt`.
    Los valores salen de `tokens.css` / `tokens.dark.css` (copia en
    `worker/brand/`) y viven en tres sitios: `--ac-*` en `web-html.js`, `ac_*` en
    `res/values*/colors.xml` y `ui/theme/Theme.kt`. Encima va una capa semántica
-   (`--vv-*` en la web, `ExtendedColors` en la app).
+   (`--ui-*` en la web (antes `--vv-*`), `ExtendedColors` en la app).
 
    Lo que **no** hay que romper:
-   - **Los `--vv-*` cuelgan de los ROLES del kit** (`--ac-action`, `--ac-active`,
+   - **Los `--ui-*` cuelgan de los ROLES del kit** (`--ac-action`, `--ac-active`,
      `--ac-highlight`, `--ac-pending`, `--ac-nav-*`), no de las rampas. Son los
      roles los que cambian con el tema: la marca no se invierte, lo que cambia es
      quién hace de acción. En oscuro el teal no contrasta y pasa a titular; la
@@ -269,6 +279,57 @@ mensaje de commit ya redactado está en `COMMIT_MESSAGE.txt`.
     todo acorde con cejilla saldrá con los puntos corridos.
 17. **El diccionario global solo se amplía**: sembrar añade lo que falta y nunca
     pisa lo editado a mano ni la semilla curada.
+18. **En la web, cada pantalla es una ruta y la ruta es la única puerta.**
+    `#/`, `#/mias`, `#/papelera`, `#/propuestas`, `#/acordes`, `#/usuarios`,
+    `#/admin`, `#/entrar`, `#/cancion/<id>`, `#/nueva` y `#/editar/<id>`. Cada
+    una declara el permiso que pide (`sesion`, `editor`, `admin`) y el guardia se
+    aplica **al resolver la URL**: al arrancar, al navegar, al volver con
+    «atrás» y al cerrar sesión. Nada de abrir una pantalla llamando a su función:
+    así es como se llegaba al editor sin sesión y como el historial acababa
+    llevando a sitios que no correspondían. Editar comprueba además la ficha
+    (dueño o admin), porque tener sesión no es tener permiso sobre ESA partitura.
+19. **Los filtros del listado se resuelven en SQL, no en el navegador.** El
+    listado viene por páginas: filtrar solo lo descargado hacía que «Solo
+    privadas» o una carpeta salieran vacías hasta pulsar «Cargar más» varias
+    veces. En el navegador se queda **solo** el recorte por el texto del
+    buscador, que tiene que responder tecla a tecla.
+20. **La digitación de un acorde es de la partitura, no del diccionario.**
+    `songs.chord_variants` guarda, por instrumento, qué posición usa cada acorde
+    en esa canción (`{"guitarra":{"F":2}}`); el índice 0 no se guarda porque es
+    el valor por defecto. La API **solo la toca si el cliente la manda**: la app
+    Android envía la ficha entera y no la conoce, así que sin esa condición
+    guardar desde el móvil borraría lo elegido en la web.
+21. **El instrumento es un dato, no un ajuste de pintado.** En la app,
+    `Instrument` (guitarra 6 cuerdas / ukelele 4) lleva la afinación al aire, el
+    MIDI de cada cuerda y el nombre del diccionario; de ahí salen el diagrama,
+    el sonido y las digitaciones. Una `ChordShape` dice a qué instrumento
+    pertenece por cuántos trastes trae, así que un diagrama suelto se pinta y
+    suena bien sin arrastrar el instrumento por media aplicación.
+22. **En el ukelele no se exige la fundamental en el bajo.** Es una regla de
+    guitarra: la afinación estándar del ukelele es *reentrante* (la 4.ª cuerda
+    suena más aguda que la 3.ª) y no hay bajo que valga. Con la regla puesta, el
+    generador devolvía posturas altas en vez del Do al aire; sin ella salen las
+    de siempre (C 0003, Am 2000, F 2010, G 0232), y hay tests que las fijan.
+23. **Las digitaciones propias del usuario son de guitarra.** Se guardan con seis
+    trastes y sin instrumento, así que el editor de digitaciones solo se ofrece
+    en guitarra en vez de guardar algo que después nadie sabría leer.
+24. **Las afinaciones del afinador se calculan, no se copian.** `Tunings` parte
+    del nombre de la nota (La4 = 440 Hz): una tabla de decimales escritos a mano
+    es justo donde se cuela el error que hace que el afinador diga que estás
+    afinado cuando no lo estás. La cuerda más parecida se busca en SEMITONOS y
+    no en hercios, o el afinador se va siempre a las agudas.
+25. **Cada instrumento tiene su diccionario, con su blob y sus cuerdas.**
+    Guitarra son 6 valores por digitación y ukelele 4; mezclarlos obligaría a
+    adivinar de qué instrumento es cada posición. El de ukelele **existe y está
+    vacío**: la estructura está montada (blob propio, validación a 4 cuerdas,
+    selector en el visor y en el diccionario, importador de JSON) y lo único que
+    falta es el contenido.
+26. **La hoja impresa es la misma en la web y en la app.** La referencia es
+    `ESTILO_IMPRESION` (web); `PrintAdapter.kt` la reproduce en un lienzo de
+    `PrintedPdfDocument` (puntos a 72 ppp: px CSS × 0,75 y mm × 2,8346). Si se
+    cambia una, se cambia la otra. Montserrat y JetBrains Mono son fuentes
+    **variables**: en `Paint` hay que pedir el peso con
+    `setFontVariationSettings("'wght' 700")` o Montserrat sale en Thin.
 
 ---
 
@@ -278,14 +339,14 @@ mensaje de commit ya redactado está en `COMMIT_MESSAGE.txt`.
 # Worker · no hace falta cuenta de Cloudflare
 cd worker
 npm run check     # sintaxis de los módulos y del JS que se sirve
-npm test          # 187 tests
+npm test          # 205 tests
 npm run dev       # servidor local en https (ver §8: adopta el host del dominio)
 ```
 
 ```bash
 # App Android · Linux (el JDK del sistema ya vale: se instaló openjdk-21-jdk)
 export ANDROID_HOME=$HOME/Android/Sdk ANDROID_SDK_ROOT=$HOME/Android/Sdk
-./gradlew testDebugUnitTest     # 106 tests
+./gradlew testDebugUnitTest     # 121 tests
 ./gradlew assembleDebug         # APK en app/build/outputs/apk/debug/
 ./gradlew assembleRelease       # APK firmado (necesita keystore.properties)
 ```
@@ -295,9 +356,25 @@ un tiempo solo hubo JRE y la app no compilaba: AGP necesita `jlink`, y el error
 que da no menciona el JDK por ningún lado. Se instaló `openjdk-21-jdk` y quedó
 resuelto (ver §8 si tras actualizar Java falla AAPT2).
 
-Añadidos en la última sesión: dominio y HSTS, búsqueda, recomendadas, altas de
-cuenta y la biblioteca de acordes —incluida la paridad entre el navegador y el
-servidor al normalizar y al dibujar—.
+Añadidos en la última sesión: filtros del listado en SQL
+(`test/filtros.test.mjs`), instrumentos y variantes de digitación de punta a
+punta (`test/instrumentos.test.mjs`); en la app, posturas y audio de ukelele
+(`UkuleleChordsTest`) y afinaciones (`tuner/TuningsTest`).
+
+**Prueba de la web en un navegador sin cabeza** (lo que usó la última sesión
+para las rutas, los permisos, los filtros, las digitaciones y la mudanza de
+claves; el arnés vivía fuera del repo y hay que rehacerlo):
+1. Un script de Node importa `WEB_HTML`, `WEB_CSS`, `CLIENT_JS` y `WEB_APP_JS` y
+   escribe una sola página: CSS en `<style>`, JS en `<script>` **cambiando
+   `</script` por `<\/script`** (hay cadenas que lo contienen y cerrarían la
+   etiqueta), y sin el CSS nada se oculta (`.hidden` vive ahí).
+2. Antes de la aplicación, un `<script>` sustituye `window.fetch` por una API de
+   mentira con respuestas fijas y pone (o no) `accordio_token`.
+3. Otro `<script>` al final ejecuta los pasos con esperas y vuelca el resultado
+   en un `<div>` fuera de pantalla.
+4. `chromium --headless --no-sandbox --virtual-time-budget=10000 --dump-dom
+   pagina.html | grep -o 'id="TEST"[^>]*>[^<]*'`. Con `--screenshot` y
+   `--window-size=1440,900` se ve la maquetación.
 
 Cobertura de tests (lógica pura): transposición, biblioteca de acordes, audio de
 acordes, extracción de acordes de una canción, orden y filtrado de listas, formato
@@ -342,10 +419,11 @@ Linux/macOS:
 que las columnas **y las tablas** están, `wrangler deploy` y verificación de lo
 publicado (que incluye el 301 de HTTP y la cabecera HSTS en un dominio propio).
 
-**El próximo despliegue crea la tabla `settings`**, así que la base va antes que
-el código: `release` ya lo hace en ese orden. Un `wrangler deploy` a secas
-publicaría el código sin la tabla; el interruptor de altas cae a «abiertas» y no
-rompe nada, pero conviene no dejarlo así.
+**El próximo despliegue añade la columna `songs.chord_variants`** (y crea la
+tabla `settings` si aún no se hizo), así que **la base va antes que el código**:
+`release` ya lo hace en ese orden. Un `wrangler deploy` a secas publicaría un
+código que escribe en una columna que no existe, y **guardar cualquier
+partitura fallaría**.
 
 Para publicar la app: `./tools/deploy.sh app <apk> --url https://accordio.site`.
 Lee `versionCode`/`versionName` de `build.gradle.kts`, rechaza un APK firmado con
@@ -375,21 +453,26 @@ Estado actual de producción:
 ## 7. Pendiente
 
 **Lo primero de todo**
-- [ ] **COMMIT.** 58 ficheros modificados y ~19 sin seguir. Todo lo de §3 vive
-      solo en el árbol de trabajo. El mensaje está escrito en
-      `COMMIT_MESSAGE.txt`; el último commit del repositorio es `8e550df`.
-- [ ] **Desplegar la web.** Lo desplegado llega hasta «el papel como documento».
-      Sin subir: el capo en el PDF, el editor a tres columnas y su alineación, el
-      scroll del panel lateral y el logo en la cabecera del papel.
-      `cd worker && npx wrangler deploy`.
+- [ ] **COMMIT.** 60 ficheros con cambios y 7 nuevos: todo lo de §3 vive solo en
+      el árbol de trabajo. Mensaje en `COMMIT_MESSAGE.txt`; el último commit es
+      `9e9eaa9`.
+- [ ] **Desplegar la web con `./tools/deploy.sh release`**, NO con un
+      `wrangler deploy` a secas: hay columna nueva (§6). No consta ningún
+      despliegue posterior a `9e9eaa9`; el último documentado llegaba hasta «el
+      papel como documento», así que probablemente falten también el capo en el
+      PDF, el editor y el logo del papel de aquella sesión. Tras desplegar,
+      Ctrl+F5: los estáticos cambian de ruta (`/static/accordio.*`).
+- [ ] **Publicar la app** con los cambios de esta sesión (ukelele, afinador, PDF,
+      renombrado): subir `versionCode`/`versionName` y
+      `./tools/deploy.sh app <apk> --url https://accordio.site`.
 - [ ] **Copia de seguridad de la clave de firma** fuera de esta máquina (§9).
       Sin ella no se puede volver a actualizar la app nunca.
-- [ ] **Probar la app 2.0 en un dispositivo real.** Compila y sus 106 tests
-      pasan, pero **no se ha visto ejecutándose**: aquí no hay emulador. Mirar la
+- [ ] **Probar la app en un dispositivo real.** Compila y sus 121 tests pasan,
+      pero **no se ha visto ejecutándose**: aquí no hay emulador. Mirar la
       migración de Room 16 → 17 sobre una base con datos, la prueba del modo
-      avión (§5) y que la imagen nueva se vea bien.
-- [ ] Decidir qué hacer con `accordio_claro_oscuro.zip` (2,4 MB, sin seguir en la
-      raíz): ignorarlo o guardarlo. Lo que se usa ya está en `worker/brand/`.
+      avión (§5), el selector del afinador, los diagramas de ukelele, el PDF
+      impreso y que tras actualizar **se conserve la sesión** (mudanza de
+      `guitarchords_sync` → `accordio_sync`).
 
 **Convendría, sin prisa**
 - [ ] Activar **Always Use HTTPS** y **Minimum TLS 1.2** en la zona de Cloudflare
@@ -399,10 +482,28 @@ Estado actual de producción:
 - [ ] Sembrar el diccionario en producción si no se ha hecho: pestaña Acordes →
       **Importar diccionario base** (una vez; solo añade).
 
+**Ukelele: falta el contenido**
+- [ ] **Subir el diccionario de ukelele.** La estructura está hecha; el blob
+      (`chords/global-chords-ukelele.json`) está vacío. Dos formas de llenarlo:
+      pestaña **Acordes → Instrumento: Ukelele → Importar JSON…**, o
+      `PUT /api/chords/global?instrument=ukelele` con
+      `{"chords": {"Am": [{"frets":[2,0,0,0],"fingers":[2,0,0,0],"baseFret":1,"barres":[]}]}}`.
+      **Cuatro valores por digitación**, de la 4ª cuerda (Sol) a la 1ª (La); el
+      servidor rechaza los de seis. No hay semilla de ukelele: `seed` solo
+      siembra guitarra.
+- [ ] **Empaquetar el diccionario de ukelele en la app**: cuando exista, va a
+      `app/src/main/assets/chords/ukulele.json` con el formato de chords-db
+      (cuatro trastes por posición). `ChordDb` ya lo busca ahí; mientras no
+      esté, las posturas las calcula `ChordLibrary` y la pantalla lo avisa.
+- [ ] Llevar las **variantes por partitura** (`chordVariants`) a la app: hoy el
+      móvil no las lee (la API se las conserva al guardar desde el móvil, así
+      que no se pierden). El ukelele ya lo conoce: diccionario, diagramas,
+      sonido y afinador.
+
 **Mejoras identificadas y no abordadas**
 - [ ] Sincronizar el progreso del entrenamiento (mismo patrón que los acordes).
 - [ ] Niveles 4-5 del curriculum en el resto de áreas.
-- [ ] El parser de cabeceras está tres veces: `SongTextFormat.kt`, `vParseSong`
+- [ ] El parser de cabeceras está tres veces: `SongTextFormat.kt`, `acParseSong`
       y `migrate.js`. El de YouTube, dos (cliente y servidor), con un test que
       compara ambas para que no se separen.
 - [ ] CSP: ya no queda JS de la aplicación en línea, pero sigue habiendo un
@@ -413,6 +514,11 @@ Estado actual de producción:
       iconos para casi todos.
 - [ ] `wrangler` está en la 3.114 y hay 4.x. Actualizar en su momento, no justo
       antes de un despliegue.
+- [ ] Meter en el repo el arnés de pruebas de la web en navegador (§5): hoy hay
+      que rehacerlo cada vez.
+- [ ] Retirar, pasado un tiempo, las mudanzas de claves (`mudarClaves` en la web,
+      `mudar` en `SyncPrefs`), los alias `/static/vivace.*` y la cancelación de
+      los trabajos `vivace-sync*` de WorkManager.
 
 ---
 ## 8. Trampas conocidas
@@ -475,6 +581,26 @@ Estado actual de producción:
   activarse y acaba desplazándose la página entera. Pasó con la ficha del editor.
 - **`wrangler dev` adopta el host del `custom_domain`**, así que en local también
   redirige a HTTPS. Por eso `npm run dev` usa `--local-protocol https`.
+- **`node --test test/` falla en Node 22.23** con «Cannot find module …/test»:
+  por eso `npm test` pasa el patrón `"test/*.test.mjs"`.
+- **`test/fake-d1.mjs` asocia los valores POR POSICIÓN**: añadir una columna a un
+  `INSERT`/`UPDATE` de `db.js` sin mover los índices del fake deja tests en rojo
+  con valores cruzados (así salió `rev` 5 en vez de 6 al meter `chord_variants`).
+- **Los acentos graves también rompen dentro de un COMENTARIO** de `WEB_APP_JS`:
+  para el literal de plantilla un comentario no es nada especial.
+- **El CSS del editor tiene trampas de orden**: una `@media` escrita ANTES de la
+  regla base que quiere pisar pierde con la misma especificidad, y `#eSide label`
+  gana a `#eLockedWrap` (hace falta `#eSide #eLockedWrap`). Y si `#editSplit`
+  tiene `flex-basis:auto`, el alto de su contenido le quita sitio a la ficha:
+  va con `flex:1 1 0`.
+- **En Chromium con barras «Fluent», las flechas de la barra de scroll no se
+  quitan**: con `scrollbar-color` puesto, `::-webkit-scrollbar-button` no aplica.
+  El color y el grosor sí se respetan.
+- **WorkManager guarda los trabajos únicos por NOMBRE en disco**: renombrar uno
+  sin cancelar el viejo deja los dos corriendo para siempre.
+- **El prefijo `v` de la web significa dos cosas**: los ids del visor (`vTitle`,
+  `vBody`, `vChordBar`…, de *visor*) y, hasta el renombrado, la librería de
+  cliente (hoy `ac*`). Un buscar-y-reemplazar de `v[A-Z]` se lleva el visor.
 
 ---
 

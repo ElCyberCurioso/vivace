@@ -89,7 +89,7 @@ for (const clave of readdirSync(carpeta).sort()) {
 
 const compacto = entradas.join("|");
 const salida = `/*
- * Vivace · biblioteca de acordes (generada, no editar a mano).
+ * Accordio · biblioteca de acordes (generada, no editar a mano).
  *
  * Origen: github.com/szaza/guitar-chords-db-json (MIT). Se regenera con
  *   node tools/generar-chords-db.mjs <carpeta-del-repo> [posiciones]

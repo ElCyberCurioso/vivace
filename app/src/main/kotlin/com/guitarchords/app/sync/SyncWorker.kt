@@ -50,8 +50,17 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
     }
 
     companion object {
-        private const val UNICO = "vivace-sync"
-        private const val PERIODICO = "vivace-sync-periodico"
+        private const val UNICO = "accordio-sync"
+        private const val PERIODICO = "accordio-sync-periodico"
+
+        /*
+         * Los nombres de antes del renombrado. WorkManager identifica el trabajo
+         * periódico POR NOMBRE y lo guarda en disco: si no se cancelan, en los
+         * móviles que ya tenían la app seguiría corriendo el periódico viejo
+         * ADEMÁS del nuevo, sincronizando el doble para siempre.
+         */
+        private const val UNICO_ANTIGUO = "vivace-sync"
+        private const val PERIODICO_ANTIGUO = "vivace-sync-periodico"
 
         private val CON_RED = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
@@ -82,6 +91,8 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
 
         /** Red de seguridad: una pasada cada pocas horas por si algo se quedó atrás. */
         fun schedulePeriodic(context: Context) {
+            // Antes de programar el nuestro, se retira el del nombre viejo.
+            WorkManager.getInstance(context).cancelUniqueWork(PERIODICO_ANTIGUO)
             val peticion = PeriodicWorkRequestBuilder<SyncWorker>(6, TimeUnit.HOURS)
                 .setConstraints(CON_RED)
                 .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 5, TimeUnit.MINUTES)
@@ -95,6 +106,8 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
         fun cancel(context: Context) {
             WorkManager.getInstance(context).cancelUniqueWork(UNICO)
             WorkManager.getInstance(context).cancelUniqueWork(PERIODICO)
+            WorkManager.getInstance(context).cancelUniqueWork(UNICO_ANTIGUO)
+            WorkManager.getInstance(context).cancelUniqueWork(PERIODICO_ANTIGUO)
         }
     }
 }

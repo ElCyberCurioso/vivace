@@ -193,10 +193,10 @@ private data class RegisterRequest(val email: String, val password: String, val 
 class UnauthorizedException(message: String) : IOException(message)
 
 /**
- * Cliente de la API de Vivace: autenticación por email/contraseña y acceso a
+ * Cliente de la API de Accordio: autenticación por email/contraseña y acceso a
  * las partituras del usuario. Sustituyó al token compartido, ya retirado.
  */
-class VivaceClient(baseUrl: String, private val token: String = "") {
+class AccordioClient(baseUrl: String, private val token: String = "") {
 
     private val base = baseUrl.trim().trimEnd('/')
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }

@@ -43,9 +43,6 @@ val AccordioBody = FontFamily(
     Font(R.font.poppins_semibold, FontWeight.SemiBold)
 )
 
-/** Nombre anterior de la familia de texto; se mantiene para no romper llamadas. */
-val VivaceSans = AccordioBody
-
 /**
  * Monoespaciada (JetBrains Mono) para la HOJA de partitura y las cifras: BPM,
  * trastes, compases, hercios del afinador, XP.
@@ -54,7 +51,7 @@ val VivaceSans = AccordioBody
  * concesión: sin ancho fijo los acordes dejan de caer sobre su sílaba. Es la
  * misma decisión que en la web.
  */
-val VivaceMono = FontFamily(
+val AccordioMono = FontFamily(
     variableFont(R.font.jetbrains_mono, FontWeight.Normal),
     variableFont(R.font.jetbrains_mono, FontWeight.SemiBold)
 )

@@ -5,7 +5,7 @@ import { CLIENT_JS } from "./src/client-lib.js";
 
 // La librería es JavaScript de navegador que viaja como texto: se compila y se
 // pide la función, sin ejecutar nada más.
-const detect = new Function(CLIENT_JS + "\nreturn vDetectChords;")();
+const detect = new Function(CLIENT_JS + "\nreturn acDetectChords;")();
 
 const cases = [
   // [entrada, salida esperada]
@@ -43,4 +43,4 @@ if (detect("C G Am\nletra").marked !== 3) {
 }
 
 if (fail) { console.error(fail + " fallos"); process.exit(1); }
-console.log("vDetectChords: " + (cases.length + 2) + " casos OK");
+console.log("acDetectChords: " + (cases.length + 2) + " casos OK");

@@ -6,12 +6,12 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 
 /**
- * Servidor de Vivace por defecto. La web y la API son el mismo Worker, así que
+ * Servidor de Accordio por defecto. La web y la API son el mismo Worker, así que
  * esta URL vale tanto para el navegador como para la app; sigue siendo
  * editable en la pantalla de sincronización por si alguien despliega el Worker
  * en su propia cuenta.
  */
-const val VIVACE_BASE_URL = "https://accordio.site"
+const val ACCORDIO_BASE_URL = "https://accordio.site"
 
 /**
  * Persists the Worker endpoint, auth token and last-sync timestamp.
@@ -31,28 +31,68 @@ class SyncPrefs(context: Context) {
                 .build()
             EncryptedSharedPreferences.create(
                 context,
-                "guitarchords_sync_secure",
+                PREFS_SEGURAS,
                 masterKey,
                 EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
                 EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
             )
         }.getOrElse {
-            context.getSharedPreferences("guitarchords_sync", Context.MODE_PRIVATE)
-        }.also { secure ->
-            // Migración única desde las prefs antiguas en texto plano.
-            val legacy = context.getSharedPreferences("guitarchords_sync", Context.MODE_PRIVATE)
-            if (secure !== legacy && legacy.contains(KEY_TOKEN) && !secure.contains(KEY_TOKEN)) {
-                secure.edit()
-                    .putString(KEY_URL, legacy.getString(KEY_URL, ""))
-                    .putString(KEY_TOKEN, legacy.getString(KEY_TOKEN, ""))
-                    .putLong(KEY_LAST, legacy.getLong(KEY_LAST, 0L))
-                    .apply()
-                legacy.edit().clear().apply()
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        }.also { destino ->
+            /*
+             * Dos mudanzas, y las dos de una vez:
+             *  - las prefs en texto plano de antes de cifrar (guitarchords_sync);
+             *  - las que llevaban el nombre viejo del proyecto
+             *    (guitarchords_sync / guitarchords_sync_secure).
+             *
+             * Sin esto, cambiar el nombre del fichero de preferencias habría
+             * dejado a quien ya tenía la app sin URL, sin token y sin sesión, con
+             * los datos intactos en un fichero que ya no lee nadie.
+             */
+            mudar(context.getSharedPreferences(PREFS_ANTIGUAS, Context.MODE_PRIVATE), destino)
+            runCatching {
+                val masterKey = MasterKey.Builder(context)
+                    .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                    .build()
+                mudar(
+                    EncryptedSharedPreferences.create(
+                        context,
+                        PREFS_SEGURAS_ANTIGUAS,
+                        masterKey,
+                        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                    ),
+                    destino
+                )
             }
         }
 
+    /**
+     * Copia lo que haya en [origen] a [destino] y vacía el origen. No pisa nada:
+     * si la clave ya existe en el destino, manda el destino.
+     */
+    private fun mudar(origen: SharedPreferences, destino: SharedPreferences) {
+        if (origen === destino) return
+        val contenido = runCatching { origen.all }.getOrNull().orEmpty()
+        if (contenido.isEmpty()) return
+        val edit = destino.edit()
+        for ((clave, valor) in contenido) {
+            if (destino.contains(clave)) continue
+            when (valor) {
+                is String -> edit.putString(clave, valor)
+                is Long -> edit.putLong(clave, valor)
+                is Int -> edit.putInt(clave, valor)
+                is Boolean -> edit.putBoolean(clave, valor)
+                is Float -> edit.putFloat(clave, valor)
+                else -> Unit
+            }
+        }
+        edit.apply()
+        runCatching { origen.edit().clear().apply() }
+    }
+
     var baseUrl: String
-        get() = sp.getString(KEY_URL, VIVACE_BASE_URL).orEmpty()
+        get() = sp.getString(KEY_URL, ACCORDIO_BASE_URL).orEmpty()
         set(value) { sp.edit().putString(KEY_URL, value).apply() }
 
     var token: String
@@ -129,6 +169,12 @@ class SyncPrefs(context: Context) {
         set(value) { sp.edit().putLong(KEY_CHORDS_LAST, value).apply() }
 
     private companion object {
+        /** Ficheros de preferencias. Los `_ANTIGUAS` son de antes del renombrado. */
+        const val PREFS = "accordio_sync"
+        const val PREFS_SEGURAS = "accordio_sync_secure"
+        const val PREFS_ANTIGUAS = "guitarchords_sync"
+        const val PREFS_SEGURAS_ANTIGUAS = "guitarchords_sync_secure"
+
         const val KEY_URL = "base_url"
         const val KEY_TOKEN = "token"
         const val KEY_LAST = "last_sync"

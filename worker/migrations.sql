@@ -1,4 +1,4 @@
--- Vivace · cambios sobre tablas que ya existen.
+-- Accordio · cambios sobre tablas que ya existen.
 --
 -- schema.sql solo CREA lo que falta, y SQLite no tiene "ADD COLUMN IF NOT
 -- EXISTS": por eso los ALTER viven aquí. Al repetirlos fallan con "duplicate
@@ -28,3 +28,10 @@ CREATE TABLE IF NOT EXISTS settings (
   value      TEXT NOT NULL,
   updated_at INTEGER NOT NULL
 );
+
+-- Sexta tanda · variantes de acorde por partitura.
+--
+-- Qué digitación se usa para cada acorde de ESTA canción, por instrumento. Sin
+-- esto se pintaba siempre la primera del diccionario, que para media biblioteca
+-- es una postura alta que no es la que toca quien escribió la partitura.
+ALTER TABLE songs ADD COLUMN chord_variants TEXT NOT NULL DEFAULT '';

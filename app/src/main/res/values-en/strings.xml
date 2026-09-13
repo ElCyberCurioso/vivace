@@ -208,6 +208,25 @@
     <string name="mic_permission_msg">To detect guitar notes in real time.</string>
     <string name="grant_permission">Grant permission</string>
     <string name="play_a_string">Play a string</string>
+    <!-- Instrument and tunings -->
+    <string name="instrument">Instrument</string>
+    <string name="instrument_guitar">Guitar</string>
+    <string name="instrument_ukulele">Ukulele</string>
+    <string name="tuning">Tuning</string>
+    <string name="tuning_standard">Standard</string>
+    <string name="tuning_drop_d">Drop D</string>
+    <string name="tuning_half_step_down">Half step down (E♭)</string>
+    <string name="tuning_full_step_down">Whole step down (D)</string>
+    <string name="tuning_drop_c">Drop C</string>
+    <string name="tuning_dadgad">DADGAD</string>
+    <string name="tuning_open_g">Open G</string>
+    <string name="tuning_open_d">Open D</string>
+    <string name="tuning_open_e">Open E</string>
+    <string name="tuning_uke_standard">Standard C (reentrant G)</string>
+    <string name="tuning_uke_low_g">Low G</string>
+    <string name="tuning_uke_baritone">Baritone</string>
+    <string name="tuning_uke_d">D tuning</string>
+    <string name="ukulele_no_dictionary">Shapes are computed: the ukulele dictionary does not ship with the app yet.</string>
 
     <!-- Search -->
     <string name="search_placeholder">Title, artist, genre or lyrics…</string>

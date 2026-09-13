@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Vivace · despliegue a producción (Linux/macOS).
+# Accordio · despliegue a producción (Linux/macOS).
 #
 #   ./tools/deploy.sh preflight        comprueba TODO sin tocar nada
 #   ./tools/deploy.sh backend          primera vez: bucket R2, base D1 y secreto

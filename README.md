@@ -1,4 +1,4 @@
-# Vivace
+# Accordio
 
 Aplicación Android para guitarristas: gestiona partituras con letra y acordes, las sincroniza con tu propio servidor y añade herramientas de práctica (afinador, metrónomo, diccionario y un sistema de entrenamiento gamificado).
 
@@ -70,6 +70,10 @@ storePassword=…
 keyAlias=vivace
 keyPassword=…
 ```
+
+El fichero y el alias siguen diciendo `vivace`, y **no se tocan**: son los de la
+clave con la que ya está firmada la app publicada. Firmar con otra clave —o con
+otro alias— hace que Android rechace la actualización.
 
 Sin ese fichero, `assembleRelease` firma con la clave de depuración. Sube `versionCode` en cada publicación.
 
@@ -237,10 +241,19 @@ no el token de marca: el texto secundario sobre tarjeta clara (`#7B8E92` da
 3,2:1) y sobre tarjeta oscura (`#8CA6AA`, 3,6:1). Es la misma corrección que
 lleva la web.
 
-La app **pasa a llamarse Accordio** en lo visible (nombre del lanzador,
-cabecera). El `applicationId` sigue siendo `com.guitarchords.app`: cambiarlo
-desinstalaría la app de todo el mundo y rompería las actualizaciones. Por dentro
-quedan nombres antiguos (`VivaceClient`, `GuitarChordsTheme`) que no ve nadie.
+La app se llama **Accordio**, y desde el renombrado también por dentro: el
+código, los comentarios y las claves de preferencias. Lo que **no** cambia es lo
+que rompería algo si cambiara:
+
+| Sigue diciendo | Por qué no se toca |
+|---|---|
+| `applicationId = "com.guitarchords.app"` y el paquete `com.guitarchords.app` | Cambiarlo es publicar OTRA app: desinstala la instalada, se lleva sus datos y rompe la actualización automática. |
+| `vivace-release.jks`, `keyAlias=vivace` | Es la clave con la que está firmada la app publicada. |
+| La base D1 `vivace`, el Worker `guitarchords-sync`, el bucket `guitarchords` | Son nombres REALES de recursos de Cloudflare: cambiarlos en el `wrangler.toml` no los renombra, apunta a otros. |
+
+Las claves de almacenamiento sí se renombraron (`vivace_*` → `accordio_*` en la
+web, `guitarchords_sync` → `accordio_sync` en el móvil) **con mudanza**: al
+arrancar se copian del nombre viejo al nuevo, así que nadie pierde la sesión.
 
 ### Estilo: paquete de marca Accordio
 
@@ -381,7 +394,7 @@ Desde la web se gestiona el repertorio propio igual que desde el móvil: **lista
 
 Hay **conmutador de tema** claro/oscuro en la cabecera (se recuerda en el navegador; sin elección manda el del sistema).
 
-Los **avisos y las confirmaciones son de la propia web**, no del navegador: al compartir una partitura, al borrar o al pedir un texto sale un diálogo con la tipografía y los colores de Vivace (y respeta el tema claro/oscuro), más un aviso flotante que se va solo. `alert`, `confirm` y `prompt` desentonaban y, encima, congelaban la página mientras estaban abiertos: con el metrónomo sonando o una restauración en marcha se notaba.
+Los **avisos y las confirmaciones son de la propia web**, no del navegador: al compartir una partitura, al borrar o al pedir un texto sale un diálogo con la tipografía y los colores de Accordio (y respeta el tema claro/oscuro), más un aviso flotante que se va solo. `alert`, `confirm` y `prompt` desentonaban y, encima, congelaban la página mientras estaban abiertos: con el metrónomo sonando o una restauración en marcha se notaba.
 
 El **editor** son tres columnas: escribir, ver cómo queda y la ficha. Los campos
 —título, artista, categoría, lista, visibilidad, capo, enlaces— iban antes
@@ -416,7 +429,7 @@ tabla `settings` de D1.
 
 > El antiguo panel `/admin` con token compartido **se ha retirado**, junto con las rutas `/list`, `/object`, `/bodies` y `/delete`. Se saltaban el modelo de permisos: con un único token se leía, sobrescribía y borraba el texto de cualquier partitura, incluidas las privadas de otras cuentas. Lo que valía la pena de aquel panel vive ahora en la pestaña Administración, bajo la sesión y los roles.
 
-El CSS y el JavaScript se sirven aparte (`/static/vivace.css` y `/static/vivace-app.js`) con `ETag` y caché: antes iban dentro del HTML y se volvían a descargar ~90 KB en cada visita.
+El CSS y el JavaScript se sirven aparte (`/static/accordio.css` y `/static/accordio-app.js`) con `ETag` y caché: antes iban dentro del HTML y se volvían a descargar ~90 KB en cada visita.
 
 ## Worker y API
 
@@ -434,7 +447,7 @@ npm test                    # tests: auth, permisos, API, librería web y acorde
 
 ```bash
 npx wrangler r2 bucket create guitarchords
-npx wrangler d1 create vivace                       # pega el id en wrangler.toml
+npx wrangler d1 create vivace                       # pega el id en wrangler.toml (el nombre de la base no se renombra: ver arriba)
 npx wrangler d1 execute vivace --remote --file=schema.sql
 npx wrangler d1 execute vivace --remote --file=migrations.sql
 npx wrangler secret put AUTH_SECRET                 # clave para firmar sesiones

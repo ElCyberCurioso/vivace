@@ -50,7 +50,7 @@ class ChordSyncManager(
         // Sin sesión no hay nada que sincronizar: los acordes van por cuenta.
         if (base.isBlank() || token.isBlank()) return@withLock Outcome(0, false)
 
-        val client = VivaceClient(base, token)
+        val client = AccordioClient(base, token)
 
         // 1) Descargar el blob de la cuenta.
         //

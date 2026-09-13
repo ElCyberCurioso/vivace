@@ -1,9 +1,9 @@
 /*
- * Vivace · Worker de Cloudflare
+ * Accordio · Worker de Cloudflare
  * =============================
  * Una sola pieza hace de web, de API multiusuario y de almacén (D1 + R2).
  *
- *   GET  /                      Web de Vivace (pública)
+ *   GET  /                      Web de Accordio (pública)
  *   GET  /static/*              CSS, JS y favicon (cacheados, con ETag)
  *   POST /auth/*                Registro y sesión
  *   *    /api/*                 API multiusuario (ver src/api.js y src/sync.js)
@@ -182,7 +182,7 @@ const app = {
       return new Response(null, { status: 204, headers: cors });
     }
 
-    // --- Vivace web (pública): catálogo, visor y edición con sesión propia ---
+    // --- Web de Accordio (pública): catálogo, visor y edición con sesión propia ---
     if (path === "/" && request.method === "GET") {
       return staticResponse(request, WEB_HTML, "text/html; charset=utf-8", ETAG_WEB, 0);
     }
@@ -201,13 +201,22 @@ const app = {
     if (path === "/static/favicon-dark.svg" && request.method === "GET") {
       return staticResponse(request, FAVICON_DARK_SVG, "image/svg+xml; charset=utf-8", ETAG_ICON_DARK, 86400);
     }
-    if (path === "/static/vivace.js" && request.method === "GET") {
+    /*
+     * Los ficheros de la web. Las rutas /static/vivace.* se mantienen como
+     * alias de las nuevas: la PÁGINA que ya está en la caché de alguien pide
+     * las viejas, y sin ellas se quedaría sin estilos y sin aplicación hasta
+     * que recargara. Se pueden retirar cuando caduquen (una hora de cache).
+     */
+    if ((path === "/static/accordio.js" || path === "/static/vivace.js") &&
+        request.method === "GET") {
       return staticResponse(request, CLIENT_JS, "application/javascript; charset=utf-8", ETAG_JS, 3600);
     }
-    if (path === "/static/vivace-app.js" && request.method === "GET") {
+    if ((path === "/static/accordio-app.js" || path === "/static/vivace-app.js") &&
+        request.method === "GET") {
       return staticResponse(request, WEB_APP_JS, "application/javascript; charset=utf-8", ETAG_APP, 3600);
     }
-    if (path === "/static/vivace.css" && request.method === "GET") {
+    if ((path === "/static/accordio.css" || path === "/static/vivace.css") &&
+        request.method === "GET") {
       return staticResponse(request, WEB_CSS, "text/css; charset=utf-8", ETAG_CSS, 3600);
     }
 
@@ -231,7 +240,7 @@ const app = {
       });
     }
 
-    // --- API multiusuario (Vivace): /auth/* y /api/* con sesión propia ---
+    // --- API multiusuario (Accordio): /auth/* y /api/* con sesión propia ---
     try {
       const apiResponse = await handleApi(request, env, url, cors);
       if (apiResponse) return apiResponse;

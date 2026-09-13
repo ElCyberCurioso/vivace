@@ -26,8 +26,6 @@ import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
 
 private val NOTE_NAMES = arrayOf("C","C#","D","D#","E","F","F#","G","G#","A","A#","B")
-// Open-string note index (low E .. high E)
-private val OPEN_NOTES = intArrayOf(4, 9, 2, 7, 11, 4)
 
 /**
  * Diagrama de acorde. Con [onStringTap] cada cuerda se vuelve pulsable
@@ -76,12 +74,15 @@ fun ChordDiagram(
                     if (onStringTap == null) Modifier
                     else Modifier.pointerInput(shape) {
                         detectTapGestures { offset ->
-                            // Reparto horizontal en 6 columnas: la más a la
-                            // izquierda es la 6.ª cuerda (Mi grave).
+                            // Reparto horizontal en tantas columnas como
+                            // cuerdas: la de más a la izquierda es la más
+                            // grave que se dibuja (6.ª en guitarra, 4.ª en
+                            // ukelele).
+                            val cuerdas = shape.frets.size.coerceAtLeast(2)
                             val sideMargin = size.width * 0.12f
-                            val colStep = (size.width - 2 * sideMargin) / 5f
+                            val colStep = (size.width - 2 * sideMargin) / (cuerdas - 1)
                             val idx = ((offset.x - sideMargin) / colStep)
-                                .roundToInt().coerceIn(0, 5)
+                                .roundToInt().coerceIn(0, cuerdas - 1)
                             onStringTap(idx)
                         }
                     }
@@ -107,7 +108,13 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawDiagram(
     val usableW = w - 2 * sideMargin
     val usableH = h - topMargin - h * 0.08f
 
-    val strings = 6
+    /*
+     * Tantas cuerdas como trae la digitación: seis de guitarra, cuatro de
+     * ukelele. Antes estaba fijo en seis y un acorde de ukelele se habría
+     * pintado con dos cuerdas de más y los puntos corridos.
+     */
+    val strings = shape.frets.size.coerceIn(2, 8)
+    val openNotes = Instrument.forStringCount(strings).openPitchClasses
     val frets = 5
     val colStep = usableW / (strings - 1)
     val rowStep = usableH / frets
@@ -166,8 +173,8 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawDiagram(
     }
 
     shape.barres.forEach { barre ->
-        val from = barre.fromString.coerceIn(1, 6)
-        val to = barre.toString.coerceIn(1, 6)
+        val from = barre.fromString.coerceIn(1, strings)
+        val to = barre.toString.coerceIn(1, strings)
         val s1 = strings - from
         val s2 = strings - to
         val sLo = minOf(s1, s2)
@@ -204,7 +211,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawDiagram(
             )
         }
         if (showNotes) {
-            val noteIdx = ((OPEN_NOTES[s] + fret) % 12 + 12) % 12
+            val noteIdx = ((openNotes.getOrElse(s) { 0 } + fret) % 12 + 12) % 12
             val note = NOTE_NAMES[noteIdx]
             drawContext.canvas.nativeCanvas.apply {
                 val paint = android.graphics.Paint().apply {

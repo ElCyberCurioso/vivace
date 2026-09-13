@@ -57,18 +57,18 @@ test("los comodines de LIKE se escapan: % no lo devuelve todo", async () => {
 test("la copia del navegador normaliza igual que el servidor", () => {
   // Si una mitad quitara tildes y la otra no, el navegador escondería al pintar
   // justo los resultados que el servidor acaba de encontrar.
-  const vNormalizarBusqueda = new Function(CLIENT_JS + "\nreturn vNormalizarBusqueda;")();
+  const acNormalizarBusqueda = new Function(CLIENT_JS + "\nreturn acNormalizarBusqueda;")();
   for (const t of ["Bulería", "  ZOMBIE ", "Mañana", "Où", "Über", "canción 3", ""]) {
-    assert.equal(vNormalizarBusqueda(t), normalizarBusqueda(t), "discrepan con " + JSON.stringify(t));
+    assert.equal(acNormalizarBusqueda(t), normalizarBusqueda(t), "discrepan con " + JSON.stringify(t));
   }
 });
 
 test("el umbral cuenta letras y cifras, no espacios ni signos", () => {
-  const vLetrasYCifras = new Function(CLIENT_JS + "\nreturn vLetrasYCifras;")();
-  assert.equal(vLetrasYCifras("ab"), 2);
-  assert.equal(vLetrasYCifras("a b"), 2);
-  assert.equal(vLetrasYCifras("a-b."), 2);
-  assert.equal(vLetrasYCifras("ab1"), 3);
-  assert.equal(vLetrasYCifras("añ2"), 3);
-  assert.equal(vLetrasYCifras("   "), 0);
+  const acLetrasYCifras = new Function(CLIENT_JS + "\nreturn acLetrasYCifras;")();
+  assert.equal(acLetrasYCifras("ab"), 2);
+  assert.equal(acLetrasYCifras("a b"), 2);
+  assert.equal(acLetrasYCifras("a-b."), 2);
+  assert.equal(acLetrasYCifras("ab1"), 3);
+  assert.equal(acLetrasYCifras("añ2"), 3);
+  assert.equal(acLetrasYCifras("   "), 0);
 });

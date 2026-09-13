@@ -1,8 +1,8 @@
 /*
- * Vivace · aplicación web (servida en /).
+ * Accordio · aplicación web (servida en /).
  *
  * La página no lleva build: es HTML servido tal cual, con el CSS y el JS en
- * dos ficheros aparte (/static/vivace.css y /static/vivace-app.js).
+ * dos ficheros aparte (/static/accordio.css y /static/accordio-app.js).
  *
  * Están fuera del HTML a propósito. Antes iba todo en línea, así que cada
  * visita se descargaba ~90 KB otra vez —el HTML no se puede cachear, porque
@@ -11,12 +11,12 @@
  * revalida su ETag.
  */
 
-/** Hoja de estilos, servida en /static/vivace.css. */
+/** Hoja de estilos, servida en /static/accordio.css. */
 export const WEB_CSS = `  /* Accordio · paquete de estilo de marca (accordio-web-kit, claro + oscuro).
      Los valores --ac-* salen tal cual de tokens.css y tokens.dark.css del kit;
-     encima va la capa semántica --vv-* que es la que piden los componentes.
+     encima va la capa semántica --ui-* que es la que piden los componentes.
 
-     Regla 9 del kit: los --vv-* cuelgan de los ROLES (--ac-action, --ac-active,
+     Regla 9 del kit: los --ui-* cuelgan de los ROLES (--ac-action, --ac-active,
      --ac-highlight, --ac-pending, --ac-nav-*), no de las rampas de marca. Los
      roles ya cambian solos con el tema, así que casi nada hay que redefinir en
      oscuro: la marca no se invierte; lo que cambia es quién hace de acción.
@@ -63,40 +63,40 @@ export const WEB_CSS = `  /* Accordio · paquete de estilo de marca (accordio-we
     --ac-ease:cubic-bezier(.2,.8,.2,1); --ac-dur:200ms;
 
     /* ---- capa semántica de la web ---- */
-    --vv-bg:var(--ac-bg); --vv-surface:var(--ac-surface); --vv-surface-alt:var(--ac-surface-2);
-    --vv-border:var(--ac-line); --vv-border-strong:var(--ac-primary-200);
-    --vv-text:var(--ac-body); --vv-head:var(--ac-ink);
-    --vv-text-muted:var(--ac-muted); --vv-text-subtle:var(--ac-muted);
-    --vv-accent:var(--ac-action); --vv-accent-strong:var(--ac-action-hover);
-    --vv-on-accent:var(--ac-on-action); --vv-accent-soft:var(--ac-primary-100);
+    --ui-bg:var(--ac-bg); --ui-surface:var(--ac-surface); --ui-surface-alt:var(--ac-surface-2);
+    --ui-border:var(--ac-line); --ui-border-strong:var(--ac-primary-200);
+    --ui-text:var(--ac-body); --ui-head:var(--ac-ink);
+    --ui-text-muted:var(--ac-muted); --ui-text-subtle:var(--ac-muted);
+    --ui-accent:var(--ac-action); --ui-accent-strong:var(--ac-action-hover);
+    --ui-on-accent:var(--ac-on-action); --ui-accent-soft:var(--ac-primary-100);
     /* Estado seleccionado/activo: turquesa (regla 1, un acento por bloque). */
-    --vv-active:var(--ac-active); --vv-on-active:var(--ac-primary-800);
-    --vv-active-soft:var(--ac-turquoise-200);
+    --ui-active:var(--ac-active); --ui-on-active:var(--ac-primary-800);
+    --ui-active-soft:var(--ac-turquoise-200);
     /* Amarillo SOLO como estado: capo, estrellas, propuestas pendientes. */
-    --vv-state:var(--ac-pending); --vv-on-state:var(--ac-yellow-900);
-    --vv-state-soft:#FFFBE6; --vv-state-text:var(--ac-yellow-900);
-    --vv-danger-soft:#FFE9E9; --vv-danger-text:var(--ac-coral-700);
+    --ui-state:var(--ac-pending); --ui-on-state:var(--ac-yellow-900);
+    --ui-state-soft:#FFFBE6; --ui-state-text:var(--ac-yellow-900);
+    --ui-danger-soft:#FFE9E9; --ui-danger-text:var(--ac-coral-700);
     /* Regla 5: coral vale de relleno, no de texto. Sobre crema, el coral de
        marca da 2,4:1; para LEER acordes hace falta la rampa 700. En oscuro sí
        vale el rol, que ya viene aclarado (#FF8A8A sobre #0F2429). */
-    --vv-chord:var(--ac-coral-700); --vv-danger:var(--ac-coral-700);
-    --vv-danger-solid:var(--ac-highlight); --vv-on-danger:var(--ac-on-highlight);
-    --vv-beat:var(--ac-active);
-    --vv-focus:var(--ac-focus);
-    --vv-header-bg:var(--ac-nav-bg); --vv-header-text:var(--ac-nav-fg);
-    --vv-glow:none;
-    --vv-shadow-card:var(--ac-shadow-sm); --vv-shadow-pop:var(--ac-shadow-md);
-    --vv-font-ui:var(--ac-font-body); --vv-font-head:var(--ac-font-heading);
+    --ui-chord:var(--ac-coral-700); --ui-danger:var(--ac-coral-700);
+    --ui-danger-solid:var(--ac-highlight); --ui-on-danger:var(--ac-on-highlight);
+    --ui-beat:var(--ac-active);
+    --ui-focus:var(--ac-focus);
+    --ui-header-bg:var(--ac-nav-bg); --ui-header-text:var(--ac-nav-fg);
+    --ui-glow:none;
+    --ui-shadow-card:var(--ac-shadow-sm); --ui-shadow-pop:var(--ac-shadow-md);
+    --ui-font-ui:var(--ac-font-body); --ui-font-head:var(--ac-font-heading);
     /* El kit no trae monoespaciada y la hoja no puede prescindir de ella: los
        acordes van sobre la sílaba exacta, columna a columna. Se queda JetBrains
        Mono para partitura, cifras y diagramas. */
-    --vv-font-mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-    --vv-radius-sm:var(--ac-radius-sm); --vv-radius-md:var(--ac-radius-md);
-    --vv-radius-lg:var(--ac-radius-lg); --vv-radius-pill:var(--ac-radius-pill);
+    --ui-font-mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --ui-radius-sm:var(--ac-radius-sm); --ui-radius-md:var(--ac-radius-md);
+    --ui-radius-lg:var(--ac-radius-lg); --ui-radius-pill:var(--ac-radius-pill);
     /* Ancho de la hoja de partitura, en caracteres del tipo monoespaciado.
        Va en ch y no en px a propósito: al cambiar el tamaño de letra, la hoja
        sigue teniendo el mismo número de columnas y la lectura no se descoloca. */
-    --vv-sheet:68ch;
+    --ui-sheet:68ch;
   }
 
   /* Modo oscuro del kit (tokens.dark.css), palabra por palabra. Se escribe dos
@@ -123,17 +123,17 @@ export const WEB_CSS = `  /* Accordio · paquete de estilo de marca (accordio-we
       /* Lo único que la capa semántica tiene que rectificar en oscuro: los
          rellenos tintados y el borde fuerte, que en claro salen de rampas
          claras, y el coral de texto, que aquí ya es legible como rol. */
-      --vv-border-strong:#2F636B;
-      --vv-accent-soft:rgba(78,205,196,.16);
-      --vv-active-soft:rgba(109,217,208,.20);
-      --vv-chord:var(--ac-highlight); --vv-danger:var(--ac-highlight);
-      --vv-on-active:var(--ac-primary-800);
-      --vv-state-soft:rgba(255,230,109,.16); --vv-state-text:var(--ac-yellow);
-      --vv-danger-soft:rgba(255,138,138,.16); --vv-danger-text:var(--ac-highlight);
+      --ui-border-strong:#2F636B;
+      --ui-accent-soft:rgba(78,205,196,.16);
+      --ui-active-soft:rgba(109,217,208,.20);
+      --ui-chord:var(--ac-highlight); --ui-danger:var(--ac-highlight);
+      --ui-on-active:var(--ac-primary-800);
+      --ui-state-soft:rgba(255,230,109,.16); --ui-state-text:var(--ac-yellow);
+      --ui-danger-soft:rgba(255,138,138,.16); --ui-danger-text:var(--ac-highlight);
       /* El gris del kit (#8CA6AA) se queda en 3,6:1 sobre la tarjeta oscura: el
          artista y las notas al pie costaban de leer. Se sube el ROL de texto
          secundario; el token de marca --ac-muted no se toca. */
-      --vv-text-muted:#A9C3C6; --vv-text-subtle:#93AFB2;
+      --ui-text-muted:#A9C3C6; --ui-text-subtle:#93AFB2;
     }
   }
   [data-theme=dark] {
@@ -153,25 +153,25 @@ export const WEB_CSS = `  /* Accordio · paquete de estilo de marca (accordio-we
     --ac-shadow-sm:0 1px 2px rgba(0,0,0,.30), 0 2px 6px rgba(0,0,0,.24);
     --ac-shadow-md:0 4px 10px rgba(0,0,0,.34), 0 12px 28px rgba(0,0,0,.30);
     --ac-shadow-lg:0 10px 24px rgba(0,0,0,.40), 0 28px 60px rgba(0,0,0,.36);
-    --vv-border-strong:#2F636B;
-    --vv-accent-soft:rgba(78,205,196,.16);
-    --vv-active-soft:rgba(109,217,208,.20);
-    --vv-chord:var(--ac-highlight); --vv-danger:var(--ac-highlight);
-    --vv-on-active:var(--ac-primary-800);
-    --vv-state-soft:rgba(255,230,109,.16); --vv-state-text:var(--ac-yellow);
-    --vv-danger-soft:rgba(255,138,138,.16); --vv-danger-text:var(--ac-highlight);
-    --vv-text-muted:#A9C3C6; --vv-text-subtle:#93AFB2;
+    --ui-border-strong:#2F636B;
+    --ui-accent-soft:rgba(78,205,196,.16);
+    --ui-active-soft:rgba(109,217,208,.20);
+    --ui-chord:var(--ac-highlight); --ui-danger:var(--ac-highlight);
+    --ui-on-active:var(--ac-primary-800);
+    --ui-state-soft:rgba(255,230,109,.16); --ui-state-text:var(--ac-yellow);
+    --ui-danger-soft:rgba(255,138,138,.16); --ui-danger-text:var(--ac-highlight);
+    --ui-text-muted:#A9C3C6; --ui-text-subtle:#93AFB2;
   }
   * { box-sizing:border-box; }
   a { color:var(--ac-turquoise-700); text-decoration:none; }
-  a:hover { color:var(--vv-accent); }
-  a.brand { color:var(--vv-header-text); }
-  a.brand:hover { color:var(--vv-header-text); }
+  a:hover { color:var(--ui-accent); }
+  a.brand { color:var(--ui-header-text); }
+  a.brand:hover { color:var(--ui-header-text); }
   /* Fondo crema con el mosaico de notas del kit (regla 6: solo sobre crema y
      sin tintar). En oscuro no se pone: el mosaico está dibujado en tonos crema
      y sobre el fondo oscuro sería ruido. */
-  body { margin:0; background:var(--vv-bg); color:var(--vv-text);
-         font:400 16px/1.6 var(--vv-font-ui); -webkit-font-smoothing:antialiased; }
+  body { margin:0; background:var(--ui-bg); color:var(--ui-text);
+         font:400 16px/1.6 var(--ui-font-ui); -webkit-font-smoothing:antialiased; }
   /* Mosaico de notas de fondo (regla 6): va en el fondo de PÁGINA y tal cual,
      sin tintar. El kit trae su versión night, así que ahora sale en los dos
      temas: la elige el token --ac-pattern. En una capa propia detrás de todo y
@@ -179,51 +179,78 @@ export const WEB_CSS = `  /* Accordio · paquete de estilo de marca (accordio-we
   body::before { content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
                  background-image:var(--ac-pattern); background-repeat:repeat;
                  background-size:400px 400px; }
-  h1, h2, h3, h4 { font-family:var(--vv-font-head); color:var(--vv-head);
+  h1, h2, h3, h4 { font-family:var(--ui-font-head); color:var(--ui-head);
                    font-weight:700; letter-spacing:-.02em; line-height:1.15; }
   button, input, select, textarea { font:inherit; color:inherit; }
   /* Regla 8 del kit: el foco se ve siempre, y en turquesa. */
-  :focus-visible { outline:3px solid var(--vv-focus); outline-offset:2px;
-                   border-radius:var(--vv-radius-sm); }
+  :focus-visible { outline:3px solid var(--ui-focus); outline-offset:2px;
+                   border-radius:var(--ui-radius-sm); }
   ::selection { background:var(--ac-turquoise-200); color:var(--ac-ink); }
   /* Nada cuadrado (regla 3): los controles son píldoras. */
   /* Los botones secundarios tienen SUPERFICIE, no solo contorno: sobre el crema
      con mosaico, un borde pálido y letra fina no se leían como algo pulsable, y
      «Cargar más» directamente se perdía en el fondo. */
-  button { cursor:pointer; border:1.5px solid var(--vv-border-strong);
-           background:var(--vv-surface-alt); color:var(--vv-accent);
-           border-radius:var(--vv-radius-pill); padding:9px 18px;
+  button { cursor:pointer; border:1.5px solid var(--ui-border-strong);
+           background:var(--ui-surface-alt); color:var(--ui-accent);
+           border-radius:var(--ui-radius-pill); padding:9px 18px;
            font-weight:600; font-size:14px; white-space:nowrap;
-           box-shadow:var(--vv-shadow-card);
+           box-shadow:var(--ui-shadow-card);
            transition:background var(--ac-dur) var(--ac-ease), color var(--ac-dur) var(--ac-ease),
                       border-color var(--ac-dur) var(--ac-ease); }
   /* El tinte de hover es para los CONTROLES. Las tarjetas también son <button>
-     (se pulsan enteras), pero tienen superficie propia, y --vv-accent-soft es
+     (se pulsan enteras), pero tienen superficie propia, y --ui-accent-soft es
      semitransparente: al pasar por encima dejaban ver el mosaico del fondo a
      través de la tarjeta. Se excluyen aquí y se les da su propio hover. */
-  button:hover:not(.card):not(.chordCard) { background:var(--vv-accent-soft);
-                                            border-color:var(--vv-accent); }
-  button.primary { background:var(--vv-accent); color:var(--vv-on-accent);
+  button:hover:not(.card):not(.chordCard) { background:var(--ui-accent-soft);
+                                            border-color:var(--ui-accent); }
+  button.primary { background:var(--ui-accent); color:var(--ui-on-accent);
                    border-color:transparent; }
-  button.primary:hover { background:var(--vv-accent-strong); }
-  button.ghost { border-color:transparent; background:transparent; color:var(--vv-text);
+  button.primary:hover { background:var(--ui-accent-strong); }
+  button.ghost { border-color:transparent; background:transparent; color:var(--ui-text);
                  box-shadow:none; }
   button:disabled { opacity:.45; cursor:default; background:transparent; }
   input[type=text], input[type=email], input[type=password], input[type=url], textarea, select {
-    background:var(--vv-surface-alt); border:1.5px solid var(--vv-border);
-    border-radius:var(--vv-radius-md); padding:10px 14px; width:100%; color:var(--vv-head); }
+    background:var(--ui-surface-alt); border:1.5px solid var(--ui-border);
+    border-radius:var(--ui-radius-md); padding:10px 14px; width:100%; color:var(--ui-head); }
   input:hover, textarea:hover, select:hover { border-color:var(--ac-turquoise-400); }
-  input:focus, textarea:focus, select:focus { border-color:var(--vv-focus); outline:none;
-    box-shadow:0 0 0 3px var(--vv-active-soft); }
-  input::placeholder, textarea::placeholder { color:var(--vv-text-subtle); }
+  input:focus, textarea:focus, select:focus { border-color:var(--ui-focus); outline:none;
+    box-shadow:0 0 0 3px var(--ui-active-soft); }
+  input::placeholder, textarea::placeholder { color:var(--ui-text-subtle); }
+
+  /*
+   * Barras de desplazamiento de la casa. Las nativas salen en gris de sistema y
+   * en modo oscuro son una franja clara que corta la pagina por la mitad.
+   *
+   * Se escribe dos veces porque no hay una sola forma: scrollbar-color es el
+   * estandar (Firefox y Chrome moderno) y ::-webkit-scrollbar es lo que entienden
+   * Safari y los Chrome antiguos. El que no reconozca una se queda con la otra.
+   *
+   * El borde transparente con background-clip es lo que deja aire alrededor del
+   * pulgar: sin el toca los dos lados del canal y parece una barra de progreso.
+   */
+  html { scrollbar-color:var(--ui-border-strong) transparent; scrollbar-width:thin; }
+  *::-webkit-scrollbar { width:11px; height:11px; }
+  *::-webkit-scrollbar-track { background:transparent; }
+  *::-webkit-scrollbar-thumb { background:var(--ui-border-strong); border-radius:999px;
+                               border:3px solid transparent; background-clip:content-box; }
+  *::-webkit-scrollbar-thumb:hover { background:var(--ui-accent); background-clip:content-box; }
+  *::-webkit-scrollbar-corner { background:transparent; }
+  /* Las flechas de los extremos las pinta el sistema y no se dejan colorear: se
+     quitan enteras. Hacen falta las tres declaraciones —hay versiones que
+     ignoran display en esta pseudoclase— y las variantes con :start/:end, que
+     son las que dibuja Chrome de verdad. */
+  *::-webkit-scrollbar-button,
+  *::-webkit-scrollbar-button:vertical:start, *::-webkit-scrollbar-button:vertical:end,
+  *::-webkit-scrollbar-button:horizontal:start, *::-webkit-scrollbar-button:horizontal:end {
+    display:none; width:0; height:0; -webkit-appearance:none; background:transparent; }
   /* Barra superior teal maciza, como en la guía del kit. */
   header { position:sticky; top:0; z-index:10; display:flex; gap:12px; align-items:center;
-           padding:12px 24px; background:var(--vv-header-bg); color:var(--vv-header-text);
+           padding:12px 24px; background:var(--ui-header-bg); color:var(--ui-header-text);
            border-bottom:0; box-shadow:var(--ac-shadow-sm); }
   header .brand { display:flex; align-items:center; gap:12px; min-width:0; }
   header .brand svg { flex:0 0 auto; }
   header h1 { margin:0; font-size:22px; font-weight:700; letter-spacing:-.02em; line-height:1;
-              color:var(--vv-header-text); }
+              color:var(--ui-header-text); }
   header .kicker { display:block; font-size:9px; letter-spacing:.18em; font-weight:600;
                    text-transform:uppercase; color:var(--ac-turquoise-200); margin-top:4px; }
   /* Sobre el teal, los botones de la cabecera van en claro. */
@@ -231,7 +258,7 @@ export const WEB_CSS = `  /* Accordio · paquete de estilo de marca (accordio-we
      ahí el fondo ya es macizo y una píldora blanca con letra clara se quedaba
      ilegible. Contorno claro y letra crema. */
   header button { background:transparent; box-shadow:none;
-                  border-color:rgba(242,250,246,.45); color:var(--vv-header-text); }
+                  border-color:rgba(242,250,246,.45); color:var(--ui-header-text); }
   /* El velo claro de antes quedaba casi del color del icono y se lo comía. Sobre
      la barra siempre hay teal, así que el hover OSCURECE en vez de aclarar, y el
      icono se pasa al amarillo de la marca (lo que el kit usa para los iconos de
@@ -247,66 +274,96 @@ export const WEB_CSS = `  /* Accordio · paquete de estilo de marca (accordio-we
   header #who { color:var(--ac-turquoise-200); }
   header .grow { flex:1; }
   main { padding:16px; max-width:1520px; margin:0 auto; }
+  /*
+   * Con el editor abierto la pagina cambia de reglas: <main> deja de estar
+   * limitado a 1520 px y el cuerpo pasa a ser una columna flexible. Asi la
+   * altura que le queda al editor sale sola de lo que mide la cabecera, sin
+   * restar a mano un numero que se queda viejo en cuanto la cabecera cambia.
+   *
+   * Solo de 901 px para arriba: en estrecho la hoja y la vista previa van una
+   * debajo de otra y atarlas a la ventana las dejaba en dos rendijas. Ahi la
+   * pagina se desplaza como cualquier otra.
+   */
+  body:has(#editView:not(.hidden)) main { max-width:none; padding:12px 14px; margin:0; }
+  @media (min-width:901px) {
+    /* Alto exacto de ventana y sin desplazamiento: lo unico que se recorre son
+       la hoja y la vista previa, cada una por dentro. Que se moviese la pagina
+       entera sacaba la barra de herramientas de la pantalla justo cuando hace
+       falta, y dejaba dos barras verticales compitiendo. */
+    html:has(#editView:not(.hidden)), body:has(#editView:not(.hidden)) {
+      height:100vh; overflow:hidden; }
+    body:has(#editView:not(.hidden)) { display:flex; flex-direction:column; }
+    body:has(#editView:not(.hidden)) header { flex:0 0 auto; }
+    /* Sin suelo: las dos cajas se quedan con lo que sobre, y si sobra poco se
+       recorren por dentro en vez de empujar la pagina. */
+    body:has(#editView:not(.hidden)) #eContent,
+    body:has(#editView:not(.hidden)) #ePreview { min-height:0; }
+    /* margin:0 es imprescindible: el «margin:0 auto» de arriba deja el ancho de
+       <main> en el de su contenido —los margenes automaticos anulan el estirado
+       del contenedor flexible— y la pagina se quedaba a medio ancho. */
+    body:has(#editView:not(.hidden)) main { flex:1 1 auto; min-height:0; display:flex; }
+    body:has(#editView:not(.hidden)) #editView { flex:1 1 auto; min-width:0; min-height:0; display:flex; }
+  }
   #listView, #authView { max-width:960px; margin:0 auto; }
   .tabs { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
-  .tabs button { border-color:var(--vv-border-strong); color:var(--vv-accent); }
-  .tabs button[aria-selected=true] { background:var(--vv-active); color:var(--vv-on-active);
-                                     border-color:transparent; box-shadow:var(--vv-shadow-pop); }
+  .tabs button { border-color:var(--ui-border-strong); color:var(--ui-accent); }
+  .tabs button[aria-selected=true] { background:var(--ui-active); color:var(--ui-on-active);
+                                     border-color:transparent; box-shadow:var(--ui-shadow-pop); }
   .tabs button[aria-selected=true]:hover { background:var(--ac-turquoise-600); }
   .grid { display:grid; gap:10px; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); align-items:start; }
   /* Las tarjetas son <button>, y la regla de arriba les pone nowrap: sin esto
      un titulo largo se sale de la tarjeta por la derecha. */
   .card, .chordCard { white-space:normal; }
   .card { display:block; text-align:left; width:100%; border:1.5px solid transparent;
-          border-radius:var(--vv-radius-lg); padding:16px 18px; background:var(--vv-surface);
-          box-shadow:var(--vv-shadow-card);
+          border-radius:var(--ui-radius-lg); padding:16px 18px; background:var(--ui-surface);
+          box-shadow:var(--ui-shadow-card);
           transition:box-shadow var(--ac-dur) var(--ac-ease),
                      border-color var(--ac-dur) var(--ac-ease),
                      transform var(--ac-dur) var(--ac-ease); }
   /* La tarjeta no cambia de color al pasar por encima: se levanta. Mantiene su
      superficie opaca (si no, se transparenta sobre el mosaico) y solo se le
      suben la sombra y el borde. */
-  .card:hover { background:var(--vv-surface); border-color:var(--vv-active);
-                box-shadow:var(--vv-shadow-pop); transform:translateY(-2px); }
-  .card:active { transform:translateY(0); box-shadow:var(--vv-shadow-card); }
-  .card .t { font-family:var(--vv-font-head); font-weight:700; letter-spacing:-.01em;
-             color:var(--vv-head); }
-  .card .a { font-size:13px; color:var(--vv-text-muted); overflow-wrap:anywhere; }
+  .card:hover { background:var(--ui-surface); border-color:var(--ui-active);
+                box-shadow:var(--ui-shadow-pop); transform:translateY(-2px); }
+  .card:active { transform:translateY(0); box-shadow:var(--ui-shadow-card); }
+  .card .t { font-family:var(--ui-font-head); font-weight:700; letter-spacing:-.01em;
+             color:var(--ui-head); }
+  .card .a { font-size:13px; color:var(--ui-text-muted); overflow-wrap:anywhere; }
   .card .t { font-weight:600; overflow-wrap:anywhere; }
-  #vSource { border:1px solid var(--vv-border-strong); border-radius:var(--vv-radius-md);
+  #vSource { border:1px solid var(--ui-border-strong); border-radius:var(--ui-radius-md);
              padding:9px 15px; font-size:14px; font-weight:500; white-space:nowrap;
-             color:var(--vv-text); }
-  #vSource:hover { background:var(--vv-accent-soft); color:var(--vv-text); }
+             color:var(--ui-text); }
+  #vSource:hover { background:var(--ui-accent-soft); color:var(--ui-text); }
   /* Tira de versiones bajo la cabecera del visor. */
   .versions { display:flex; gap:6px; overflow-x:auto; padding:8px 14px;
-              background:var(--vv-surface); border-bottom:1px solid var(--vv-border); }
+              background:var(--ui-surface); border-bottom:1px solid var(--ui-border); }
   .versions button { flex:0 0 auto; padding:6px 12px; font-size:13px; }
-  .versions button[aria-pressed=true] { background:var(--vv-active); color:var(--vv-on-active);
+  .versions button[aria-pressed=true] { background:var(--ui-active); color:var(--ui-on-active);
                                         border-color:transparent; }
   .versions .sep { flex:1 1 auto; min-width:8px; }
   /* Fichas de la cola de revisión y del listado de usuarios. */
   .fila { display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap;
-          border:1px solid var(--vv-border); border-radius:var(--vv-radius-lg);
-          background:var(--vv-surface); padding:14px 16px; margin-bottom:10px; }
+          border:1px solid var(--ui-border); border-radius:var(--ui-radius-lg);
+          background:var(--ui-surface); padding:14px 16px; margin-bottom:10px; }
   .fila .cuerpo { flex:1 1 320px; min-width:0; }
   .fila .t { font-weight:600; overflow-wrap:anywhere; }
-  .fila .meta { font-size:13px; color:var(--vv-text-muted); overflow-wrap:anywhere; }
+  .fila .meta { font-size:13px; color:var(--ui-text-muted); overflow-wrap:anywhere; }
   .fila .nota { margin-top:6px; font-size:14px; overflow-wrap:anywhere; }
-  .estado { font-size:12px; border-radius:var(--vv-radius-pill); padding:4px 12px;
-            border:1.5px solid transparent; background:var(--vv-accent-soft);
-            color:var(--vv-accent); font-weight:600; }
-  .estado[data-s=pending] { background:var(--vv-state); color:var(--vv-on-state);
+  .estado { font-size:12px; border-radius:var(--ui-radius-pill); padding:4px 12px;
+            border:1.5px solid transparent; background:var(--ui-accent-soft);
+            color:var(--ui-accent); font-weight:600; }
+  .estado[data-s=pending] { background:var(--ui-state); color:var(--ui-on-state);
                             border-color:transparent; }
-  .estado[data-s=approved] { color:var(--vv-beat); border-color:var(--vv-beat); }
-  .estado[data-s=rejected], .estado[data-s=withdrawn] { color:var(--vv-danger); border-color:var(--vv-danger); }
-  .aviso { background:var(--vv-active-soft); border:1.5px solid var(--ac-turquoise-400);
-           color:var(--vv-head); border-radius:var(--vv-radius-md); padding:11px 14px;
+  .estado[data-s=approved] { color:var(--ui-beat); border-color:var(--ui-beat); }
+  .estado[data-s=rejected], .estado[data-s=withdrawn] { color:var(--ui-danger); border-color:var(--ui-danger); }
+  .aviso { background:var(--ui-active-soft); border:1.5px solid var(--ac-turquoise-400);
+           color:var(--ui-head); border-radius:var(--ui-radius-md); padding:11px 14px;
            margin-bottom:12px; font-size:14px; }
   .filtros { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; align-items:flex-end; }
   /* La etiqueta va encima del control: antes el nombre del filtro solo existía
      como title=, que ni se lee con lector de pantalla ni se ve al tocar. */
   .filtro { display:flex; flex-direction:column; gap:4px; flex:0 1 190px; font-size:11px;
-            text-transform:uppercase; letter-spacing:.08em; color:var(--vv-text-muted); }
+            text-transform:uppercase; letter-spacing:.08em; color:var(--ui-text-muted); }
   .filtro:first-child { flex:1 1 220px; }
   /* El control ocupa el ancho de su etiqueta y NADA de flex propio: dentro de
      una columna, un flex-basis se convertiría en altura y salen cajas gigantes. */
@@ -315,43 +372,43 @@ export const WEB_CSS = `  /* Accordio · paquete de estilo de marca (accordio-we
   #favFilter[aria-pressed=true] .ic { color:var(--ac-on-highlight); }
   .listas { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px; }
   .listas .etiqueta { font-size:11px; text-transform:uppercase; letter-spacing:.08em;
-                      color:var(--vv-text-muted); }
+                      color:var(--ui-text-muted); }
   .chips { display:flex; gap:6px; flex-wrap:wrap; }
-  .chip { border:1px solid var(--vv-border); border-radius:999px; padding:4px 12px;
+  .chip { border:1px solid var(--ui-border); border-radius:999px; padding:4px 12px;
           font-size:13px; background:transparent; color:inherit; cursor:pointer; }
-  .chip[aria-pressed=true] { background:var(--vv-active); color:var(--vv-on-active);
-                             border-color:var(--vv-active); font-weight:600; }
+  .chip[aria-pressed=true] { background:var(--ui-active); color:var(--ui-on-active);
+                             border-color:var(--ui-active); font-weight:600; }
   .card .fav { float:right; border:0; background:transparent; font-size:16px; line-height:1;
-               padding:0 0 0 8px; cursor:pointer; color:var(--vv-text-muted); }
+               padding:0 0 0 8px; cursor:pointer; color:var(--ui-text-muted); }
   .card .fav[aria-pressed=true] { color:var(--ac-coral); }
   .acciones { display:flex; gap:6px; margin-top:8px; }
-  /* Antes: fondo transparente y un radio inexistente (--vv-radius), así que la
+  /* Antes: fondo transparente y un radio inexistente (--ui-radius), así que la
      sección se leía sobre el mosaico del fondo y las esquinas salían rectas. */
-  .adminTool { border:1.5px solid var(--vv-border); border-radius:var(--vv-radius-lg);
-               background:var(--vv-surface); box-shadow:var(--vv-shadow-card);
+  .adminTool { border:1.5px solid var(--ui-border); border-radius:var(--ui-radius-lg);
+               background:var(--ui-surface); box-shadow:var(--ui-shadow-card);
                padding:16px 18px; margin-bottom:12px; }
-  .adminTool h3 { margin:0 0 6px; font-size:16px; font-family:var(--vv-font-head);
-                  font-weight:700; letter-spacing:-.01em; color:var(--vv-head); }
-  .adminTool p { margin:0 0 10px; font-size:13px; color:var(--vv-text-muted); }
+  .adminTool h3 { margin:0 0 6px; font-size:16px; font-family:var(--ui-font-head);
+                  font-weight:700; letter-spacing:-.01em; color:var(--ui-head); }
+  .adminTool p { margin:0 0 10px; font-size:13px; color:var(--ui-text-muted); }
   /* Las etiquetas van en su propia fila con separación real: pegadas unas a
      otras parecían una sola píldora partida. */
   .etiquetas { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
-  .badge { display:inline-block; font-size:12px; border-radius:var(--vv-radius-pill);
-           padding:4px 12px; border:1.5px solid transparent; background:var(--vv-accent-soft);
-           color:var(--vv-accent); font-weight:600; }
+  .badge { display:inline-block; font-size:12px; border-radius:var(--ui-radius-pill);
+           padding:4px 12px; border:1.5px solid transparent; background:var(--ui-accent-soft);
+           color:var(--ui-accent); font-weight:600; }
   /* Cada etiqueta dice una cosa distinta, así que no todas son del mismo color:
      categoría en el teal de marca, pública en turquesa (estado), privada sin
      relleno y lista en amarillo. */
   /* Además del color cambia la FORMA, que es lo que se distingue de un vistazo
      y también en oscuro, donde varios tintes turquesa se parecen entre sí:
      pública va rellena, privada solo de contorno y la lista en amarillo. */
-  .badge.publica { background:var(--vv-active); color:var(--vv-on-active); }
-  .badge.privada { background:transparent; border-color:var(--vv-border-strong);
-                   color:var(--vv-text-muted); }
-  .badge.lista { background:var(--vv-state-soft); color:var(--vv-state-text);
-                 border-color:var(--vv-state); }
-  .msg { color:var(--vv-danger); min-height:1.2em; }
-  .empty { color:var(--vv-text-muted); text-align:center; padding:40px 12px; }
+  .badge.publica { background:var(--ui-active); color:var(--ui-on-active); }
+  .badge.privada { background:transparent; border-color:var(--ui-border-strong);
+                   color:var(--ui-text-muted); }
+  .badge.lista { background:var(--ui-state-soft); color:var(--ui-state-text);
+                 border-color:var(--ui-state); }
+  .msg { color:var(--ui-danger); min-height:1.2em; }
+  .empty { color:var(--ui-text-muted); text-align:center; padding:40px 12px; }
   .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
   .stack { display:flex; flex-direction:column; gap:12px; max-width:420px; margin:40px auto; }
   /* La partitura se centra como bloque, pero el texto sigue alineado a la
@@ -360,108 +417,148 @@ export const WEB_CSS = `  /* Accordio · paquete de estilo de marca (accordio-we
   /* Ancho fijo para todas. Antes era max-content y se centraba con margin
      auto: cada partitura salía con un ancho distinto según su línea más larga,
      y las cortas aparecían centradas mientras las largas iban a la izquierda. */
-  .sheet { width:var(--vv-sheet); max-width:100%; margin:0; text-align:left;
-           /* Las líneas más anchas que la hoja se desplazan DENTRO de ella:
-              los acordes van sobre la sílaba exacta, así que partir la línea
-              no es una opción. */
+  /* La hoja mide lo que mide su línea más larga —max-content— y se para en el
+     ancho del contenedor. Antes eran 68ch fijos y una tablatura ancha obligaba
+     a desplazarse de lado aunque sobrase sitio en la ventana. El overflow-x se
+     queda como último recurso, para cuando la línea no cabe ni así: los acordes
+     van sobre la sílaba exacta, así que partir la línea no es una opción. */
+  .sheet { width:max-content; max-width:100%; margin:0; text-align:left;
            overflow-x:auto; }
-  /* ---- editor: escribir · ver · ajustar ----
-     Las dos primeras columnas se reparten lo que sobra y la de ajustes tiene
-     ancho fijo: es un formulario, y estirarlo no lo hace más útil, mientras que
-     cada píxel de más en la hoja sí se nota al escribir. */
-  .editor { max-width:1760px; margin:0 auto; display:flex; flex-direction:column; gap:12px; }
-  /*
-   * Las tres columnas se alinean porque comparten estructura —cabecera de alto
-   * fijo y debajo una caja del mismo alto— y no por casualidad. La ficha llevaba
-   * su fondo en el propio panel, cabecera incluida, así que su caja empezaba
-   * donde las OTRAS tenían el rótulo: 38 px más arriba, y otros tantos de menos
-   * por abajo.
-   */
-  #editSplit { display:grid; grid-template-columns:1fr 1fr clamp(280px, 22vw, 340px); gap:14px;
-               align-items:stretch; --alto-editor:calc(100vh - 210px); }
-  .pane { display:flex; flex-direction:column; gap:6px; min-width:0; }
+  /* ---- editor: ajustar arriba · escribir y ver debajo ----
+     La ficha es una barra a lo ancho de la pagina con el alto justo que pide su
+     contenido. Todo lo que sobra —que es casi toda la ventana— se lo reparten a
+     partes iguales la hoja y la vista previa, que es donde se trabaja. Antes la
+     ficha era una tercera columna y se llevaba 340 px de ancho a cambio de un
+     formulario que se toca una vez. */
+  .editor { max-width:none; margin:0; display:flex; flex-direction:column; gap:12px;
+            flex:1 1 auto; min-width:0; min-height:0; }
+  /* Dos columnas iguales, y el alto lo pone el hueco que deja la ficha: min-height:0
+     es lo que permite que la rejilla encoja por debajo de su contenido en vez de
+     desbordar la pagina. */
+  #editSplit { display:grid; grid-template-columns:1fr 1fr; gap:14px;
+               align-items:stretch; flex:1 1 auto; min-height:0; }
+  .pane { display:flex; flex-direction:column; gap:6px; min-width:0; min-height:0; }
   .pane .hd { display:flex; align-items:center; gap:8px; font-size:11px; letter-spacing:.18em;
-              text-transform:uppercase; color:var(--vv-text-subtle);
+              text-transform:uppercase; color:var(--ui-text-subtle);
               height:38px; flex:0 0 auto; }
   .pane .hd small { letter-spacing:0; text-transform:none; font-size:12px; }
-  /* Un solo alto para las tres cajas: cambiarlo es tocar --alto-editor. */
-  #eContent, #ePreview, #eSideBox { height:var(--alto-editor); }
-  #eContent, #ePreview { min-height:320px; }
-  /* La hoja ocupa lo que hay: es el trabajo de verdad. */
-  #eContent { resize:vertical;
-              font-family:var(--vv-font-mono); font-size:14px; line-height:1.45; white-space:pre; }
+  /* Las dos cajas se estiran hasta el borde inferior de la ventana. */
+  #eContent, #ePreview { flex:1 1 auto; min-height:240px; }
+  #eContent { resize:none;
+              font-family:var(--ui-font-mono); font-size:14px; line-height:1.45; white-space:pre; }
   #ePreview { overflow:auto;
-              background:var(--vv-surface); border:1.5px solid var(--vv-border);
-              border-radius:var(--vv-radius-md); padding:10px 12px;
-              font-family:var(--vv-font-mono); font-size:14px; line-height:1.45; }
+              background:var(--ui-surface); border:1.5px solid var(--ui-border);
+              border-radius:var(--ui-radius-md); padding:10px 12px;
+              font-family:var(--ui-font-mono); font-size:14px; line-height:1.45; }
   /* Misma altura de linea que el textarea: asi la linea N de la izquierda cae
      a la altura de la linea N de la derecha y el scroll atado cuadra. En el
      visor se mantiene 1.35, que ahi se lee mas apretado y no hay con que
      comparar. */
   #ePreview .ln, #ePreview .tab { line-height:1.45; }
 
-  /* Columna de ajustes: se desplaza sola si no cabe, y los botones quedan
-     siempre abajo, pegados al borde de la tarjeta. */
-  #eSideBox { display:flex; flex-direction:column;
-              background:var(--vv-surface); border:1.5px solid var(--vv-border);
-              border-radius:var(--vv-radius-lg); box-shadow:var(--vv-shadow-card);
-              padding:14px; }
+  /* Ficha: barra superior. Los campos fluyen en rejilla y ocupan el ancho que
+     haga falta; los botones se quedan a la derecha, en su columna, para que no
+     bailen de sitio segun cuantos campos se vean. */
+  #eSide { flex:0 0 auto; }
+  #eSide .hd { height:26px; }
+  /* La barra mide lo que miden sus campos y ni un pixel mas. El tope es una red
+     de seguridad para ventanas muy bajas: si alguna vez no cabe, se desplaza
+     ella en vez de empujar la hoja fuera de la pantalla. */
+  #eSideBox { display:flex; flex-direction:row; align-items:stretch; gap:16px;
+              height:auto; max-height:min(56vh, 460px);
+              background:var(--ui-surface); border:1.5px solid var(--ui-border);
+              border-radius:var(--ui-radius-lg); box-shadow:var(--ui-shadow-card);
+              padding:12px 14px; }
   /*
-   * min-height:0 no es un adorno: sin él, un hijo flexible NO encoge por debajo
-   * de su contenido, así que la lista de campos empujaba la caja hacia abajo, el
-   * overflow no llegaba a activarse y había que recorrer la página entera para
-   * llegar al último campo. Con esto el scroll se queda dentro del panel.
+   * Rejilla de columnas CONTADAS, no auto-fit. Con auto-fit el numero de columnas
+   * dependia del ancho sobrante y los campos caian donde tocase: dos filas rotas
+   * por la mitad, huecos en medio y el video apretado contra la URL. Con seis
+   * columnas los once campos entran en dos filas exactas y cada cosa cae donde
+   * se la espera: arriba de que va la partitura, abajo la version y los extras.
    */
-  #eSideBody { display:flex; flex-direction:column; gap:12px;
-               overflow-y:auto; flex:1 1 auto; min-height:0; padding-right:4px; }
-  #eSide label { display:block; font-size:13px; }
+  #eSideBody { display:grid; grid-template-columns:repeat(6,minmax(0,1fr));
+               gap:12px 14px; align-items:end; align-content:start;
+               overflow-y:auto; flex:1 1 auto; min-width:0; min-height:0; padding-right:4px; }
+  @media (max-width:1500px) { #eSideBody { grid-template-columns:repeat(4,minmax(0,1fr)); } }
+  @media (max-width:1150px) { #eSideBody { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+  @media (max-width:900px)  { #eSideBody { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+  @media (max-width:620px)  { #eSideBody { grid-template-columns:1fr; } }
+  #eSide label { display:flex; flex-direction:column; justify-content:flex-end;
+                 font-size:13px; }
+  /* La aclaracion, en su propia linea: en linea con el rotulo partia las
+     etiquetas por sitios distintos en cada campo y las filas quedaban a
+     alturas dispares. */
+  #eSide label small { display:block; line-height:1.35; }
+  /*
+   * Estrecha Y baja a la vez: con tres columnas salen cuatro filas, y con la
+   * aclaración de cada rótulo no caben sin recortar. Las aclaraciones son ayuda,
+   * no información: se van antes que dejar medio campo fuera. En cuanto hay
+   * ancho o alto de sobra, vuelven.
+   */
+  @media (max-width:1150px) and (max-height:800px) {
+    #eSide label small { display:none; }
+  }
   #eSide label input, #eSide label select { margin-top:4px; }
-  #eVersionHead { display:flex; flex-direction:column; gap:12px; }
-  #eAcciones { display:flex; flex-direction:column; gap:8px; flex:0 0 auto;
-               margin-top:12px; padding-top:12px; border-top:1.5px solid var(--vv-border); }
+  /* Bloqueada es una casilla con su texto al lado, no un campo con rótulo
+     encima: la regla de arriba pone todas las etiquetas en columna. */
+  #eSide #eLockedWrap { flex-direction:row; align-items:center; }
+  /* El capo no es un <label> —su mando son dos botones, no un campo— pero en la
+     rejilla tiene que comportarse igual que los demás. */
+  #eSideBody .campo { display:flex; flex-direction:column; justify-content:flex-end;
+                      gap:4px; font-size:13px; }
+  /* display:contents: los dos campos de version entran en la MISMA rejilla que
+     los demas en vez de apilarse dentro de una celda y desnivelar la fila. */
+  #eVersionHead { display:contents; }
+  /*
+   * El video se lleva dos columnas: el enlace es largo y con el buscador al
+   * lado —no debajo— la fila no crece de alto por un solo campo. El aviso va
+   * en su propia linea, y solo cuando dice algo.
+   */
+  #eTubeWrap { grid-column:span 2; display:grid; grid-template-columns:1fr auto;
+               gap:6px 8px; align-items:end; }
+  #eTubeWrap > label { min-width:0; }
+  #eTubeMsg { grid-column:1 / -1; font-size:11px; color:var(--ui-text-muted); }
+  #eTubeMsg:empty { display:none; }
+  #eAcciones { display:flex; flex-direction:column; gap:8px; flex:0 0 auto; width:200px;
+               margin-top:0; padding:0 0 0 14px;
+               border-top:0; border-left:1.5px solid var(--ui-border); }
   #eAcciones .msg:empty, #eAcciones .aviso.hidden { display:none; }
+  #eAcciones .msg, #eAcciones .aviso { font-size:12px; }
 
   /*
-   * La ficha sigue siendo una COLUMNA mientras quepa, hasta 1000 px. Antes bajaba
-   * a lo ancho ya en 1200, y entonces para tocar la categoría o el capo había que
-   * recorrer toda la página: el panel dejaba de tener scroll propio. En un
-   * portátil de 1280 —o con la ventana sin maximizar— eso era el caso normal.
+   * Quien cede el alto es la ficha, no la hoja. Sin esto, en una ventana baja la
+   * barra se quedaba con sus 56vh y a la hoja le sobraban 56 px: sitio para dos
+   * líneas. Ahora la zona de trabajo tiene suelo propio y la ficha se encoge —y
+   * se desplaza por dentro— hasta donde haga falta.
    */
-  @media (max-width:1280px) {
-    /* La vista previa es lo primero que sobra: se escribe mirando el textarea. */
-    #editSplit { grid-template-columns:1.2fr 1fr clamp(260px, 24vw, 320px); }
-    /* Las aclaraciones del rótulo se parten en dos líneas y se salen de los
-       38 px de la cabecera. Son ayuda, no información: se quitan antes que
-       descuadrar las columnas. */
-    #editSplit .hd small { display:none; }
+  @media (min-width:901px) {
+    #eSide, #eSideBox { flex:0 1 auto; min-height:0; }
+    /* Base 0 y no auto: con base automatica la rejilla pide de salida el alto de
+       su contenido —un textarea de cien lineas— y ese exceso se repartia entre
+       las dos, dejando la ficha en una rendija. Con base 0 se lleva SOLO lo que
+       sobra, y el suelo lo pone min-height. */
+    #editSplit { flex:1 1 0; min-height:min(230px, 40vh); }
   }
-  /*
-   * Pantalla baja (portátiles de 768, o con la ventana sin maximizar): los
-   * botones en columna se comían 156 px de los 390 que quedaban, y la ficha se
-   * veía por una rendija de dos campos. En fila ocupan la mitad.
-   */
-  @media (max-height:820px) and (min-width:1001px) {
-    #eAcciones { flex-direction:row; flex-wrap:wrap; align-items:center; }
+
+  /* Pantalla estrecha: los botones pasan a una fila bajo los campos, que en
+     vertical la columna de la derecha deja los campos en una rendija. */
+  @media (max-width:900px) {
+    #eSideBox { flex-direction:column; gap:10px; }
+    #eAcciones { width:auto; flex-direction:row; flex-wrap:wrap; align-items:center;
+                 padding:10px 0 0; border-left:0; border-top:1.5px solid var(--ui-border); }
     #eAcciones button { flex:1 1 auto; }
     #eAcciones .msg, #eAcciones .aviso { flex:1 1 100%; }
+    /* La barra ya no compite con nada por el alto: se ve entera. */
+    #eSideBox { max-height:none; }
+    /* Ya no caben dos columnas: la vista previa baja debajo de la hoja. Alto
+       fijo para las dos, que aqui manda el desplazamiento de la pagina. */
+    #editSplit { grid-template-columns:1fr; }
+    #eContent, #ePreview { flex:0 0 auto; height:44vh; min-height:220px; }
+    #eContent { resize:vertical; }
   }
-  @media (max-width:1000px) {
-    /* Ya no caben tres: la ficha baja a lo ancho, en rejilla, y ahí sí fluye con
-       la página porque no hay ninguna columna con la que alinearse. */
-    #editSplit { grid-template-columns:1fr 1fr; }
-    #eSide { grid-column:1 / -1; }
-    #eSideBox { height:auto; }
-    #eSideBody { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-                 align-items:end; overflow:visible; }
-    #eAcciones { flex-direction:row; flex-wrap:wrap; align-items:center; }
-  }
-  @media (max-width:900px) {
-    #editSplit { grid-template-columns:1fr; --alto-editor:40vh; }
-    #eContent, #ePreview { min-height:220px; }
-  }
-  label small { color:var(--vv-text-subtle); }
+  label small { color:var(--ui-text-subtle); }
   /* ---- visor ---- */
-  #viewer { position:fixed; inset:0; background:var(--vv-bg); display:none; flex-direction:column; z-index:20; }
+  #viewer { position:fixed; inset:0; background:var(--ui-bg); display:none; flex-direction:column; z-index:20; }
   #viewer.on { display:flex; }
   /* Con el visor abierto la pagina de detras no debe poder desplazarse: si no,
      salen dos barras verticales y una de ellas no hace nada. Va en los dos
@@ -472,7 +569,7 @@ export const WEB_CSS = `  /* Accordio · paquete de estilo de marca (accordio-we
      lo mismo — que es lo que pasaría con un simple flex. */
   #vHead { display:grid; grid-template-columns:1fr auto 1fr; gap:10px;
            align-items:center; padding:10px 14px;
-           border-bottom:1px solid var(--vv-border); background:var(--vv-surface); }
+           border-bottom:1px solid var(--ui-border); background:var(--ui-surface); }
   #vHead .lado { display:flex; align-items:center; gap:8px; min-width:0; }
   #vHead .lado.der { justify-content:flex-end; }
   /* El bloque de título tiene que poder encoger: sin min-width:0 no baja de su
@@ -481,22 +578,22 @@ export const WEB_CSS = `  /* Accordio · paquete de estilo de marca (accordio-we
   #vHead .vMeta { min-width:0; display:flex; align-items:center; gap:12px; }
   #vHead .titulo { min-width:0; display:flex; align-items:baseline; gap:6px; }
   #vHead .titulo > * { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  #vSep { color:var(--vv-text-subtle); flex:0 0 auto; }
+  #vSep { color:var(--ui-text-subtle); flex:0 0 auto; }
   /* El capo cambia cómo se toca la canción entera: va en ámbar macizo, que no
      se pueda pasar por alto como pasaba con la píldora gris de antes. */
   #vCapo { display:inline-flex; align-items:baseline; gap:6px; flex:0 0 auto;
-           background:var(--vv-state); color:var(--vv-on-state); border:0;
+           background:var(--ui-state); color:var(--ui-on-state); border:0;
            border-radius:999px; padding:3px 12px 4px; font-size:11px;
            font-weight:600; letter-spacing:.16em; text-transform:uppercase; }
-  #vCapo .n { font-family:var(--vv-font-mono); font-size:15px; letter-spacing:0; }
+  #vCapo .n { font-family:var(--ui-font-mono); font-size:15px; letter-spacing:0; }
   #vTitle { font-weight:600; }
-  #vArtist { color:var(--vv-text-muted); }
+  #vArtist { color:var(--ui-text-muted); }
   /* El vídeo, a la derecha de la partitura. Se queda fijo mientras la hoja se
      desplaza: es para acompañarse, no para leerlo. */
   #vTube { flex:0 0 340px; display:none; flex-direction:column; gap:8px; min-height:0; }
   #vTube.on { display:flex; }
   #vTube .marco { position:relative; width:100%; padding-top:56.25%;
-                  border:1px solid var(--vv-border); border-radius:var(--vv-radius-lg);
+                  border:1px solid var(--ui-border); border-radius:var(--ui-radius-lg);
                   overflow:hidden; background:#000; }
   #vTube iframe { position:absolute; inset:0; width:100%; height:100%; border:0; }
   @media (max-width:1200px) { #vTube { flex-basis:280px; } }
@@ -506,7 +603,7 @@ export const WEB_CSS = `  /* Accordio · paquete de estilo de marca (accordio-we
      ancha se irían de lado también los comentarios y el pie. */
   #vBody { flex:0 1 auto; min-width:0; overflow-y:auto; overflow-x:hidden;
            padding:16px 18px 60px;
-           font-family:var(--vv-font-mono); font-size:var(--fs,18px);
+           font-family:var(--ui-font-mono); font-size:var(--fs,18px);
            /* Hueco de la barra reservado siempre. Sin esto, una canción larga
               tiene barra y una corta no, y la hoja se desplaza unos píxeles al
               cambiar de una a otra: el mismo baile que se quería quitar. */
@@ -515,25 +612,46 @@ export const WEB_CSS = `  /* Accordio · paquete de estilo de marca (accordio-we
      Lo que se centra en la ventana es el CONJUNTO (mandos + hoja + vídeo),
      que es cosa de #vMain; dentro de la columna, el texto empieza a la
      izquierda y se queda ahí. */
-  #vSheet { width:var(--vv-sheet); max-width:100%; flex:0 0 auto; }
+  /* La columna de lectura nunca baja de --ui-sheet, para que una canción de
+     líneas cortas no salga en una tira estrecha, pero sí crece con el contenido
+     hasta donde dé la ventana. */
+  #vSheet { width:max-content; min-width:var(--ui-sheet); max-width:100%; flex:0 0 auto; }
   .ln { white-space:pre; line-height:1.35; margin:0; }
-  .tab { white-space:pre; line-height:1.35; color:var(--vv-text-muted); }
-  .chord { color:var(--vv-chord); font-weight:600; }
+  .tab { white-space:pre; line-height:1.35; color:var(--ui-text-muted); }
+  .chord { color:var(--ui-chord); font-weight:600; }
   #vBody .chord { cursor:pointer; border-radius:3px; }
   /* Globo de digitaciones al pasar por encima. Fuera del flujo y sin capturar
      el ratón: si lo capturase, entrar en él contaría como salir del acorde. */
   #chordHover { position:fixed; z-index:45; display:none; gap:8px; padding:10px;
-                pointer-events:none; background:var(--vv-surface);
-                border:1px solid var(--vv-border-strong); border-radius:var(--vv-radius-md);
+                pointer-events:none; background:var(--ui-surface);
+                border:1px solid var(--ui-border-strong); border-radius:var(--ui-radius-md);
                 box-shadow:0 6px 24px rgba(0,0,0,.35); }
   #chordHover.on { display:flex; }
-  #chordHover .nm { font-family:var(--vv-font-mono); font-weight:600; color:var(--vv-chord);
+  #chordHover .nm { font-family:var(--ui-font-mono); font-weight:600; color:var(--ui-chord);
                     align-self:center; padding-right:2px; }
+  /*
+   * Mando de un solo valor: – valor +. En el editor lo usa el capo, que antes
+   * eran trece pastillas en dos filas ocupando media ficha para algo que casi
+   * siempre vale 0. Ocupa el ancho de su celda para que el valor quede centrado
+   * y los dos botones en los extremos, siempre en el mismo sitio.
+   */
+  .stepper { display:flex; width:100%; align-items:center; justify-content:space-between;
+             gap:6px; padding:4px; background:var(--ui-surface);
+             border:1.5px solid var(--ui-border); border-radius:var(--ui-radius-pill); }
+  .stepper button { flex:0 0 auto; min-width:36px; padding:6px 10px;
+                    font-family:var(--ui-font-mono); font-size:16px; line-height:1; }
+  .stepper output { flex:1 1 auto; text-align:center; min-width:0;
+                    font-family:var(--ui-font-mono); font-size:13px; white-space:nowrap;
+                    overflow:hidden; text-overflow:ellipsis; }
+  /* Con capo puesto el valor va en ámbar, como en el visor: es un estado, no un
+     dato más de la ficha. */
+  .stepper output[data-puesto=si] { color:var(--ui-state-text); font-weight:600; }
+
   /* Fila de botones para capo y traste base: un toque en vez de teclear. */
   .pills { display:flex; flex-wrap:wrap; gap:4px; }
-  .pills button { padding:6px 10px; font-family:var(--vv-font-mono); font-size:13px;
+  .pills button { padding:6px 10px; font-family:var(--ui-font-mono); font-size:13px;
                   min-width:38px; }
-  .pills button[aria-pressed=true] { background:var(--vv-active); color:var(--vv-on-active);
+  .pills button[aria-pressed=true] { background:var(--ui-active); color:var(--ui-on-active);
                                      border-color:transparent; }
   #vBody .chord:hover, #vBody .chord:focus-visible { background:var(--ac-coral-200); color:var(--ac-coral-700); }
   /* Los mandos y las versiones son dos recuadros en una columna propia a la
@@ -542,51 +660,51 @@ export const WEB_CSS = `  /* Accordio · paquete de estilo de marca (accordio-we
   #vMain { flex:1; display:flex; min-height:0; gap:14px; padding:14px; justify-content:center; }
   #vSide { flex:0 0 260px; display:flex; flex-direction:column; gap:14px;
            min-height:0; overflow:auto; }
-  #vCtrl { background:var(--vv-surface); border:1px solid var(--vv-border);
-           border-radius:var(--vv-radius-lg);
+  #vCtrl { background:var(--ui-surface); border:1px solid var(--ui-border);
+           border-radius:var(--ui-radius-lg);
            padding:12px; display:flex; flex-direction:column; gap:10px; flex:0 0 auto; }
   #vCtrl .row { gap:6px; }
   #vCtrl button { padding:7px 10px; font-size:13px; }
-  #vVersionPanel { background:var(--vv-surface); border:1px solid var(--vv-border);
-                   border-radius:var(--vv-radius-lg);
+  #vVersionPanel { background:var(--ui-surface); border:1px solid var(--ui-border);
+                   border-radius:var(--ui-radius-lg);
                    padding:12px; display:flex; flex-direction:column; gap:8px;
                    flex:0 1 auto; min-height:0; overflow:auto; }
   #vVersionPanel .hd { font-size:11px; letter-spacing:.18em; text-transform:uppercase;
-                       color:var(--vv-text-subtle); }
-  .vRow { display:flex; flex-direction:column; gap:4px; padding:8px; border-radius:var(--vv-radius-md);
+                       color:var(--ui-text-subtle); }
+  .vRow { display:flex; flex-direction:column; gap:4px; padding:8px; border-radius:var(--ui-radius-md);
           border:1px solid transparent; cursor:pointer; background:transparent; text-align:left;
           white-space:normal; }
-  .vRow:hover { background:var(--vv-active-soft); }
-  .vRow[aria-pressed=true] { border-color:var(--vv-active); background:var(--vv-active-soft); }
-  .vRow .num { font-family:var(--vv-font-mono); font-size:12px; color:var(--vv-text-subtle); }
+  .vRow:hover { background:var(--ui-active-soft); }
+  .vRow[aria-pressed=true] { border-color:var(--ui-active); background:var(--ui-active-soft); }
+  .vRow .num { font-family:var(--ui-font-mono); font-size:12px; color:var(--ui-text-subtle); }
   .vRow .nm { font-weight:600; overflow-wrap:anywhere; }
   .vRow .val { display:flex; align-items:center; gap:6px; }
   .stars { display:inline-flex; gap:1px; }
   .stars button, .stars span { border:0; background:none; padding:0 1px; font-size:15px;
-                               line-height:1; color:var(--vv-border-strong); cursor:default; }
+                               line-height:1; color:var(--ui-border-strong); cursor:default; }
   .stars button { cursor:pointer; }
   .stars .on { color:var(--ac-yellow-600); }
-  .nota { font-family:var(--vv-font-mono); font-size:12px; color:var(--vv-text-muted); }
+  .nota { font-family:var(--ui-font-mono); font-size:12px; color:var(--ui-text-muted); }
   /* Comentarios, al final de la partitura. */
-  #vComments { max-width:100%; margin:32px 0 0; border-top:1px solid var(--vv-border);
-               padding-top:16px; font-family:var(--vv-font-ui); font-size:15px; }
+  #vComments { max-width:100%; margin:32px 0 0; border-top:1px solid var(--ui-border);
+               padding-top:16px; font-family:var(--ui-font-ui); font-size:15px; }
   #vComments h4, #vRelated h4 { margin:0 0 12px; font-size:11px; letter-spacing:.18em;
-                  text-transform:uppercase; color:var(--vv-text-subtle); font-weight:600; }
+                  text-transform:uppercase; color:var(--ui-text-subtle); font-weight:600; }
   /* Recomendadas al pie de la partitura: mismas tarjetas que el catálogo, en
      una rejilla más apretada porque aquí compiten con la hoja, no la sustituyen. */
-  #vRelated { max-width:100%; margin:28px 0 0; border-top:1px solid var(--vv-border);
-              padding-top:16px; font-family:var(--vv-font-ui); font-size:15px; }
+  #vRelated { max-width:100%; margin:28px 0 0; border-top:1px solid var(--ui-border);
+              padding-top:16px; font-family:var(--ui-font-ui); font-size:15px; }
   #vRelated:empty { display:none; }
-  #vRelated h4 { color:var(--vv-chord); }
+  #vRelated h4 { color:var(--ui-chord); }
   .relGrid { display:grid; gap:10px; grid-template-columns:repeat(auto-fill,minmax(210px,1fr));
              align-items:start; }
-  .comentario { padding:10px 0; border-bottom:1px solid var(--vv-border); }
-  .comentario .quien { font-size:13px; color:var(--vv-text-muted); display:flex; gap:8px; align-items:baseline; }
+  .comentario { padding:10px 0; border-bottom:1px solid var(--ui-border); }
+  .comentario .quien { font-size:13px; color:var(--ui-text-muted); display:flex; gap:8px; align-items:baseline; }
   .comentario .texto { white-space:pre-wrap; overflow-wrap:anywhere; margin-top:4px; }
-  .comentario .quitar { border:0; background:none; color:var(--vv-danger); font-size:12px;
+  .comentario .quitar { border:0; background:none; color:var(--ui-danger); font-size:12px;
                         padding:0; cursor:pointer; }
   #vCommentForm { display:flex; flex-direction:column; gap:8px; margin-top:12px; }
-  #vCommentForm textarea { min-height:80px; font-family:var(--vv-font-ui); }
+  #vCommentForm textarea { min-height:80px; font-family:var(--ui-font-ui); }
   /* ---- visor en pantalla estrecha ---- */
   /* Con selector de elemento a propósito: .tool también fija display y, a
      igualdad de peso, ganaba la que va después en la hoja. */
@@ -610,14 +728,14 @@ export const WEB_CSS = `  /* Accordio · paquete de estilo de marca (accordio-we
     /* Menú de acciones colgando del botón. */
     #vMenu { position:absolute; top:calc(100% + 6px); right:8px; z-index:32;
              display:flex; flex-direction:column; align-items:stretch; gap:8px;
-             min-width:190px; padding:10px; background:var(--vv-surface);
-             border:1.5px solid var(--vv-border); border-radius:var(--vv-radius-lg);
+             min-width:190px; padding:10px; background:var(--ui-surface);
+             border:1.5px solid var(--ui-border); border-radius:var(--ui-radius-lg);
              box-shadow:var(--ac-shadow-lg); }
     #vMenu[hidden] { display:none; }
     #vMenu > * { justify-content:flex-start; width:100%; }
-    #vMenu #vSource { padding:9px 14px; border:1.5px solid var(--vv-border-strong);
-                      border-radius:var(--vv-radius-pill); font-weight:600;
-                      font-size:14px; background:var(--vv-surface-alt); }
+    #vMenu #vSource { padding:9px 14px; border:1.5px solid var(--ui-border-strong);
+                      border-radius:var(--ui-radius-pill); font-weight:600;
+                      font-size:14px; background:var(--ui-surface-alt); }
     button.soloEstrecho { display:inline-flex; }
 
     /*
@@ -633,18 +751,18 @@ export const WEB_CSS = `  /* Accordio · paquete de estilo de marca (accordio-we
     #vSide { position:fixed; left:0; right:0; bottom:0; z-index:31;
              flex:0 0 auto; max-height:76vh; overflow:auto;
              padding:10px 14px calc(16px + env(safe-area-inset-bottom));
-             background:var(--vv-surface); border-top:1.5px solid var(--vv-border);
-             border-radius:var(--vv-radius-lg) var(--vv-radius-lg) 0 0;
+             background:var(--ui-surface); border-top:1.5px solid var(--ui-border);
+             border-radius:var(--ui-radius-lg) var(--ui-radius-lg) 0 0;
              box-shadow:var(--ac-shadow-lg);
              transform:translateY(101%); transition:transform 280ms var(--ac-ease); }
     /* Asa: dice «esto se arrastra/se cierra» sin gastar una línea de texto. */
     #vSide::before { content:""; display:block; width:44px; height:4px; flex:0 0 auto;
-                     border-radius:999px; background:var(--vv-border-strong);
+                     border-radius:999px; background:var(--ui-border-strong);
                      margin:0 auto 10px; }
     #viewer.conMandos #vSide { transform:none; }
     /* Cerrar también con un botón: tocar fuera funciona, pero no se ve. */
     #vToolsClose { position:absolute; top:8px; right:10px; padding:6px 12px;
-                   font-size:13px; color:var(--vv-accent); }
+                   font-size:13px; color:var(--ui-accent); }
     #vSide { position:fixed; }
     /* Dentro del panel, el recuadro de mandos ya no necesita su propia caja. */
     #vCtrl { background:transparent; border:0; box-shadow:none; padding:0; }
@@ -655,9 +773,9 @@ export const WEB_CSS = `  /* Accordio · paquete de estilo de marca (accordio-we
     /* El botón que lo abre: abajo, al alcance del pulgar y sobre la hoja. */
     #vTools { position:fixed; z-index:29; right:16px;
               bottom:calc(16px + env(safe-area-inset-bottom));
-              padding:12px 20px; background:var(--vv-accent); color:var(--vv-on-accent);
+              padding:12px 20px; background:var(--ui-accent); color:var(--ui-on-accent);
               border-color:transparent; box-shadow:var(--ac-shadow-lg); }
-    #vTools .ic { color:var(--vv-on-accent); --ac-icon-accent:var(--vv-on-accent); }
+    #vTools .ic { color:var(--ui-on-accent); --ac-icon-accent:var(--ui-on-accent); }
     #viewer.conMandos #vTools { display:none; }
 
     /* Las versiones se leen al terminar la partitura, no dentro de los mandos:
@@ -681,51 +799,71 @@ export const WEB_CSS = `  /* Accordio · paquete de estilo de marca (accordio-we
     /* Título y artista en una línea, con puntos suspensivos si no cabe. */
     #vHead .titulo > * { max-width:46vw; }
   }
-  #vCtrl .row label { font-size:12px; color:var(--vv-text-muted); white-space:nowrap; }
-  #vTone { color:var(--vv-accent); font-weight:600; }
+  #vCtrl .row label { font-size:12px; color:var(--ui-text-muted); white-space:nowrap; }
+  #vTone { color:var(--ui-accent); font-weight:600; }
   #vCtrl input[type=range] { flex:1; min-width:80px; width:auto; padding:0; border:0;
-                             background:transparent; accent-color:var(--vv-accent); }
+                             background:transparent; accent-color:var(--ui-accent); }
   /* Cifras (BPM, tono, velocidad, capo) siempre en la mono de la marca. */
   #vSpeedVal, #vBpmVal, #vTone {
-    font-family:var(--vv-font-mono); font-variant-numeric:tabular-nums; }
-  .beat { width:12px; height:12px; border-radius:50%; background:var(--vv-border-strong); display:inline-block; }
-  .beat.on { background:var(--vv-state); box-shadow:var(--vv-glow); }
+    font-family:var(--ui-font-mono); font-variant-numeric:tabular-nums; }
+  .beat { width:12px; height:12px; border-radius:50%; background:var(--ui-border-strong); display:inline-block; }
+  .beat.on { background:var(--ui-state); box-shadow:var(--ui-glow); }
   /* ---- acordes ---- */
   .chordSvg { display:block; color:var(--ac-primary); }
-  .chordBar { display:flex; gap:8px; overflow-x:auto; padding:8px 14px; background:var(--vv-surface);
-              border-bottom:1px solid var(--vv-border); }
+  .chordBar { display:flex; gap:8px; overflow-x:auto; padding:8px 14px; background:var(--ui-surface);
+              border-bottom:1px solid var(--ui-border); }
   .chordBar button { flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:2px;
                      padding:6px 8px; border-color:transparent; }
-  .chordBar .nm { font-family:var(--vv-font-mono); font-size:12px; font-weight:600; color:var(--vv-chord); }
-  .chordBar .none { color:var(--vv-text-subtle); font-size:13px; padding:8px 4px; white-space:nowrap; }
+  .chordBar .nm { font-family:var(--ui-font-mono); font-size:12px; font-weight:600; color:var(--ui-chord); }
+  .chordBar .none { color:var(--ui-text-subtle); font-size:13px; padding:8px 4px; white-space:nowrap; }
   .modal { position:fixed; inset:0; z-index:40; background:rgba(8,29,33,.55);
            display:flex; align-items:center; justify-content:center; padding:16px; }
-  .modalBox { background:var(--vv-surface); border:1.5px solid var(--vv-border); width:100%;
+  .modalBox { background:var(--ui-surface); border:1.5px solid var(--ui-border); width:100%;
               box-shadow:var(--ac-shadow-lg);
-              border-radius:var(--vv-radius-lg); padding:16px; max-width:780px; max-height:86vh;
+              border-radius:var(--ui-radius-lg); padding:16px; max-width:780px; max-height:86vh;
               overflow:auto; display:flex; flex-direction:column; gap:12px; }
-  .modalBox h3 { margin:0; font-size:20px; font-family:var(--vv-font-head); font-weight:700;
-                 letter-spacing:-.02em; color:var(--vv-head);
+  .modalBox h3 { margin:0; font-size:20px; font-family:var(--ui-font-head); font-weight:700;
+                 letter-spacing:-.02em; color:var(--ui-head);
                  min-width:0; overflow-wrap:anywhere; }
   .chordCard .nm { overflow-wrap:anywhere; text-align:center; }
   .chordGrid { display:grid; gap:10px; grid-template-columns:repeat(auto-fill,minmax(118px,1fr)); }
+
+  /* Barra del instrumento, encima de la tira de diagramas del visor. */
+  .instrBar { display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+              padding:6px 14px; border-bottom:1.5px solid var(--ui-border);
+              background:var(--ui-surface); font-size:13px; }
+  .instrBar select { padding:4px 8px; }
+  .instrBar .pista { color:var(--ui-text-subtle); font-size:11.5px; }
+  @media (max-width:600px) { .instrBar .pista { display:none; } }
+
+  /* Tarjeta de elección de digitación: el diagrama y el carrusel debajo. */
+  .varCard { display:flex; flex-direction:column; align-items:center; gap:6px; padding:10px;
+             border:1.5px solid var(--ui-border); border-radius:var(--ui-radius-md);
+             background:var(--ui-surface-alt); }
+  .varCard .nm { font-family:var(--ui-font-mono); font-weight:600; }
+  .varCard .sinDicc { font-size:11.5px; color:var(--ui-text-subtle); text-align:center; }
+  .varCard .mando { display:flex; align-items:center; gap:6px; }
+  .varCard .mando button { min-width:32px; padding:4px 8px; font-family:var(--ui-font-mono); }
+  .varCard .cuenta { font-size:11.5px; color:var(--ui-text-subtle); min-width:52px; text-align:center; }
+  /* La que usa la canción, marcada también en la ficha de solo lectura. */
+  .chordCard.elegida { border-color:var(--ui-accent); box-shadow:0 0 0 1.5px var(--ui-accent); }
   .chordCard { display:flex; flex-direction:column; align-items:center; gap:4px; padding:10px;
-               border:1.5px solid var(--vv-border); border-radius:var(--vv-radius-md);
-               background:var(--vv-surface);
+               border:1.5px solid var(--ui-border); border-radius:var(--ui-radius-md);
+               background:var(--ui-surface);
                transition:box-shadow var(--ac-dur) var(--ac-ease),
                           border-color var(--ac-dur) var(--ac-ease),
                           transform var(--ac-dur) var(--ac-ease); }
   /* Mismo trato que las tarjetas de partitura: las del diccionario también son
      <button> con superficie propia. */
-  button.chordCard:hover { background:var(--vv-surface); border-color:var(--vv-active);
-                           box-shadow:var(--vv-shadow-pop); transform:translateY(-2px); }
+  button.chordCard:hover { background:var(--ui-surface); border-color:var(--ui-active);
+                           box-shadow:var(--ui-shadow-pop); transform:translateY(-2px); }
   button.chordCard:active { transform:translateY(0); box-shadow:none; }
-  .chordCard .nm { font-family:var(--vv-font-mono); font-weight:600; }
-  .chordCard .va { font-size:11px; color:var(--vv-text-subtle); }
+  .chordCard .nm { font-family:var(--ui-font-mono); font-weight:600; }
+  .chordCard .va { font-size:11px; color:var(--ui-text-subtle); }
   .posRow { display:flex; gap:12px; align-items:center; flex-wrap:wrap; padding:10px;
-            border:1px solid var(--vv-border); border-radius:var(--vv-radius-md); }
-  .posRow input { width:54px; text-align:center; font-family:var(--vv-font-mono); padding:6px 4px; }
-  .posRow .lbl { font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--vv-text-subtle); }
+            border:1px solid var(--ui-border); border-radius:var(--ui-radius-md); }
+  .posRow input { width:54px; text-align:center; font-family:var(--ui-font-mono); padding:6px 4px; }
+  .posRow .lbl { font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--ui-text-subtle); }
   .posRow .grp { display:flex; gap:4px; align-items:center; }
   .posRow .pills button { padding:4px 8px; min-width:30px; font-size:12px; }
   /* Avisos flotantes y diálogos propios: sustituyen a alert/confirm/prompt del
@@ -735,22 +873,22 @@ export const WEB_CSS = `  /* Accordio · paquete de estilo de marca (accordio-we
             bottom:calc(16px + env(safe-area-inset-bottom)); display:flex; gap:8px;
             flex-direction:column; align-items:stretch; pointer-events:none;
             width:min(440px,calc(100vw - 32px)); }
-  .toast { pointer-events:auto; cursor:pointer; background:var(--vv-surface);
-           border:1.5px solid var(--vv-border); border-left:4px solid var(--vv-accent);
-           border-radius:var(--vv-radius-md); box-shadow:var(--ac-shadow-lg);
-           padding:11px 14px; font-size:14px; color:var(--vv-text); overflow-wrap:anywhere;
+  .toast { pointer-events:auto; cursor:pointer; background:var(--ui-surface);
+           border:1.5px solid var(--ui-border); border-left:4px solid var(--ui-accent);
+           border-radius:var(--ui-radius-md); box-shadow:var(--ac-shadow-lg);
+           padding:11px 14px; font-size:14px; color:var(--ui-text); overflow-wrap:anywhere;
            transition:opacity .18s ease, transform .18s ease; }
   .toast.ok { border-left-color:var(--ac-turquoise); }
   .toast.error { border-left-color:var(--ac-coral); }
   .toast.in { opacity:0; transform:translateY(10px); }
   .toast.out { opacity:0; transform:translateY(6px); }
   .dlgBox { max-width:440px; }
-  .dlgText { margin:0; color:var(--vv-text-muted); white-space:pre-line; overflow-wrap:anywhere; }
+  .dlgText { margin:0; color:var(--ui-text-muted); white-space:pre-line; overflow-wrap:anywhere; }
   .dlgField { display:flex; flex-direction:column; gap:6px; }
   .dlgField .lbl { font-size:11px; letter-spacing:.14em; text-transform:uppercase;
-                   color:var(--vv-text-subtle); }
+                   color:var(--ui-text-subtle); }
   .dlgBtns { display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; }
-  button.danger { background:var(--vv-danger-solid); color:var(--vv-on-danger);
+  button.danger { background:var(--ui-danger-solid); color:var(--ui-on-danger);
                   border-color:transparent; }
   button.danger:hover { background:var(--ac-coral-600); }
   /* Quien pide menos movimiento en el sistema no ve el levantamiento: se queda
@@ -816,24 +954,24 @@ export const WEB_CSS = `  /* Accordio · paquete de estilo de marca (accordio-we
    * icono desaparece. Para dibujar se usa la rampa que sí contrasta (la misma
    * que ya usan los acordes y las estrellas), y en oscuro son el color vivo.
    */
-  .tool { --tono:var(--vv-accent); --tono-texto:var(--vv-on-accent);
-          --tono-glifo:var(--vv-accent); --ac-icon-accent:var(--tono-glifo); }
+  .tool { --tono:var(--ui-accent); --tono-texto:var(--ui-on-accent);
+          --tono-glifo:var(--ui-accent); --ac-icon-accent:var(--tono-glifo); }
   .tool .ic { color:var(--tono-glifo); }
   .tool:hover { border-color:var(--tono-glifo); }
   .tool[aria-pressed=true] { background:var(--tono); border-color:transparent;
                              color:var(--tono-texto); }
   .tool[aria-pressed=true] .ic { color:var(--tono-texto); --ac-icon-accent:var(--tono-texto); }
   .herr.scroll .tool  { --tono:var(--ac-active);    --tono-texto:var(--ac-primary-800);
-                        --tono-glifo:var(--vv-beat); }
+                        --tono-glifo:var(--ui-beat); }
   .herr.metro .tool   { --tono:var(--ac-pending);   --tono-texto:var(--ac-yellow-900);
-                        --tono-glifo:var(--vv-state-text); }
+                        --tono-glifo:var(--ui-state-text); }
   .herr.acordes .tool { --tono:var(--ac-highlight); --tono-texto:var(--ac-on-highlight);
-                        --tono-glifo:var(--vv-chord); }
+                        --tono-glifo:var(--ui-chord); }
   .herr.tono .tool    { --tono:var(--ac-action);    --tono-texto:var(--ac-on-action);
-                        --tono-glifo:var(--vv-accent); }
-  .tool.compartir     { --tono:var(--ac-highlight); --tono-glifo:var(--vv-chord);
+                        --tono-glifo:var(--ui-accent); }
+  .tool.compartir     { --tono:var(--ac-highlight); --tono-glifo:var(--ui-chord);
                         --tono-texto:var(--ac-on-highlight); }
-  .tool.imprimir      { --tono:var(--ac-action); --tono-glifo:var(--vv-accent); }
+  .tool.imprimir      { --tono:var(--ac-action); --tono-glifo:var(--ui-accent); }
   /* «Nueva» es la acción destacada de la página: el kit reserva el coral justo
      para eso («acción destacada, nuevo»). Va rellena, no de contorno. */
   .tool.destacada { background:var(--ac-highlight); color:var(--ac-on-highlight);
@@ -843,38 +981,63 @@ export const WEB_CSS = `  /* Accordio · paquete de estilo de marca (accordio-we
   .tool.destacada:hover { background:var(--ac-highlight-hover); }
   /* Favoritas: la estrella de las tarjetas ya es coral; el filtro va a juego. */
   .tool.favoritas { --tono:var(--ac-highlight); --tono-texto:var(--ac-on-highlight);
-                    --tono-glifo:var(--vv-chord); }
+                    --tono-glifo:var(--ui-chord); }
   /* Ocultar publicadas es un filtro de estado: turquesa, y así no compite con
      el coral de «favoritas», que está al lado. */
   .tool.privadas { --tono:var(--ac-active); --tono-texto:var(--ac-primary-800);
-                   --tono-glifo:var(--vv-beat); }
+                   --tono-glifo:var(--ui-beat); }
   /* Altas abiertas = estado activo (turquesa relleno); cerradas = contorno. */
   .tool.altas { --tono:var(--ac-active); --tono-texto:var(--ac-primary-800);
-                --tono-glifo:var(--vv-beat); }
+                --tono-glifo:var(--ui-beat); }
   /* La etiqueta del bloque también toma el color: es el rótulo de la sección. */
   .herr > label:first-child { font-size:11px; font-weight:600; letter-spacing:.14em;
                               text-transform:uppercase; }
-  .herr.tono > label:first-child  { color:var(--vv-accent); }
-  .herr.metro > label:first-child { color:var(--vv-state-text); }
-  .herr.letra > label:first-child { color:var(--vv-text-muted); }
+  .herr.tono > label:first-child  { color:var(--ui-accent); }
+  .herr.metro > label:first-child { color:var(--ui-state-text); }
+  .herr.letra > label:first-child { color:var(--ui-text-muted); }
   /* Las barras deslizantes, del color de su herramienta. */
   #vCtrl #vSpeed { accent-color:var(--ac-active); }
   #vCtrl #vBpm { accent-color:var(--ac-pending); }
-  #vSpeedVal { color:var(--vv-beat); }
-  #vBpmVal { color:var(--vv-state-text); }
+  #vSpeedVal { color:var(--ui-beat); }
+  #vBpmVal { color:var(--ui-state-text); }
 
   /* «Cargar más» cierra el listado y es lo único que hay ahí abajo: va relleno
      con el color de acción y centrado, no como un contorno perdido en el fondo. */
   #moreBtn { display:block; margin:16px auto 0; padding:11px 28px;
-             background:var(--vv-accent); color:var(--vv-on-accent);
-             border-color:transparent; box-shadow:var(--vv-shadow-pop); }
-  #moreBtn:hover:not(.card):not(.chordCard) { background:var(--vv-accent-strong);
+             background:var(--ui-accent); color:var(--ui-on-accent);
+             border-color:transparent; box-shadow:var(--ui-shadow-pop); }
+  #moreBtn:hover:not(.card):not(.chordCard) { background:var(--ui-accent-strong);
                                               border-color:transparent; }
   .hidden { display:none !important; }
 `;
 
-/** JavaScript de la aplicación, servido en /static/vivace-app.js. */
-export const WEB_APP_JS = `var token = localStorage.getItem("vivace_token") || "";
+/** JavaScript de la aplicación, servido en /static/accordio-app.js. */
+export const WEB_APP_JS = `/*
+ * Las claves de almacenamiento se llamaban vivace_* y ahora son accordio_*. Se
+ * trasladan al arrancar, ANTES de leer ninguna: renombrarlas a secas habría
+ * cerrado la sesión a todo el mundo y borrado el tema elegido, que es
+ * exactamente lo que un cambio de nombre no debe hacer.
+ *
+ * La mudanza se puede quitar cuando haya pasado tiempo de sobra para que todo
+ * el mundo haya entrado una vez (digamos, un año).
+ */
+(function mudarClaves() {
+  var pares = [
+    ["vivace_token", "accordio_token"],
+    ["vivace_theme", "accordio_theme"],
+    ["vivace_instrument", "accordio_instrument"]
+  ];
+  try {
+    for (var i = 0; i < pares.length; i++) {
+      var valor = localStorage.getItem(pares[i][0]);
+      if (valor === null) continue;
+      if (localStorage.getItem(pares[i][1]) === null) localStorage.setItem(pares[i][1], valor);
+      localStorage.removeItem(pares[i][0]);
+    }
+  } catch (e) { /* almacenamiento bloqueado: se sigue sin recordar nada */ }
+})();
+
+var token = localStorage.getItem("accordio_token") || "";
 var user = null;
 var tab = "public";
 var songs = [];
@@ -882,7 +1045,7 @@ var current = null;          // { song, content }
 var editingId = null;        // null = alta nueva
 var semis = 0, flats = false, fontSize = 18;
 var scrolling = false, lastTs = 0, remainder = 0, raf = 0, wakeLock = null;
-var metro = new VMetronome();
+var metro = new AcMetronome();
 var ratings = {};              // medias por versión ("" = el Original)
 var myRatings = {};            // lo que ha votado quien está mirando
 var comments = [];
@@ -906,7 +1069,17 @@ var favOnly = false;           // ver solo las favoritas
  * "Solo privadas" apaga el filtro y devuelve el repertorio entero.
  */
 var sinPublicas = true;
-var chordDict = null;          // diccionario global, cacheado tras la primera carga
+/*
+ * Diccionarios de acordes, uno por instrumento. Son blobs distintos en el
+ * servidor (una digitación de ukelele son cuatro cuerdas y una de guitarra
+ * seis), así que aquí también viven separados y se cargan por separado.
+ */
+var chordDicts = {};           // { guitarra: {...}, ukelele: {...} }, según se piden
+var chordDict = {};            // atajo al del instrumento activo
+var instrumentos = [{ id: "guitarra", name: "Guitarra", strings: 6 },
+                    { id: "ukelele", name: "Ukelele", strings: 4 }];
+var instrumento = "guitarra";  // el que se está mirando; lo recuerda el navegador
+var editChordVariants = { guitarra: {}, ukelele: {} };   // elección del editor
 var chordBarOn = false;
 var editingChord = null;       // nombre que se está editando, "" si es nuevo
 var chordPositions = [];       // posiciones del acorde en edición
@@ -971,7 +1144,7 @@ function cerrarDialogo(caja) {
  * alert/confirm/prompt del navegador desentonaban (tipografía y colores del
  * sistema, ancho fijo, nada del tema claro/oscuro) y además congelan la página
  * mientras están abiertos: con el metrónomo sonando o una subida en marcha eso
- * se nota. Aquí van los tres en versión Vivace:
+ * se nota. Aquí van los tres en versión Accordio:
  *   notificar(texto, tipo)  aviso flotante que se va solo (no bloquea nada)
  *   confirmar(opciones)     -> Promise<boolean>
  *   pedirTexto(opciones)    -> Promise<string|null>  (null = ha cancelado)
@@ -1125,7 +1298,7 @@ function temaEfectivo() {
 }
 
 function currentTheme() {
-  try { return localStorage.getItem("vivace_theme") || ""; } catch (e) { return ""; }
+  try { return localStorage.getItem("accordio_theme") || ""; } catch (e) { return ""; }
 }
 function toggleTheme() {
   var actual = currentTheme();
@@ -1133,7 +1306,7 @@ function toggleTheme() {
     ? actual === "dark"
     : window.matchMedia("(prefers-color-scheme: dark)").matches;
   var siguiente = oscuroAhora ? "light" : "dark";
-  try { localStorage.setItem("vivace_theme", siguiente); } catch (e) {}
+  try { localStorage.setItem("accordio_theme", siguiente); } catch (e) {}
   applyTheme(siguiente);
 }
 
@@ -1221,8 +1394,8 @@ function api(method, path, body) {
 function setSession(tok, u) {
   token = tok || "";
   user = u || null;
-  if (token) localStorage.setItem("vivace_token", token);
-  else localStorage.removeItem("vivace_token");
+  if (token) localStorage.setItem("accordio_token", token);
+  else localStorage.removeItem("accordio_token");
   who.textContent = user ? (user.name || user.email) : "";
   who.classList.toggle("hidden", !user);
   loginBtn.classList.toggle("hidden", !!user);
@@ -1376,10 +1549,6 @@ function restoreSession() {
 }
 
 var registering = false;
-function showAuth(on) {
-  showView(on ? "auth" : "list");
-  authMsg.textContent = "";
-}
 function submitAuth() {
   var path = registering ? "/auth/register" : "/auth/login";
   var body = { email: email.value.trim(), password: password.value };
@@ -1390,10 +1559,11 @@ function submitAuth() {
   api("POST", path, body).then(function (d) {
     setSession(d.token, d.user);
     password.value = "";
-    showAuth(false);
-    tab = "mine";
-    listOffset = 0;
-    refresh();
+    // Se vuelve a donde se iba antes del desvío por «Entrar»; si no había
+    // destino, a la carpeta propia, que es lo que se busca al iniciar sesión.
+    var destino = rutaPendiente || "#/mias";
+    rutaPendiente = "";
+    navegar(destino, { reemplazar: true });
   }).catch(function (e) { authMsg.textContent = e.message; });
 }
 
@@ -1430,11 +1600,11 @@ function renderGenreOptions(lista) {
   var hayElegida = !genreBy;
   lista.forEach(function (g) {
     if (g.genre === genreBy) hayElegida = true;
-    opciones += '<option value="' + vEsc(g.genre) + '">' + vEsc(g.genre) +
+    opciones += '<option value="' + acEsc(g.genre) + '">' + acEsc(g.genre) +
                 (g.total ? " (" + g.total + ")" : "") + "</option>";
   });
   if (!hayElegida) {
-    opciones += '<option value="' + vEsc(genreBy) + '">' + vEsc(genreBy) + "</option>";
+    opciones += '<option value="' + acEsc(genreBy) + '">' + acEsc(genreBy) + "</option>";
   }
   genreFilter.innerHTML = opciones;
   genreFilter.value = genreBy;
@@ -1452,7 +1622,7 @@ function renderGenreDatalist(extra) {
   });
   todas.sort(function (a, b) { return a.localeCompare(b, "es"); });
   genreList.innerHTML = todas.map(function (g) {
-    return '<option value="' + vEsc(g) + '"></option>';
+    return '<option value="' + acEsc(g) + '"></option>';
   }).join("");
 }
 
@@ -1503,24 +1673,33 @@ function refresh() {
   playlistFilterWrap.classList.toggle("hidden", !propio);
   favFilter.classList.toggle("hidden", !propio);
   privFilter.classList.toggle("hidden", !propio);
-  // El catálogo puede ser enorme: género y orden los resuelve SQL. "Mis
-  // partituras" son pocas y se ordenan aquí mismo, sin ida y vuelta.
-  // Los listados vienen por páginas: sin tope, una cuenta grande se traía
-  // el catálogo entero en cada visita.
+  /*
+   * TODOS los filtros van al servidor, también los de "Mis partituras".
+   * Aplicarlos solo sobre lo ya descargado era la causa de que una carpeta o
+   * "Solo privadas" salieran vacías: el listado viene por páginas, y si las
+   * primeras sesenta partituras no pasaban el filtro no se veía nada hasta
+   * pulsar "Cargar más" una vez por página. El filtro tiene que decidir sobre
+   * todo el catálogo, y eso solo lo sabe SQL.
+   */
   var pag = "limit=" + (busqueda ? PAGINA_BUSQUEDA : PAGINA) + "&offset=" + listOffset +
-            (busqueda ? "&q=" + encodeURIComponent(busqueda) : "");
+            (busqueda ? "&q=" + encodeURIComponent(busqueda) : "") +
+            "&sort=" + encodeURIComponent(sortBy) +
+            (genreBy ? "&genre=" + encodeURIComponent(genreBy) : "");
+  var mios = (propio || tab === "trash")
+    ? (sinPublicas ? "&visibility=private" : "") +
+      (favOnly ? "&favorite=1" : "") +
+      (playlistBy ? "&playlist=" + encodeURIComponent(playlistBy) : "")
+    : "";
   var path = tab === "trash"
-    ? "/api/songs?trash=1&" + pag
+    ? "/api/songs?trash=1&" + pag + mios
     : tab === "mine"
-    ? "/api/songs?" + pag
-    : "/api/songs/public?sort=" + encodeURIComponent(sortBy) +
-      (genreBy ? "&genre=" + encodeURIComponent(genreBy) : "") + "&" + pag;
+    ? "/api/songs?" + pag + mios
+    : "/api/songs/public?" + pag;
   api("GET", path).then(function (d) {
     // Al pedir "más" se añade; al cambiar de pestaña o filtro se empieza de cero.
     songs = listOffset ? songs.concat(d.songs || []) : (d.songs || []);
     listHasMore = !!d.hasMore;
     moreBtn.classList.toggle("hidden", !listHasMore);
-    if (tab === "mine" || tab === "trash") songs = sortMine(songs);
     // El filtro ofrece lo que hay delante: en "Mis partituras", tus categorías
     // (también las de las privadas, que el catálogo público no conoce).
     var propias = genresOf(songs);
@@ -1534,29 +1713,18 @@ function refresh() {
   });
 }
 
-/** Mismo criterio que el catálogo, aplicado en el navegador. */
-function sortMine(lista) {
-  var copia = lista.slice();
-  if (sortBy === "recent") copia.sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
-  else if (sortBy === "old") copia.sort(function (a, b) { return (a.createdAt || 0) - (b.createdAt || 0); });
-  else copia.sort(function (a, b) { return (a.title || "").localeCompare(b.title || "", "es"); });
-  return copia;
-}
-
 function renderList(error) {
   // Se filtra otra vez aquí, y con la MISMA normalización que el servidor, para
   // que escribir la cuarta letra no espere a la respuesta: lo ya cargado se
   // recorta al instante y luego llega el listado completo.
-  var q = vNormalizarBusqueda(search.value);
+  var q = acNormalizarBusqueda(search.value);
   var propio = tab === "mine";
+  // Aquí SOLO se recorta por el texto del buscador, que es lo que tiene que
+  // responder tecla a tecla. Los demás filtros los resuelve el servidor: si se
+  // repitieran aquí, esconderían partituras que la página siguiente sí trae.
   var shown = songs.filter(function (s) {
-    if (propio && genreBy && (s.genre || "").toLowerCase() !== genreBy.toLowerCase()) return false;
-    if (propio && favOnly && !s.favorite) return false;
-    if (propio && sinPublicas && s.visibility === "public") return false;
-    if (propio && playlistBy === "none" && s.playlistId) return false;
-    if (propio && playlistBy && playlistBy !== "none" && s.playlistId !== playlistBy) return false;
     if (!q) return true;
-    return vNormalizarBusqueda((s.title || "") + " " + (s.artist || "")).indexOf(q) >= 0;
+    return acNormalizarBusqueda((s.title || "") + " " + (s.artist || "")).indexOf(q) >= 0;
   });
   list.innerHTML = "";
   shown.forEach(function (s) {
@@ -1624,13 +1792,13 @@ function renderList(error) {
       acc.appendChild(rest); acc.appendChild(borrar);
       card.appendChild(acc);
     }
-    card.onclick = function () { if (tab !== "trash") openSong(s.id); };
+    card.onclick = function () { if (tab !== "trash") navegar("#/cancion/" + s.id); };
     list.appendChild(card);
   });
   // Con menos de 3 letras no se ha preguntado al servidor: si el recorte local
   // no encuentra nada, hay que decir que la búsqueda aún no ha salido de aquí,
   // y no que no existe la partitura.
-  var cortaParaBuscar = q && vLetrasYCifras(search.value) < MIN_BUSQUEDA;
+  var cortaParaBuscar = q && acLetrasYCifras(search.value) < MIN_BUSQUEDA;
   // Si hay partituras y no se ve ninguna, lo que sobra es un filtro, no el
   // repertorio: decirlo así evita el «todavía no tienes partituras» que sonaba
   // a que se habían perdido.
@@ -1652,56 +1820,154 @@ function renderList(error) {
   listEmpty.classList.toggle("hidden", !msg);
 }
 
-/* ---------- enlaces a una partitura ---------- */
+/* ---------- rutas ---------- */
 /*
- * La web no cambiaba nunca de URL: no se podía enlazar a una partitura, ni usar
- * el botón «atrás», ni recargar sin volver al principio. Se resuelve con el
- * fragmento (#/cancion/<id>) y no con una ruta de verdad porque el Worker solo
- * sirve la página en «/»: una ruta como /cancion/x daría 404 antes de que el
- * navegador llegara a ejecutar nada.
+ * La web tenía UNA sola dirección para todo. Cambiar de pantalla no cambiaba la
+ * URL, así que el botón «atrás» del ratón no volvía a la pantalla anterior sino
+ * que se salía del sitio, y las pantallas se abrían llamándose entre ellas, una
+ * encima de otra. Lo peor de eso no era el desorden: al editor se llegaba por
+ * llamada directa, sin pasar por ningún control, de modo que se podía tener
+ * delante la pantalla de edición sin sesión ninguna (el guardado fallaba
+ * después, con un 401, pero para entonces ya se había escrito la partitura).
+ *
+ * Ahora cada pantalla ES una ruta, y la ruta es la ÚNICA forma de llegar a ella:
+ *
+ *   #/                      catálogo
+ *   #/mias #/papelera #/propuestas #/acordes #/usuarios #/admin
+ *   #/entrar                acceso
+ *   #/cancion/<id>          visor
+ *   #/nueva  #/editar/<id>  editor
+ *
+ * Se usa el fragmento y no una ruta de verdad porque el Worker solo sirve la
+ * página en «/»: una ruta como /cancion/x daría 404 antes de que el navegador
+ * llegara a ejecutar nada.
+ *
+ * Cada ruta declara qué permiso pide, y el guardia se aplica SIEMPRE al
+ * resolver la URL: al arrancar, al navegar, al volver con «atrás» y al cambiar
+ * de sesión. No hay puerta de atrás porque no hay más puertas.
  */
-var RUTA_CANCION = /^#[/]cancion[/]([A-Za-z0-9-]+)$/;
+var PANTALLAS = {
+  catalogo:   { hash: "#/",           vista: "list",      tab: "public" },
+  mias:       { hash: "#/mias",       vista: "list",      tab: "mine",      permiso: "sesion" },
+  papelera:   { hash: "#/papelera",   vista: "list",      tab: "trash",     permiso: "sesion" },
+  propuestas: { hash: "#/propuestas", vista: "proposals", tab: "proposals", permiso: "sesion" },
+  acordes:    { hash: "#/acordes",    vista: "chords",    tab: "chords",    permiso: "editor" },
+  usuarios:   { hash: "#/usuarios",   vista: "users",     tab: "users",     permiso: "admin" },
+  admin:      { hash: "#/admin",      vista: "admin",     tab: "admin",     permiso: "editor" },
+  entrar:     { hash: "#/entrar",     vista: "auth" },
+  cancion:    { hash: "#/cancion/",   vista: "list" },
+  nueva:      { hash: "#/nueva",      vista: "edit",      permiso: "sesion" },
+  editar:     { hash: "#/editar/",    vista: "edit",      permiso: "sesion" }
+};
 
-/** Id de partitura que pide la URL actual, o "" si no pide ninguna. */
-function cancionDeLaUrl() {
-  var m = RUTA_CANCION.exec(location.hash || "");
-  return m ? m[1] : "";
+var RUTA_CANCION = /^#[/]cancion[/]([A-Za-z0-9-]+)$/;
+var RUTA_EDITAR = /^#[/]editar[/]([A-Za-z0-9-]+)$/;
+
+/** La ruta que pide la URL de ahora mismo. Lo que no se reconoce es el catálogo. */
+function rutaActual() {
+  var h = location.hash || "";
+  var m = RUTA_CANCION.exec(h);
+  if (m) return { pantalla: "cancion", id: m[1] };
+  m = RUTA_EDITAR.exec(h);
+  if (m) return { pantalla: "editar", id: m[1] };
+  var nombres = Object.keys(PANTALLAS);
+  for (var i = 0; i < nombres.length; i++) {
+    if (PANTALLAS[nombres[i]].hash === h) return { pantalla: nombres[i], id: "" };
+  }
+  return { pantalla: "catalogo", id: "" };
+}
+
+/** La ruta que enseña una pestaña del listado. */
+function hashDePestana(pestana) {
+  var nombres = Object.keys(PANTALLAS);
+  for (var i = 0; i < nombres.length; i++) {
+    if (PANTALLAS[nombres[i]].tab === pestana) return PANTALLAS[nombres[i]].hash;
+  }
+  return "#/";
 }
 
 function enlaceDeCancion(id) {
   return location.origin + location.pathname + location.search + "#/cancion/" + id;
 }
 
-/*
- * Al navegar por la interfaz se escribe la URL, y al navegar por la URL (atrás,
- * adelante, pegar un enlace) se mueve la interfaz. La bandera aplicandoUrl corta el
- * bucle: sin él, abrir una partitura desde popstate volvería a empujar estado.
- */
-var aplicandoUrl = false;
-
-function ponerUrlDeCancion(id, reemplazar) {
-  if (aplicandoUrl) return;
-  var destino = id ? enlaceDeCancion(id) : location.origin + location.pathname + location.search;
-  if (destino === location.href) return;
-  if (reemplazar) history.replaceState({ cancion: id || null }, "", destino);
-  else history.pushState({ cancion: id || null }, "", destino);
+/** ¿Tiene quien está mirando el rango que pide la ruta? */
+function permitido(permiso) {
+  if (permiso === "sesion") return !!user;
+  if (permiso === "editor") return esEditor();
+  if (permiso === "admin") return esAdmin();
+  return true;
 }
 
-/** Lleva la interfaz a donde diga la URL. Se usa al arrancar y en cada popstate. */
+/*
+ * aplicandoUrl corta el bucle: navegar escribe la URL y la aplica, y aplicarla
+ * puede volver a navegar (un redirección del guardia). Sin la bandera, una
+ * redirección se llamaría a sí misma.
+ */
+var aplicandoUrl = false;
+var rutaPendiente = "";      // a dónde iba quien tuvo que pasar por «Entrar»
+var editorPreparado = false; // el editor ya lleva dentro lo que toca (versiones)
+
+/**
+ * Cambia de pantalla. [opciones.reemplazar] pisa la entrada actual del
+ * historial en vez de añadir otra: es lo que hay que hacer después de guardar o
+ * de borrar, para que «atrás» no devuelva a un formulario que ya no existe.
+ */
+function navegar(hash, opciones) {
+  var base = location.origin + location.pathname + location.search;
+  var destino = base + (hash === "#/" ? "" : hash);
+  if (destino !== location.href) {
+    // propia marca las entradas que ha puesto la aplicación: son las únicas
+    // en las que «atrás» lleva a otra pantalla nuestra y no fuera del sitio.
+    if (opciones && opciones.reemplazar) history.replaceState({ hash: hash }, "", destino);
+    else history.pushState({ hash: hash, propia: true }, "", destino);
+  }
+  aplicarUrl();
+}
+
+/** Volver: a la pantalla anterior si la puso la aplicación, y si no, al listado. */
+function volverAtras(alternativa) {
+  if (history.state && history.state.propia) history.back();
+  else navegar(alternativa || hashDePestana(tab), { reemplazar: true });
+}
+
+/** Lleva la interfaz a donde diga la URL. Con el guardia por delante. */
 function aplicarUrl() {
-  var id = cancionDeLaUrl();
+  if (aplicandoUrl) return;
+  var r = rutaActual();
+  var def = PANTALLAS[r.pantalla];
+
+  if (!permitido(def.permiso)) {
+    // Sin sesión se recuerda a dónde iba y se pide entrar; con sesión pero sin
+    // rango no hay nada que pedir, así que al catálogo y se dice por qué.
+    if (!user) {
+      rutaPendiente = location.hash;
+      notificar("Hay que entrar en tu cuenta para eso.", "error");
+      navegar("#/entrar", { reemplazar: true });
+    } else {
+      notificar("Tu cuenta no tiene permiso para esa pantalla.", "error");
+      navegar("#/", { reemplazar: true });
+    }
+    return;
+  }
+
   aplicandoUrl = true;
   try {
-    if (id) {
-      // Ya abierta la que toca: no hay nada que hacer. Hay que mirar TAMBIÉN si
-      // el visor está abierto: current sigue apuntando a la última partitura
-      // después de cerrarlo, así que sin esto «adelante» no la reabría.
-      var yaEstá = viewer.classList.contains("on") &&
-                   current && current.song && current.song.id === id;
-      if (!yaEstá) openSong(id, { desdeUrl: true });
-    } else if (viewer.classList.contains("on")) {
-      closeViewer();
+    if (r.pantalla === "cancion") {
+      showView("list");
+      var yaEsta = viewer.classList.contains("on") &&
+                   current && current.song && current.song.id === r.id;
+      if (!yaEsta) openSong(r.id);
+      return;
     }
+    // Cualquier otra pantalla: el visor no puede quedarse abierto encima.
+    if (viewer.classList.contains("on")) cerrarVisor();
+    if (r.pantalla === "editar") { abrirEditorDe(r.id); return; }
+    if (r.pantalla === "nueva") { prepararAlta(); showView("edit"); return; }
+    if (r.pantalla === "entrar") { showView("auth"); authMsg.textContent = ""; return; }
+    // Listados: la pestaña sale de la ruta, no al revés.
+    if (tab !== def.tab) listOffset = 0;
+    tab = def.tab;
+    refresh();
   } finally {
     aplicandoUrl = false;
   }
@@ -1864,6 +2130,27 @@ var ESTILO_IMPRESION =
   '.fuente{margin-top:6mm;font-size:9px;color:#7B8E92;' +
   'border-top:1px solid #DCE8E5;padding-top:4px;}' +
 
+  /* ---- marca de agua ----
+     La marca y el nombre del sitio cruzando la hoja de la esquina inferior
+     izquierda a la superior derecha. Va DEBAJO del texto (z-index y position:relative en las
+     tres zonas) y a opacidad de filigrana: tiene que verse que la hoja es de
+     Accordio sin estorbar para leer los acordes mientras se toca.
+
+     -45 grados y no 45: en CSS el giro positivo va en el sentido del reloj, que
+     bajaria hacia la derecha. El ancho es el de la diagonal de un A4 (unos
+     364 mm), asi que el rotulo cruza la hoja de punta a punta. */
+  '.hoja{position:relative;}' +
+  '.marca{position:absolute;left:50%;top:50%;width:364mm;' +
+  'transform:translate(-50%,-50%) rotate(-45deg);transform-origin:center;' +
+  'display:flex;align-items:center;justify-content:center;gap:22px;' +
+  'opacity:.07;z-index:0;pointer-events:none;overflow:hidden;}' +
+  '.marca .logo{flex:0 0 auto;width:104px;height:73px;}' +
+  ".marca .tit{font-family:'Montserrat',system-ui,sans-serif;font-weight:700;" +
+  'font-size:68px;letter-spacing:.05em;color:#12363D;white-space:nowrap;}' +
+  /* Encima de la marca: sin esto el texto comparte capa con ella y, en cuanto
+     algo lleva fondo (las etiquetas de capo y tono), se ve recortado. */
+  '.cab,.cuerpo,.pie{position:relative;z-index:1;}' +
+
   /* ---- pie ---- */
   '.pie{flex:0 0 auto;display:flex;align-items:baseline;' +
   'border-top:1px solid #DCE8E5;padding-top:5px;margin-top:6mm;' +
@@ -1886,12 +2173,17 @@ var GUION_PAGINAR = [
   "  var lineas = Array.prototype.slice.call(molde.children);",
   "  var cab = document.getElementById('cabPlantilla').innerHTML;",
   "  var pie = document.getElementById('piePlantilla').innerHTML;",
+  "  var marca = document.getElementById('marcaPlantilla').innerHTML;",
   "  var destino = document.getElementById('hojas');",
   "  molde.remove();",
   "",
   "  function nuevaHoja() {",
   "    var hoja = document.createElement('section');",
   "    hoja.className = 'hoja';",
+  "    var agua = document.createElement('div');",
+  "    agua.className = 'marca';",
+  "    agua.innerHTML = marca;",
+  "    hoja.appendChild(agua);",
   "    var c = document.createElement('header');",
   "    c.className = 'cab';",
   "    c.innerHTML = cab;",
@@ -1977,18 +2269,18 @@ function printViewer() {
   }
   // current.body ya es lo que se está leyendo: el Original o la versión
   // elegida, y capoActual es el capo de eso mismo (ver setCapo).
-  var lineas = vRenderSong(vTransposeBody(current.body || "", semis, flats));
+  var lineas = acRenderSong(acTransposeBody(current.body || "", semis, flats));
   var capo = capoActual;
   var titulo = current.song.title || "Partitura";
   var autor = current.song.artist || "";
-  var fuente = vUrlSegura(current.song.sourceUrl) ? current.song.sourceUrl : "";
+  var fuente = acUrlSegura(current.song.sourceUrl) ? current.song.sourceUrl : "";
 
   var estados =
     (capo > 0 ? '<span class="etq">Capo ' + capo + '</span>' : '') +
     (semis !== 0 ? '<span class="etq tono">Tono ' + (semis > 0 ? '+' : '') + semis + '</span>' : '');
 
   var doc = '<!doctype html><html lang="es"><head><meta charset="utf-8">' +
-    '<title>' + vEsc(titulo) + (autor ? ' · ' + vEsc(autor) : '') + '</title>' +
+    '<title>' + acEsc(titulo) + (autor ? ' · ' + acEsc(autor) : '') + '</title>' +
     '<link rel="preconnect" href="https://fonts.googleapis.com">' +
     '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
     '<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700' +
@@ -1997,16 +2289,21 @@ function printViewer() {
     '<style>' + ESTILO_IMPRESION + '</style></head><body>' +
     // Plantillas de cabecera y pie: se copian en cada hoja al paginar.
     '<template id="cabPlantilla">' + MARCA_PAPEL +
-      '<span class="tit">' + vEsc(titulo) + '</span>' +
-      (autor ? '<span class="aut">' + vEsc(autor) + '</span>' : '') +
+      '<span class="tit">' + acEsc(titulo) + '</span>' +
+      (autor ? '<span class="aut">' + acEsc(autor) + '</span>' : '') +
       (estados ? '<span class="est">' + estados + '</span>' : '') +
     '</template>' +
     '<template id="piePlantilla"><span>accordio.site</span>' +
       '<span class="der num"></span></template>' +
+    // Marca de agua: la misma marca de la cabecera, en grande y con el nombre
+    // del sitio. El título de la canción ya va arriba en cada hoja; lo que
+    // firma el papel es de dónde salió.
+    '<template id="marcaPlantilla">' + MARCA_PAPEL +
+      '<span class="tit">Accordio</span></template>' +
     '<div id="hojas"></div>' +
     // Molde: todo el contenido junto, del que se van sacando las líneas.
     '<div id="molde" style="position:absolute;visibility:hidden">' + lineas +
-      (fuente ? '<div class="fuente">Fuente: ' + vEsc(fuente) + '</div>' : '') +
+      (fuente ? '<div class="fuente">Fuente: ' + acEsc(fuente) + '</div>' : '') +
     '</div>' +
     '<script>' + GUION_PAGINAR + '<\/script>' +
     '</body></html>';
@@ -2070,7 +2367,7 @@ function backupZip() {
       var d2 = new Date();
       var p2 = function (n) { return String(n).padStart(2, "0"); };
       var a = document.createElement("a");
-      a.href = URL.createObjectURL(vBuildZip(entradas));
+      a.href = URL.createObjectURL(acBuildZip(entradas));
       a.download = "accordio-" + d2.getFullYear() + p2(d2.getMonth() + 1) + p2(d2.getDate()) +
                    "-" + p2(d2.getHours()) + p2(d2.getMinutes()) + ".zip";
       a.click();
@@ -2083,7 +2380,7 @@ function backupZip() {
 function restoreZip(file) {
   aviso(adminMsg, "Leyendo ZIP…");
   file.arrayBuffer()
-    .then(vReadZip)
+    .then(acReadZip)
     .then(function (entradas) {
       var textos = entradas.filter(function (e) { return /\.txt$/i.test(e.name); });
       if (!textos.length) { aviso(adminMsg, "El ZIP no trae partituras."); return; }
@@ -2104,7 +2401,7 @@ function importarTextos(textos) {
   var ok = 0, fallos = 0;
   return textos.reduce(function (previa, e) {
     return previa.then(function () {
-      var cab = vParseSong(e.text).head || {};
+      var cab = acParseSong(e.text).head || {};
       return api("POST", "/api/songs", {
         title: cab.title || e.name.replace(/\.txt$/i, ""),
         artist: cab.artist || "",
@@ -2166,12 +2463,17 @@ function categoriasAuto(aplicar) {
 }
 
 /* ---------- visor ---------- */
-function openSong(id, opciones) {
-  var desdeUrl = !!(opciones && opciones.desdeUrl);
+/*
+ * Abre la partitura en el visor. NO toca el historial: quien decide qué se ve
+ * es la ruta (#/cancion/<id>), y esto es lo que la ruta ejecuta. Antes era al
+ * revés —abrir escribía la URL— y por eso «atrás» y «adelante» acababan en
+ * sitios que no correspondían.
+ */
+function openSong(id) {
   api("GET", "/api/songs/" + id).then(function (d) {
     current = d;
     semis = 0; flats = false;
-    var parsed = vParseSong(d.content);
+    var parsed = acParseSong(d.content);
     current.body = parsed.body || d.content;
     // Autor – título en una línea; sin autor, el guion sobra.
     vArtist.textContent = d.song.artist || "";
@@ -2180,7 +2482,7 @@ function openSong(id, opciones) {
     setCapo(d.song.capo);
     // Solo http(s): un href con javascript: en la cabecera sería un agujero.
     var origen = String(d.song.sourceUrl || "");
-    var valida = vUrlSegura(origen);
+    var valida = acUrlSegura(origen);
     vSource.href = valida ? origen : "#";
     vSource.classList.toggle("hidden", !valida);
     vEdit.classList.toggle("hidden", !(user && (user.id === d.song.ownerId || user.role === "admin")));
@@ -2206,18 +2508,12 @@ function openSong(id, opciones) {
     loadRatings(d.song.id);
     loadComments(d.song.id);
     loadRelated(d.song.id);
-    // Al abrirla desde un enlace se REEMPLAZA el estado: si se empujara, el
-    // botón «atrás» devolvería a la misma página en vez de salir de ella.
-    ponerUrlDeCancion(d.song.id, desdeUrl);
   }).catch(function (e) {
-    if (desdeUrl) {
-      // Llegó por un enlace: el mensaje crudo de la API no dice qué hacer.
-      aviso(listEmpty, "No se ha podido abrir esa partitura: " + e.message +
-        ". Puede ser privada, o haber sido borrada.");
-      ponerUrlDeCancion("", true);
-    } else {
-      avisarError(e);
-    }
+    // Se llega aquí también pegando un enlace, así que el mensaje crudo de la
+    // API no basta: hay que decir qué ha podido pasar y dejar el sitio en pie.
+    aviso(listEmpty, "No se ha podido abrir esa partitura: " + e.message +
+      ". Puede ser privada, o haber sido borrada.");
+    navegar("#/", { reemplazar: true });
   });
 }
 
@@ -2271,7 +2567,7 @@ function anchoDeCaracter() {
   var regla = document.createElement("span");
   regla.textContent = "0123456789";
   regla.style.cssText = "position:absolute;visibility:hidden;white-space:pre;" +
-                        "font-family:var(--vv-font-mono);font-size:100px";
+                        "font-family:var(--ui-font-mono);font-size:100px";
   document.body.appendChild(regla);
   anchoChar = regla.getBoundingClientRect().width / 1000;   // 10 caracteres a 100 px
   regla.remove();
@@ -2318,13 +2614,17 @@ function renderViewer() {
   vFlat.style.fontWeight = flats ? "700" : "400";
   var keep = vBody.scrollTop;
   vSheet.innerHTML = '<div class="sheet">' +
-                     vRenderSong(vTransposeBody(current.body, semis, flats)) + "</div>";
+                     acRenderSong(acTransposeBody(current.body, semis, flats)) + "</div>";
   vBody.style.setProperty("--fs", fontSize + "px");
   vBody.scrollTop = keep;
   renderChordBar();
 }
 
-function closeViewer() {
+/**
+ * Apaga el visor. Es solo la mecánica —vídeo, scroll, metrónomo—: quien decide
+ * que hay que cerrarlo es la ruta.
+ */
+function cerrarVisor() {
   // Vaciar el marco para que el vídeo deje de sonar al salir.
   vTube.classList.remove("on");
   vTube.querySelector(".marco").innerHTML = "";
@@ -2334,8 +2634,10 @@ function closeViewer() {
   stopScroll();
   if (metro.isRunning()) toggleMetro();
   viewer.classList.remove("on");
-  ponerUrlDeCancion("");
 }
+
+/** Cerrar el visor es VOLVER: a la pantalla de la que se vino. */
+function salirDelVisor() { volverAtras(); }
 
 function step(ts) {
   if (!scrolling) return;
@@ -2398,7 +2700,7 @@ metro.onBeat = renderBeats;
 function renderTube() {
   var marco = vTube.querySelector(".marco");
   var enlace = current && current.song ? current.song.youtubeUrl : "";
-  var incrustado = vEmbedUrl(enlace);
+  var incrustado = acEmbedUrl(enlace);
   if (!incrustado) {
     vTube.classList.remove("on");
     marco.innerHTML = "";
@@ -2411,7 +2713,7 @@ function renderTube() {
     vTube.classList.add("on");
     return;
   }
-  marco.innerHTML = '<iframe src="' + vEsc(incrustado) + '" title="Vídeo de la canción" ' +
+  marco.innerHTML = '<iframe src="' + acEsc(incrustado) + '" title="Vídeo de la canción" ' +
     'allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" ' +
     'referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>';
   vTube.classList.add("on");
@@ -2542,7 +2844,7 @@ function renderVersionBar() {
       vVersionActions.appendChild(editar);
       var borrar = document.createElement("button");
       borrar.textContent = "Eliminar";
-      borrar.style.color = "var(--vv-danger)";
+      borrar.style.color = "var(--ui-danger)";
       borrar.onclick = function () { deleteVersion(currentVersion); };
       vVersionActions.appendChild(borrar);
     }
@@ -2631,7 +2933,7 @@ function renderRelated(lista, motivo) {
     }
     // Se abre EN EL MISMO visor: cambia la partitura, la URL y las propias
     // recomendaciones, sin pasar por el catálogo.
-    card.onclick = function () { openSong(s.id); };
+    card.onclick = function () { navegar("#/cancion/" + s.id); };
     rejilla.appendChild(card);
   });
   vRelated.appendChild(rejilla);
@@ -2741,7 +3043,7 @@ function showVersion(id) {
   if (!id) {
     currentVersion = null;
     setCapo(current.song.capo);
-    var parsed = vParseSong(current.content);
+    var parsed = acParseSong(current.content);
     current.body = parsed.body || current.content;
     renderViewer();
     renderVersionBar();
@@ -2749,7 +3051,7 @@ function showVersion(id) {
   }
   api("GET", "/api/versions/" + id).then(function (d) {
     currentVersion = id;
-    var p = vParseSong(d.content);
+    var p = acParseSong(d.content);
     current.body = p.body || d.content;
     setCapo(d.version.capo);
     renderViewer();
@@ -2765,12 +3067,11 @@ function newVersion() {
   eVersionName.value = "";
   eSource.value = "";
   editCapo = Number(current.song.capo) || 0;
-  renderCapoPills();
+  renderCapo();
   eContent.value = current.body || "";
   renderEditorPreview();
-  closeViewer();
   applyEditorMode();
-  showEdit(true);
+  irAlEditorPreparado(current.song.id);
 }
 
 function editVersion(id) {
@@ -2783,12 +3084,11 @@ function editVersion(id) {
     eVersionName.value = v.name || "";
     eSource.value = v.sourceUrl || "";
     editCapo = Number(v.capo) || 0;
-    renderCapoPills();
+    renderCapo();
     eContent.value = d.content || "";
     renderEditorPreview();
-    closeViewer();
     applyEditorMode();
-    showEdit(true);
+    irAlEditorPreparado(current.song.id);
   }).catch(avisarError);
 }
 
@@ -2816,13 +3116,12 @@ function proposeVersion() {
   eVersionName.value = "";
   eSource.value = "";
   editCapo = Number(current.song.capo) || 0;
-  renderCapoPills();
+  renderCapo();
   eContent.value = current.body || "";
   eNote.value = "";
   renderEditorPreview();
-  closeViewer();
   applyEditorMode();
-  showEdit(true);
+  irAlEditorPreparado(current.song.id);
 }
 
 /* ---------- propuestas ---------- */
@@ -2906,7 +3205,7 @@ function renderProposals(error) {
     }
     var abrir = document.createElement("button");
     abrir.textContent = "Partitura";
-    abrir.onclick = function () { openSong(p.songId); };
+    abrir.onclick = function () { navegar("#/cancion/" + p.songId); };
     acciones.appendChild(abrir);
 
     if (p.status === "pending" && esEditor()) {
@@ -2917,7 +3216,7 @@ function renderProposals(error) {
       acciones.appendChild(aprobar);
       var rechazar = document.createElement("button");
       rechazar.textContent = "Rechazar";
-      rechazar.style.color = "var(--vv-danger)";
+      rechazar.style.color = "var(--ui-danger)";
       rechazar.onclick = function () { resolveProposal(p, "reject"); };
       acciones.appendChild(rechazar);
     }
@@ -2985,8 +3284,8 @@ function openProposal(p) {
     pmTitle.textContent = p.name || "Versión propuesta";
     pmMeta.textContent = (p.authorName ? "de " + p.authorName : "") +
                          (p.capo ? " · capo " + p.capo : "");
-    var parsed = vParseSong(d.content || "");
-    pmBody.innerHTML = '<div class="sheet">' + vRenderSong(parsed.body || d.content || "") + '</div>';
+    var parsed = acParseSong(d.content || "");
+    pmBody.innerHTML = '<div class="sheet">' + acRenderSong(parsed.body || d.content || "") + '</div>';
     abrirDialogo(propModal);
   }).catch(function (e) { propMsg.textContent = e.message; });
 }
@@ -3051,22 +3350,91 @@ function renderUsers(lista) {
  * El diccionario global es el mismo para todo el mundo y cambia poco, así que
  * se pide una vez por carga de página y se guarda en memoria.
  */
-function loadChords() {
-  if (chordDict) return Promise.resolve(chordDict);
-  return api("GET", "/api/chords/global").then(function (d) {
-    chordDict = d.chords || {};
-    return chordDict;
-  }).catch(function () {
-    chordDict = {};
-    return chordDict;
+/** Cuántas cuerdas tiene un instrumento, según lo que diga el servidor. */
+function cuerdasDe(id) {
+  var i = instrumentos.filter(function (x) { return x.id === id; })[0];
+  return (i && i.strings) || 6;
+}
+
+function nombreInstrumento(id) {
+  var i = instrumentos.filter(function (x) { return x.id === id; })[0];
+  return (i && i.name) || id;
+}
+
+/**
+ * Trae el diccionario de un instrumento (o del activo) y lo cachea. Cada uno se
+ * pide una sola vez: son cientos de acordes y no cambian mientras se mira.
+ */
+function loadChords(cual) {
+  var quiero = cual || instrumento;
+  function activar(dicc) {
+    chordDicts[quiero] = dicc;
+    if (quiero === instrumento) chordDict = dicc;
+    return dicc;
+  }
+  if (chordDicts[quiero]) return Promise.resolve(activar(chordDicts[quiero]));
+  return api("GET", "/api/chords/global?instrument=" + encodeURIComponent(quiero))
+    .then(function (d) {
+      // La lista de instrumentos la manda el servidor: así no hay dos sitios
+      // que la repitan y se desincronicen al añadir uno.
+      if (d.instruments && d.instruments.length) {
+        instrumentos = d.instruments;
+        pintarInstrumentos();
+      }
+      return activar(d.chords || {});
+    })
+    .catch(function () { return activar({}); });
+}
+
+/** Posiciones de un acorde en el diccionario de [cual]; [] si no está. */
+function chordPositionsOf(name, cual) {
+  var dicc = chordDicts[cual || instrumento] || (cual ? null : chordDict) || {};
+  var entrada = dicc[name];
+  if (!entrada) return [];
+  return entrada.positions || [];
+}
+
+/**
+ * Qué digitación usa ESTA partitura para este acorde. Sin elección guardada es
+ * la primera, que es lo de siempre; con elección, la que puso quien la editó.
+ * Un índice que se salga (el diccionario cambió) vuelve a la primera en vez de
+ * dejar el hueco en blanco.
+ */
+function varianteDe(nombre, cual) {
+  var quiero = cual || instrumento;
+  var guardadas = current && current.song && current.song.chordVariants;
+  var mapa = (guardadas && guardadas[quiero]) || {};
+  var i = Number(mapa[nombre]) || 0;
+  var posiciones = chordPositionsOf(nombre, quiero);
+  return i >= 0 && i < posiciones.length ? i : 0;
+}
+
+/** Rellena los desplegables de instrumento que haya en la página. */
+function pintarInstrumentos() {
+  ["vInstr", "vmInstr", "chordInstr"].forEach(function (id) {
+    var sel = document.getElementById(id);
+    if (!sel) return;
+    var elegido = sel.value || instrumento;
+    sel.innerHTML = "";
+    instrumentos.forEach(function (i) {
+      var o = document.createElement("option");
+      o.value = i.id;
+      o.textContent = i.name;
+      sel.appendChild(o);
+    });
+    sel.value = elegido;
   });
 }
 
-/** Posiciones de un acorde; [] si no está en el diccionario. */
-function chordPositionsOf(name) {
-  var entrada = chordDict && chordDict[name];
-  if (!entrada) return [];
-  return entrada.positions || [];
+/**
+ * Cambia el instrumento que se está mirando. Es una preferencia de quien lee
+ * (no de la partitura), así que se recuerda en el navegador y no en la ficha.
+ */
+function ponerInstrumento(id) {
+  instrumento = id;
+  try { localStorage.setItem("accordio_instrument", id); } catch (e) {}
+  pintarInstrumentos();
+  return loadChords(id);
 }
 
 /**
@@ -3074,10 +3442,15 @@ function chordPositionsOf(name) {
  * si estás tocando dos tonos arriba, los diagramas son los de ahí.
  */
 function renderChordBar() {
-  if (!chordBarOn || !current) { vChordBar.classList.add("hidden"); return; }
+  if (!chordBarOn || !current) {
+    vChordBar.classList.add("hidden");
+    vInstrWrap.classList.add("hidden");
+    return;
+  }
   vChordBar.classList.remove("hidden");
-  var nombres = vSongChords(current.body).map(function (n) {
-    return vTransposeChord(n, semis, flats);
+  vInstrWrap.classList.remove("hidden");
+  var nombres = acSongChords(current.body).map(function (n) {
+    return acTransposeChord(n, semis, flats);
   });
   vChordBar.innerHTML = "";
   var pintados = 0;
@@ -3085,18 +3458,24 @@ function renderChordBar() {
     var posiciones = chordPositionsOf(nombre);
     if (!posiciones.length) return;
     pintados++;
+    // La digitación es la que eligió quien editó la partitura, no la primera
+    // del diccionario: es lo que se toca en ESTA canción.
+    var cual = varianteDe(nombre);
     var b = document.createElement("button");
-    b.innerHTML = vChordSvg(posiciones[0], 78) + '<span class="nm">' + vEsc(nombre) + '</span>';
-    b.title = posiciones.length > 1 ? posiciones.length + " digitaciones" : "";
+    b.innerHTML = acChordSvg(posiciones[cual], 78) + '<span class="nm">' + acEsc(nombre) + '</span>';
+    b.title = posiciones.length > 1
+      ? "Digitación " + (cual + 1) + " de " + posiciones.length
+      : "";
     b.onclick = function () { openChordModal(nombre); };
     vChordBar.appendChild(b);
   });
   if (!pintados) {
     var aviso = document.createElement("span");
     aviso.className = "none";
-    aviso.textContent = nombres.length
-      ? "Ningún acorde de esta partitura está en el diccionario todavía."
-      : "Esta partitura no lleva acordes marcados.";
+    aviso.textContent = !nombres.length
+      ? "Esta partitura no lleva acordes marcados."
+      : "Ningún acorde de esta partitura está en el diccionario de " +
+        nombreInstrumento(instrumento).toLowerCase() + " todavía.";
     vChordBar.appendChild(aviso);
   }
 }
@@ -3114,28 +3493,129 @@ function toggleChordBar() {
 /** Todas las digitaciones de un acorde, para mirarlas de cerca. */
 function openChordModal(nombre) {
   loadChords().then(function () {
-    cmName.textContent = nombre;
+    cmName.textContent = nombre + " · " + nombreInstrumento(instrumento);
     cmBody.innerHTML = "";
     var posiciones = chordPositionsOf(nombre);
+    var elegida = varianteDe(nombre);
     posiciones.forEach(function (pos, i) {
       var caja = document.createElement("div");
-      caja.className = "chordCard";
-      caja.innerHTML = vChordSvg(pos, 116) +
-                       '<span class="va">' + (i + 1) + " de " + posiciones.length + "</span>";
+      caja.className = "chordCard" + (i === elegida ? " elegida" : "");
+      caja.innerHTML = acChordSvg(pos, 116) +
+                       '<span class="va">' + (i === elegida ? "la de esta canción" : (i + 1) + " de " + posiciones.length) + "</span>";
       cmBody.appendChild(caja);
     });
     cmEmpty.textContent = posiciones.length
       ? ""
-      : "Este acorde no está en el diccionario global todavía.";
+      : "Este acorde no está en el diccionario de " +
+        nombreInstrumento(instrumento).toLowerCase() + " todavía.";
     cmEmpty.classList.toggle("hidden", !!posiciones.length);
     abrirDialogo(chordModal);
   });
+}
+
+/* ---------- digitaciones de la canción (editor) ---------- */
+/*
+ * Qué digitación se usa para cada acorde de ESTA canción. Antes se pintaba
+ * siempre la primera del diccionario, y la primera de la biblioteca es muchas
+ * veces una postura alta con cejilla que no es la que toca nadie: el diagrama
+ * decía una cosa y la partitura otra.
+ *
+ * La elección se guarda con la partitura (chordVariants) y por instrumento,
+ * porque el Do de guitarra y el de ukelele no se parecen en nada.
+ */
+function abrirVariantes() {
+  vmInstr.value = instrumento;
+  loadChords().then(function () {
+    renderVariantes();
+    abrirDialogo(varModal);
+  });
+}
+
+/** Los acordes que aparecen en el texto que se está editando, sin repetir. */
+function acordesDelEditor() {
+  return acSongChords(eContent.value || "");
+}
+
+function renderVariantes() {
+  var nombres = acordesDelEditor();
+  var mapa = editChordVariants[instrumento] || (editChordVariants[instrumento] = {});
+  vmBody.innerHTML = "";
+  nombres.forEach(function (nombre) {
+    var posiciones = chordPositionsOf(nombre);
+    var caja = document.createElement("div");
+    caja.className = "varCard";
+
+    var titulo = document.createElement("span");
+    titulo.className = "nm";
+    titulo.textContent = nombre;
+
+    if (!posiciones.length) {
+      var falta = document.createElement("span");
+      falta.className = "sinDicc";
+      falta.textContent = "No está en el diccionario de " +
+                          nombreInstrumento(instrumento).toLowerCase();
+      caja.appendChild(titulo);
+      caja.appendChild(falta);
+      vmBody.appendChild(caja);
+      return;
+    }
+
+    var i = Number(mapa[nombre]) || 0;
+    if (i < 0 || i >= posiciones.length) i = 0;
+    var dibujo = document.createElement("div");
+    var cuenta = document.createElement("span");
+    cuenta.className = "cuenta";
+
+    function pintar() {
+      dibujo.innerHTML = acChordSvg(posiciones[i], 116);
+      cuenta.textContent = (i + 1) + " de " + posiciones.length;
+      // La primera es el valor por defecto: no hace falta guardarla.
+      if (i === 0) delete mapa[nombre];
+      else mapa[nombre] = i;
+    }
+
+    function mover(paso) {
+      i = (i + paso + posiciones.length) % posiciones.length;
+      pintar();
+    }
+
+    var mando = document.createElement("div");
+    mando.className = "mando";
+    var menos = document.createElement("button");
+    menos.type = "button";
+    menos.className = "tool";
+    menos.textContent = "‹";
+    menos.title = "Digitación anterior";
+    menos.onclick = function () { mover(-1); };
+    var mas = document.createElement("button");
+    mas.type = "button";
+    mas.className = "tool";
+    mas.textContent = "›";
+    mas.title = "Digitación siguiente";
+    mas.onclick = function () { mover(1); };
+    mando.appendChild(menos);
+    mando.appendChild(cuenta);
+    mando.appendChild(mas);
+
+    pintar();
+    caja.appendChild(dibujo);
+    caja.appendChild(titulo);
+    caja.appendChild(mando);
+    vmBody.appendChild(caja);
+  });
+
+  var vacio = !nombres.length
+    ? "Esta partitura no lleva acordes marcados: escríbelos entre llaves, {Am}, o usa «Detectar acordes»."
+    : "";
+  vmEmpty.textContent = vacio;
+  vmEmpty.classList.toggle("hidden", !vacio);
 }
 
 /* ---------- diccionario: administración ---------- */
 
 function showChords() {
   showView("chords");
+  pintarInstrumentos();
   loadChords().then(renderChordList);
 }
 
@@ -3143,7 +3623,8 @@ function renderChordList() {
   var q = chordSearch.value.trim().toLowerCase();
   var nombres = Object.keys(chordDict || {}).sort();
   var vistos = nombres.filter(function (n) { return !q || n.toLowerCase().indexOf(q) >= 0; });
-  chordCount.textContent = nombres.length + " acordes en el diccionario";
+  chordCount.textContent = nombres.length + " acordes en el diccionario de " +
+                           nombreInstrumento(instrumento).toLowerCase();
   chordList.innerHTML = "";
   // Con el diccionario base entero son cientos de tarjetas: sin buscar se
   // enseña un aperitivo y se pide filtrar, que si no el navegador sufre.
@@ -3152,8 +3633,8 @@ function renderChordList() {
     var posiciones = chordPositionsOf(nombre);
     var card = document.createElement("button");
     card.className = "chordCard";
-    card.innerHTML = (posiciones[0] ? vChordSvg(posiciones[0], 92) : "") +
-                     '<span class="nm">' + vEsc(nombre) + '</span>' +
+    card.innerHTML = (posiciones[0] ? acChordSvg(posiciones[0], 92) : "") +
+                     '<span class="nm">' + acEsc(nombre) + '</span>' +
                      '<span class="va">' + posiciones.length +
                      (posiciones.length === 1 ? " posición" : " posiciones") + '</span>';
     card.onclick = function () { openChordEditor(nombre); };
@@ -3161,7 +3642,11 @@ function renderChordList() {
   });
   var resto = vistos.length - Math.min(vistos.length, tope);
   var msg = !nombres.length
-    ? "El diccionario está vacío. Empieza con «Importar diccionario base»."
+    ? (instrumento === "guitarra"
+        ? "El diccionario está vacío. Empieza con «Importar diccionario base»."
+        : "Todavía no hay acordes de " + nombreInstrumento(instrumento).toLowerCase() +
+          ". Añádelos con «+ Nuevo acorde» o sube el diccionario entero por la API " +
+          "(PUT /api/chords/global?instrument=" + instrumento + ").")
     : !vistos.length ? "Ningún acorde coincide con la búsqueda."
     : resto > 0 ? "Y " + resto + " más. Busca por nombre para acotar."
     : "";
@@ -3173,16 +3658,42 @@ function openChordEditor(nombre) {
   editingChord = nombre || "";
   chName.value = editingChord;
   chordPositions = JSON.parse(JSON.stringify(chordPositionsOf(editingChord)));
-  if (!chordPositions.length) {
-    chordPositions = [{ frets: [-1, -1, -1, -1, -1, -1], fingers: [0, 0, 0, 0, 0, 0], baseFret: 1, barres: [] }];
-  }
+  if (!chordPositions.length) chordPositions = [posicionVacia()];
   chMsg.textContent = "";
   chDelete.classList.toggle("hidden", !editingChord);
   renderChordPositions();
   abrirDialogo(chordEditor);
 }
 
-/** Una fila por posición: seis trastes, traste base, cejillas y el dibujo al lado. */
+/** Una digitación en blanco, con las cuerdas del instrumento que se administra. */
+function posicionVacia() {
+  var n = cuerdasDe(instrumento);
+  var frets = [], fingers = [];
+  for (var i = 0; i < n; i++) { frets.push(-1); fingers.push(0); }
+  return { frets: frets, fingers: fingers, baseFret: 1, barres: [] };
+}
+
+/*
+ * Cómo se llaman las cuerdas al aire, para rotular la fila de trastes. La
+ * guitarra va de la sexta a la primera; el ukelele, en afinación de sol, de la
+ * cuarta a la primera.
+ */
+var CUERDAS_AL_AIRE = {
+  guitarra: ["Mi", "La", "Re", "Sol", "Si", "Mi"],
+  ukelele: ["Sol", "Do", "Mi", "La"]
+};
+
+function rotuloCuerdas() {
+  var n = cuerdasDe(instrumento);
+  var nombres = CUERDAS_AL_AIRE[instrumento];
+  if (!nombres || nombres.length !== n) {
+    nombres = [];
+    for (var i = 1; i <= n; i++) nombres.push(String(i));
+  }
+  return nombres.join("  ");
+}
+
+/** Una fila por posición: un traste por cuerda, traste base, cejillas y el dibujo. */
 function renderChordPositions() {
   chPositions.innerHTML = "";
   chordPositions.forEach(function (pos, idx) {
@@ -3190,12 +3701,12 @@ function renderChordPositions() {
     fila.className = "posRow";
 
     var vista = document.createElement("div");
-    vista.innerHTML = vChordSvg(pos, 92);
+    vista.innerHTML = acChordSvg(pos, 92);
     fila.appendChild(vista);
 
     var trastes = document.createElement("div");
     trastes.className = "grp";
-    for (var c = 0; c < 6; c++) {
+    for (var c = 0; c < pos.frets.length; c++) {
       (function (cuerda) {
         var inp = document.createElement("input");
         inp.type = "number"; inp.min = "-1"; inp.max = "24";
@@ -3203,14 +3714,14 @@ function renderChordPositions() {
         inp.oninput = function () {
           var v = parseInt(inp.value, 10);
           pos.frets[cuerda] = isNaN(v) ? -1 : v;
-          vista.innerHTML = vChordSvg(pos, 92);
+          vista.innerHTML = acChordSvg(pos, 92);
         };
         trastes.appendChild(inp);
       })(c);
     }
     var etiqueta = document.createElement("span");
     etiqueta.className = "lbl";
-    etiqueta.textContent = "Mi  La  Re  Sol  Si  Mi";
+    etiqueta.textContent = rotuloCuerdas();
     var envoltorio = document.createElement("div");
     envoltorio.appendChild(etiqueta);
     envoltorio.appendChild(trastes);
@@ -3231,7 +3742,7 @@ function renderChordPositions() {
           b.onclick = function () {
             pos.baseFret = traste;
             pintaBase();
-            vista.innerHTML = vChordSvg(pos, 92);
+            vista.innerHTML = acChordSvg(pos, 92);
           };
           pastillas.appendChild(b);
         })(t);
@@ -3251,7 +3762,7 @@ function renderChordPositions() {
     ic.oninput = function () {
       pos.barres = ic.value.split(",").map(function (v) { return parseInt(v, 10); })
                      .filter(function (v) { return !isNaN(v); });
-      vista.innerHTML = vChordSvg(pos, 92);
+      vista.innerHTML = acChordSvg(pos, 92);
     };
     cej.appendChild(lc); cej.appendChild(ic);
     fila.appendChild(cej);
@@ -3270,8 +3781,11 @@ function renderChordPositions() {
 
 /** Guarda el diccionario entero: es un blob único y el que manda para todos. */
 function saveChordDict(siguiente, mensaje) {
-  return api("PUT", "/api/chords/global", { chords: siguiente }).then(function (d) {
-    chordDict = siguiente;
+  var cual = instrumento;
+  return api("PUT", "/api/chords/global?instrument=" + encodeURIComponent(cual),
+             { instrument: cual, chords: siguiente }).then(function (d) {
+    chordDicts[cual] = siguiente;
+    if (cual === instrumento) chordDict = siguiente;
     chordSaved.textContent = mensaje || ("Guardado · " + d.count + " acordes");
     chordMsg.textContent = "";
     renderChordList();
@@ -3311,11 +3825,47 @@ function deleteChord() {
   });
 }
 
+/*
+ * Carga un diccionario entero desde un fichero JSON, para el instrumento que
+ * esté elegido. Es la puerta por la que entrará el diccionario de ukelele: la
+ * estructura ya está montada (blob propio, cuatro cuerdas, su selector), y lo
+ * único que falta es el contenido.
+ *
+ * Se acepta tanto { "chords": { … } } como el objeto de acordes pelado, y tanto
+ * { positions: [ … ] } como la lista suelta: es lo mismo que admite el
+ * servidor, que es quien valida de verdad.
+ */
+function importarDiccionario(file) {
+  var cual = instrumento;
+  chordMsg.textContent = "";
+  chordSaved.textContent = "Leyendo…";
+  file.text().then(function (texto) {
+    var datos = JSON.parse(texto);
+    var acordes = datos && datos.chords ? datos.chords : datos;
+    var cuantos = Object.keys(acordes || {}).length;
+    if (!cuantos) throw new Error("el fichero no trae ningún acorde");
+    return confirmar({
+      titulo: "Importar diccionario de " + nombreInstrumento(cual).toLowerCase(),
+      texto: "Se van a guardar " + cuantos + " acordes. Sustituye por completo el " +
+             "diccionario de " + nombreInstrumento(cual).toLowerCase() + " que haya ahora.",
+      aceptar: "Importar"
+    }).then(function (sigue) {
+      if (!sigue) { chordSaved.textContent = ""; return; }
+      return saveChordDict(acordes, "Importados " + cuantos + " acordes");
+    });
+  }).catch(function (e) {
+    chordSaved.textContent = "";
+    chordMsg.textContent = "No se ha podido importar: " + e.message;
+  });
+}
+
 function seedChords() {
   chordMsg.textContent = "";
   chordSaved.textContent = "Importando…";
-  api("POST", "/api/chords/global/seed").then(function (d) {
-    chordDict = null;
+  // La semilla que trae el Worker es de guitarra; el servidor rechaza pedirla
+  // para otro instrumento en vez de sembrarlo con digitaciones que no valen.
+  api("POST", "/api/chords/global/seed?instrument=" + encodeURIComponent(instrumento)).then(function (d) {
+    delete chordDicts[instrumento];
     return loadChords().then(function () {
       chordSaved.textContent = "Añadidos " + d.added + " acordes (ya tenías " + d.kept + ")";
       renderChordList();
@@ -3330,26 +3880,32 @@ function seedChords() {
 
 var editCapo = 0;
 
+/** Último traste con capo. Más arriba no queda mástil que valga la pena. */
+var CAPO_MAX = 12;
+
 /**
- * Capo de 0 a 12 en botones. Se elige de un toque y no hay forma de escribir
- * un valor imposible; 0 es "sin capo" y por eso va con su propia etiqueta.
+ * Capo en un carrusel de un traste en un traste. Antes eran trece pastillas:
+ * ocupaban dos filas de la ficha para un valor que casi siempre es 0 y que,
+ * cuando no lo es, se mueve de uno en uno.
+ *
+ * Da la vuelta a propósito —de 12 se pasa a «Sin capo» y de ahí a 12— para que
+ * ninguno de los dos botones se quede muerto en los extremos; el valor está a
+ * la vista entre los dos, así que no hay forma de perderse.
  */
-function renderCapoPills() {
-  eCapoPills.innerHTML = "";
-  for (var i = 0; i <= 12; i++) {
-    (function (valor) {
-      var b = document.createElement("button");
-      b.textContent = valor === 0 ? "Sin capo" : String(valor);
-      b.setAttribute("aria-pressed", valor === editCapo);
-      b.onclick = function () { editCapo = valor; renderCapoPills(); };
-      eCapoPills.appendChild(b);
-    })(i);
-  }
+function moverCapo(paso) {
+  editCapo = (editCapo + paso + (CAPO_MAX + 1)) % (CAPO_MAX + 1);
+  renderCapo();
+}
+
+/** Vuelca editCapo en el mando. 0 es «sin capo» y se dice con palabras. */
+function renderCapo() {
+  eCapoVal.textContent = editCapo === 0 ? "Sin capo" : "Traste " + editCapo;
+  eCapoVal.setAttribute("data-puesto", editCapo === 0 ? "no" : "si");
 }
 
 /** Marca los acordes del texto con la misma lógica que el panel /admin. */
 function detectChords() {
-  var r = vDetectChords(eContent.value);
+  var r = acDetectChords(eContent.value);
   if (!r.marked) { editMsg.textContent = "No se ha detectado ninguna línea de acordes."; return; }
   eContent.value = r.text;
   renderEditorPreview();
@@ -3362,9 +3918,9 @@ function detectChords() {
  * partitura: lo de la derecha es exactamente lo que vera quien la toque.
  */
 function renderEditorPreview() {
-  var parsed = vParseSong(eContent.value);
+  var parsed = acParseSong(eContent.value);
   ePreview.innerHTML = '<div class="sheet">' +
-                       vRenderSong(parsed.body || eContent.value) + "</div>";
+                       acRenderSong(parsed.body || eContent.value) + "</div>";
 }
 
 /**
@@ -3415,15 +3971,35 @@ function applyEditorMode() {
   }
 }
 
-function showEdit(on) {
-  showView(on ? "edit" : "list");
-  editMsg.textContent = "";
+/** Salir del editor es VOLVER, igual que en el visor. */
+function salirDelEditor() { volverAtras(hashDePestana(tab)); }
+/*
+ * Deja el editor listo con lo que ya se ha preparado (una versión, una
+ * propuesta) y cambia de ruta. La bandera evita que el enrutador vuelva a
+ * rellenarlo con la partitura y se lleve por delante el modo recién puesto.
+ */
+function irAlEditorPreparado(songId) {
+  editorPreparado = true;
+  navegar("#/editar/" + songId);
 }
-function newSong() {
+
+/** Copia de las variantes de una partitura, para poder tocarlas sin pisar nada. */
+function variantesDe(song) {
+  var origen = (song && song.chordVariants) || {};
+  var copia = {};
+  instrumentos.forEach(function (i) {
+    copia[i.id] = Object.assign({}, origen[i.id] || {});
+  });
+  return copia;
+}
+
+/** Deja el editor en blanco. Lo llama la ruta #/nueva. */
+function prepararAlta() {
   editingId = null;
   eTitle.value = ""; eArtist.value = ""; eSource.value = ""; eContent.value = ""; eGenre.value = "";
   eTube.value = ""; eTubeMsg.textContent = "";
-  editCapo = 0; renderCapoPills();
+  editCapo = 0; renderCapo();
+  editChordVariants = variantesDe(null);
   eLocked.checked = false;
   editorMode = "song"; editingVersionId = null;
   eVisibility.value = "private";
@@ -3432,7 +4008,7 @@ function newSong() {
   ePlaylist.value = (playlistBy && playlistBy !== "none") ? playlistBy : "";
   renderEditorPreview();
   applyEditorMode();
-  showEdit(true);
+  editMsg.textContent = "";
 }
 function editCurrent() {
   if (!current) return;
@@ -3445,18 +4021,58 @@ function editCurrent() {
         aceptar: "Editarla igualmente"
       })
     : Promise.resolve(true);
-  permiso.then(function (sigue) { if (sigue) abrirEditorDeCancion(); });
+  permiso.then(function (sigue) { if (sigue) navegar("#/editar/" + current.song.id); });
 }
 
-/** Vuelca la partitura del visor en el editor. Sale de editCurrent. */
-function abrirEditorDeCancion() {
+/** ¿Puede quien está mirando editar ESTA partitura? La misma regla del servidor. */
+function puedeEditarCancion(song) {
+  return !!user && !!song && (user.id === song.ownerId || esAdmin());
+}
+
+/*
+ * Lo que ejecuta la ruta #/editar/<id>. Tener sesión no basta: editar es un
+ * permiso sobre ESA partitura, así que se comprueba con la ficha delante y, si
+ * no toca, se devuelve al visor. Vale igual llegando por el botón que pegando
+ * la dirección.
+ */
+function abrirEditorDe(id) {
+  if (editorPreparado) {           // ya lo ha dejado listo newVersion/proposeVersion
+    editorPreparado = false;
+    editMsg.textContent = "";
+    showView("edit");
+    return;
+  }
+  var ficha = current && current.song && current.song.id === id && current.content != null
+    ? Promise.resolve(current)
+    : api("GET", "/api/songs/" + id);
+  ficha.then(function (d) {
+    current = d;
+    if (current.body == null) {
+      var trozos = acParseSong(d.content);
+      current.body = trozos.body || d.content;
+    }
+    if (!puedeEditarCancion(d.song)) {
+      notificar("Esa partitura no es tuya: no se puede editar.", "error");
+      navegar("#/cancion/" + id, { reemplazar: true });
+      return;
+    }
+    volcarEnEditor();
+    showView("edit");
+  }).catch(function (e) {
+    aviso(listEmpty, "No se ha podido abrir esa partitura para editarla: " + e.message);
+    navegar("#/", { reemplazar: true });
+  });
+}
+
+/** Vuelca la partitura de current en los campos del editor. */
+function volcarEnEditor() {
   editorMode = "song";
   editingVersionId = null;
   editingId = current.song.id;
   eTitle.value = current.song.title || "";
   eArtist.value = current.song.artist || "";
   editCapo = Number(current.song.capo) || 0;
-  renderCapoPills();
+  renderCapo();
   eSource.value = current.song.sourceUrl || "";
   eGenre.value = current.song.genre || "";
   eTube.value = current.song.youtubeUrl || "";
@@ -3465,10 +4081,10 @@ function abrirEditorDeCancion() {
   eVisibility.value = current.song.visibility || "private";
   ePlaylist.value = current.song.playlistId || "";
   eContent.value = current.content || "";
+  editChordVariants = variantesDe(current.song);
   renderEditorPreview();
-  closeViewer();
   applyEditorMode();
-  showEdit(true);
+  editMsg.textContent = "";
 }
 function saveSong() {
   if (editorMode === "version") return saveVersion();
@@ -3483,16 +4099,17 @@ function saveSong() {
     sourceUrl: eSource.value.trim(),
     visibility: eVisibility.value,
     playlistId: ePlaylist.value || null,
+    chordVariants: editChordVariants,
     content: eContent.value
   };
   var req = editingId ? api("PUT", "/api/songs/" + editingId, payload)
                       : api("POST", "/api/songs", payload);
   req.then(function () {
-    showEdit(false);
-    tab = "mine";
-    listOffset = 0;
     loadGenres();          // la categoría puede ser nueva
-    refresh();
+    // Se REEMPLAZA la entrada del editor: guardada la partitura, «atrás» no
+    // puede devolver a un formulario que ya no tiene nada que hacer.
+    listOffset = 0;
+    navegar("#/mias", { reemplazar: true });
   }).catch(function (e) { editMsg.textContent = e.message; });
 }
 /** Guarda una versión de la partitura abierta (alta o edición). */
@@ -3508,8 +4125,7 @@ function saveVersion() {
     : api("POST", "/api/songs/" + editingId + "/versions", payload);
   req.then(function () {
     editorMode = "song";
-    showEdit(false);
-    openSong(editingId);
+    navegar("#/cancion/" + editingId, { reemplazar: true });
   }).catch(function (e) { editMsg.textContent = e.message; });
 }
 
@@ -3524,10 +4140,8 @@ function sendVersionProposal() {
     content: eContent.value
   }).then(function () {
     editorMode = "song";
-    showEdit(false);
-    tab = "proposals";
     listOffset = 0;
-    refresh();
+    navegar("#/propuestas", { reemplazar: true });
   }).catch(function (e) { editMsg.textContent = e.message; });
 }
 
@@ -3545,10 +4159,8 @@ function proposePublish() {
     if (nota === null) return;
     return api("POST", "/api/songs/" + id + "/proposals", { kind: "publish", note: nota })
       .then(function () {
-        showEdit(false);
-        tab = "proposals";
         listOffset = 0;
-        refresh();
+        navegar("#/propuestas", { reemplazar: true });
         notificar("Propuesta enviada", "ok");
       }).catch(function (e) { editMsg.textContent = e.message; });
   });
@@ -3564,9 +4176,9 @@ function deleteSong() {
   }).then(function (sigue) {
     if (!sigue) return;
     return api("DELETE", "/api/songs/" + id).then(function () {
-      showEdit(false);
       loadGenres();
-      refresh();
+      current = null;
+      navegar("#/mias", { reemplazar: true });
       notificar("Partitura en la papelera", "ok");
     }).catch(function (e) { editMsg.textContent = e.message; });
   });
@@ -3584,18 +4196,21 @@ function ajustarAutocomplete() {
 
 loginBtn.onclick = function () { registering = false; authTitle.textContent = "Entrar en Accordio";
   authSubmit.textContent = "Entrar"; authSwitch.textContent = "Crear una cuenta";
-  nameWrap.classList.add("hidden"); ajustarAutocomplete(); showAuth(true); };
+  nameWrap.classList.add("hidden"); ajustarAutocomplete(); navegar("#/entrar"); };
 logoutBtn.onclick = function () {
-  closeViewer();
+  cerrarVisor();
   current = null;
   editingId = null;
   editingVersionId = null;
   editorMode = "song";
-  chordDict = null;              // el diccionario se recarga con la sesión nueva
+  chordDicts = {};               // los diccionarios se recargan con la sesión nueva
+  chordDict = {};
   setSession("", null);
-  tab = "public";
-  listOffset = 0;
-  refresh();
+  // Al catálogo, y REEMPLAZANDO: si se estaba en el editor o en la papelera,
+  // «atrás» no puede devolver a una pantalla que ya no se tiene permiso de ver.
+  // La comprobación no depende de esto —el guardia la repite— pero así no se
+  // ve un parpadeo de la pantalla anterior.
+  navegar("#/", { reemplazar: true });
 };
 authSwitch.onclick = function () {
   registering = !registering;
@@ -3610,10 +4225,9 @@ authSubmit.onclick = submitAuth;
 password.addEventListener("keydown", function (e) { if (e.key === "Enter") submitAuth(); });
 
 /** Cambiar de pestaña o de filtro empieza el listado desde el principio. */
+/** Cambiar de pestaña es cambiar de ruta: lo demás lo hace el enrutador. */
 function irA(pestana) {
-  tab = pestana;
-  listOffset = 0;
-  refresh();
+  navegar(hashDePestana(pestana));
 }
 
 tabPublic.onclick = function () { irA("public"); };
@@ -3631,7 +4245,7 @@ moreBtn.onclick = function () { listOffset += PAGINA; refresh(); };
 search.oninput = function () {
   renderList();
   var texto = search.value.trim();
-  var quiereBuscar = vLetrasYCifras(texto) >= MIN_BUSQUEDA ? texto : "";
+  var quiereBuscar = acLetrasYCifras(texto) >= MIN_BUSQUEDA ? texto : "";
   if (quiereBuscar === busqueda) return;      // nada que cambiar en el servidor
   clearTimeout(temporizadorBusqueda);
   temporizadorBusqueda = setTimeout(function () {
@@ -3644,21 +4258,28 @@ tabChords.onclick = function () { irA("chords"); };
 
 themeBtn.onclick = toggleTheme;
 
+/*
+ * Cambiar un filtro es empezar el listado de cero: el desplazamiento que había
+ * era el del filtro anterior, y reutilizarlo se saltaba las primeras.
+ */
 playlistFilter.onchange = function () {
   playlistBy = playlistFilter.value;
   renderPlaylistControls();
-  renderList();
+  listOffset = 0;
+  refresh();
 };
 favFilter.onclick = function () {
   favOnly = !favOnly;
   marcarFavoritas();
-  renderList();
+  listOffset = 0;
+  refresh();
 };
 
 privFilter.onclick = function () {
   sinPublicas = !sinPublicas;
   marcarPrivadas();
-  renderList();
+  listOffset = 0;
+  refresh();
 };
 
 /** Estado del filtro, y qué pasa al pulsarlo. */
@@ -3789,8 +4410,11 @@ function hideChordHover() {
 function showChordHover(el, nombre) {
   var posiciones = chordPositionsOf(nombre);
   if (!posiciones.length) return;
-  chordHover.innerHTML = '<span class="nm">' + vEsc(nombre) + '</span>' +
-    posiciones.slice(0, 4).map(function (p) { return vChordSvg(p, 84); }).join("");
+  // La de esta canción primero: es la que se está tocando.
+  var elegida = varianteDe(nombre);
+  var orden = [posiciones[elegida]].concat(posiciones.filter(function (p, i) { return i !== elegida; }));
+  chordHover.innerHTML = '<span class="nm">' + acEsc(nombre) + '</span>' +
+    orden.slice(0, 4).map(function (p) { return acChordSvg(p, 84); }).join("");
   chordHover.classList.add("on");
   // Se coloca debajo del acorde y se mete hacia dentro si no cabe a la derecha.
   var r = el.getBoundingClientRect();
@@ -3827,6 +4451,19 @@ vBody.onclick = function (e) {
   openChordModal(destino.textContent.trim());
 };
 cmClose.onclick = function () { cerrarDialogo(chordModal); };
+eChords.onclick = abrirVariantes;
+vmClose.onclick = function () { cerrarDialogo(varModal); };
+varModal.onclick = function (e) { if (e.target === varModal) cerrarDialogo(varModal); };
+vmInstr.onchange = function () {
+  ponerInstrumento(vmInstr.value).then(renderVariantes);
+};
+vInstr.onchange = function () {
+  ponerInstrumento(vInstr.value).then(function () {
+    renderChordBar();
+    // El diccionario que se administra es el del instrumento que se mira.
+    if (tab === "chords") renderChordList();
+  });
+};
 document.addEventListener("keydown", function (e) {
   if (e.key === "Escape" && !chordModal.classList.contains("hidden")) {
     cerrarDialogo(chordModal);
@@ -3845,16 +4482,38 @@ sortSel.onchange = function () { sortBy = sortSel.value; listOffset = 0; refresh
 chordSearch.oninput = renderChordList;
 chordNew.onclick = function () { openChordEditor(""); };
 chordSeed.onclick = seedChords;
+chordImport.onclick = function () { chordFile.click(); };
+chordFile.onchange = function () {
+  if (chordFile.files && chordFile.files[0]) importarDiccionario(chordFile.files[0]);
+  chordFile.value = "";        // el mismo fichero dos veces también tiene que valer
+};
 chClose.onclick = function () { cerrarDialogo(chordEditor); };
 chAddPos.onclick = function () {
-  chordPositions.push({ frets: [-1, -1, -1, -1, -1, -1], fingers: [0, 0, 0, 0, 0, 0], baseFret: 1, barres: [] });
+  chordPositions.push(posicionVacia());
   renderChordPositions();
 };
+/* El diccionario que se administra es el del instrumento elegido aquí, que es
+   el mismo que se ve en el visor: no tendría sentido editar uno y mirar otro. */
+chordInstr.onchange = function () {
+  ponerInstrumento(chordInstr.value).then(function () {
+    chordSaved.textContent = "";
+    chordMsg.textContent = "";
+    renderChordList();
+  });
+};
 eDetect.onclick = detectChords;
+eCapoMenos.onclick = function () { moverCapo(-1); };
+eCapoMas.onclick = function () { moverCapo(1); };
+// Las flechas mueven el capo mientras el mando tenga el foco: es un valor de
+// una sola dimensión y quien va con el teclado espera que se comporte así.
+eCapoStep.addEventListener("keydown", function (e) {
+  if (e.key === "ArrowLeft" || e.key === "ArrowDown") { moverCapo(-1); e.preventDefault(); }
+  else if (e.key === "ArrowRight" || e.key === "ArrowUp") { moverCapo(1); e.preventDefault(); }
+});
 // Comprobación en el momento: pegar algo que no es de YouTube se ve al instante.
 eTube.oninput = function () {
   var v = eTube.value.trim();
-  eTubeMsg.textContent = !v ? "" : (vEmbedUrl(v) ? "Vídeo reconocido" : "No parece un enlace de YouTube");
+  eTubeMsg.textContent = !v ? "" : (acEmbedUrl(v) ? "Vídeo reconocido" : "No parece un enlace de YouTube");
 };
 eTubeSearch.onclick = function () {
   var consulta = (eArtist.value.trim() + " " + eTitle.value.trim()).trim();
@@ -3864,15 +4523,15 @@ eTubeSearch.onclick = function () {
 };
 chSave.onclick = saveChord;
 chDelete.onclick = deleteChord;
-newBtn.onclick = newSong;
+newBtn.onclick = function () { navegar("#/nueva"); };
 eContent.oninput = renderEditorPreview;
 linkPaneScroll(eContent, ePreview);
 linkPaneScroll(ePreview, eContent);
 saveBtn.onclick = saveSong;
-cancelEdit.onclick = function () { showEdit(false); };
+cancelEdit.onclick = salirDelEditor;
 deleteBtn.onclick = deleteSong;
 
-vClose.onclick = closeViewer;
+vClose.onclick = salirDelVisor;
 vEdit.onclick = editCurrent;
 vPlay.onclick = function () { scrolling ? stopScroll() : startScroll(); };
 vSpeed.oninput = function () { vSpeedVal.textContent = vSpeed.value + " px/s"; };
@@ -3889,7 +4548,7 @@ vFontDown.onclick = function () { fontSize = Math.max(8, fontSize - 1); renderVi
 vMetro.onclick = toggleMetro;
 vBpm.oninput = function () { vBpmVal.textContent = vBpm.value; metro.bpm = +vBpm.value; };
 document.addEventListener("keydown", function (e) {
-  if (e.key === "Escape" && viewer.classList.contains("on")) closeViewer();
+  if (e.key === "Escape" && viewer.classList.contains("on")) salirDelVisor();
 });
 
 applyTheme(currentTheme());
@@ -3897,13 +4556,22 @@ window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", fun
   if (!currentTheme()) recursosDeTema(temaEfectivo());
 });
 renderBeats(0);
+// El instrumento es una preferencia de quien lee, así que lo recuerda el
+// navegador: quien toca el ukelele no tiene que elegirlo en cada partitura.
+try {
+  var instrGuardado = localStorage.getItem("accordio_instrument");
+  if (instrGuardado) instrumento = instrGuardado;
+} catch (e) {}
+pintarInstrumentos();
 loadGenres();
 loadSettings();
 restoreSession().then(function () {
-  // La portada es el catálogo, se tenga sesión o no: al entrar interesa ver lo
-  // que hay publicado, no la carpeta propia (que está a un clic, en su pestaña).
-  refresh();
-  // Lo último: así una partitura privada propia se abre con la sesión ya puesta.
+  /*
+   * La sesión PRIMERO y la ruta después: el guardia decide con el usuario ya
+   * cargado, y una partitura privada propia se abre con la sesión puesta. La
+   * portada, cuando la URL no pide otra cosa, es el catálogo: se tenga cuenta o
+   * no, al entrar interesa ver lo que hay publicado.
+   */
   aplicarUrl();
 });
 `;
@@ -3928,11 +4596,11 @@ export const WEB_HTML = `<!doctype html>
   /* El tema elegido se aplica ANTES de pintar: si se hiciera al final del
      <body>, la página aparecería un instante con el tema contrario. */
   try {
-    var vvTema = localStorage.getItem("vivace_theme");
-    if (vvTema === "light" || vvTema === "dark") document.documentElement.setAttribute("data-theme", vvTema);
+    var acTema = localStorage.getItem("accordio_theme") || localStorage.getItem("vivace_theme");
+    if (acTema === "light" || acTema === "dark") document.documentElement.setAttribute("data-theme", acTema);
   } catch (e) {}
 </script>
-<link rel="stylesheet" href="/static/vivace.css">
+<link rel="stylesheet" href="/static/accordio.css">
 </head>
 <body>
 
@@ -3959,7 +4627,7 @@ export const WEB_HTML = `<!doctype html>
     </span>
   </a>
   <span class="grow"></span>
-  <span id="who" class="hidden" style="font-size:13px;color:var(--vv-text-muted)"></span>
+  <span id="who" class="hidden" style="font-size:13px;color:var(--ui-text-muted)"></span>
   <button id="themeBtn" class="iconBtn" title="Cambiar tema" aria-label="Cambiar tema">
     <svg class="iconoTema" viewBox="0 0 24 24" aria-hidden="true" fill="none"
          stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
@@ -4090,19 +4758,89 @@ export const WEB_HTML = `<!doctype html>
   <!-- editor -->
   <section id="editView" class="hidden">
     <!--
-      Tres columnas: escribir, ver cómo queda y los ajustes. Antes los campos
-      iban apilados ARRIBA y empujaban el editor y la vista previa fuera de la
-      pantalla, cuando escribir la partitura es el 90 % del trabajo y el título
-      o la categoría se tocan una vez. Ahora la hoja manda y los ajustes están
-      al lado, en su columna, junto con los botones.
+      La ficha va arriba, en una barra a lo ancho y del alto justo; debajo,
+      escribir y ver cómo queda, a media pantalla cada uno. Los ajustes se
+      tocan una vez y la hoja es el 90 % del trabajo: darles una columna
+      propia les regalaba ancho que a la hoja le hace falta.
     -->
     <div class="editor">
+      <!-- Ajustes: lo que se rellena una vez y se mira de reojo. -->
+      <aside class="pane" id="eSide">
+        <div class="hd">Ficha</div>
+        <!-- La caja va aparte del rótulo para que la barra tenga el mismo
+             remate de tarjeta que las cajas de abajo. -->
+        <div id="eSideBox">
+          <div id="eSideBody">
+          <label>Título<input type="text" id="eTitle"></label>
+          <label>Artista<input type="text" id="eArtist"></label>
+          <label>Categoría <small>estilo musical</small>
+            <input type="text" id="eGenre" list="genreList" placeholder="Rock, bolero, folk…">
+            <datalist id="genreList"></datalist></label>
+          <label id="ePlaylistWrap">Lista
+            <select id="ePlaylist">
+              <option value="">Sin lista</option>
+            </select></label>
+          <label id="eVisibilityWrap">Visibilidad
+            <select id="eVisibility">
+              <option value="private">Privada (solo yo)</option>
+              <option value="public">Pública (cualquiera puede verla)</option>
+            </select>
+          </label>
+          <label id="eLockedWrap" class="row" style="gap:8px;align-items:center">
+            <input type="checkbox" id="eLocked" style="width:auto">
+            <span>Bloqueada <small>pide confirmación antes de editarla</small></span>
+          </label>
+
+          <div id="eVersionHead">
+            <label>Nombre de la versión <small>«Acústica», «En Do», «Tablatura»…</small>
+              <input type="text" id="eVersionName" placeholder="Acústica"></label>
+            <label id="eNoteWrap">Mensaje para quien la revise <small>opcional</small>
+              <input type="text" id="eNote" placeholder="Qué cambia y por qué"></label>
+          </div>
+
+          <div class="campo">Capo
+            <!-- Carrusel: al pasar del último traste vuelve a «Sin capo», y al
+                 revés. Así ningún botón se queda muerto en los extremos. -->
+            <div class="stepper" id="eCapoStep">
+              <button type="button" id="eCapoMenos" class="tool" title="Un traste menos"
+                      aria-label="Bajar el capo un traste">–</button>
+              <output id="eCapoVal" for="eCapoMenos eCapoMas" aria-live="polite">Sin capo</output>
+              <button type="button" id="eCapoMas" class="tool" title="Un traste más"
+                      aria-label="Subir el capo un traste">+</button>
+            </div>
+          </div>
+
+          <label>URL de la partitura original <small>opcional</small>
+            <input type="url" id="eSource" placeholder="https://…"></label>
+          <!-- El buscador va al lado de su campo, no debajo: suelto se quedaba
+               en una fila para él solo y estiraba la barra entera. -->
+          <div id="eTubeWrap">
+            <label>Vídeo de YouTube <small>opcional; se ve junto a la partitura</small>
+              <input type="text" id="eTube" placeholder="https://youtu.be/…"></label>
+            <button id="eTubeSearch" title="Busca el vídeo en YouTube, en otra pestaña">Buscar</button>
+            <span id="eTubeMsg" class="nota"></span>
+          </div>
+        </div>
+
+          <!-- Los botones, a la derecha de la barra: sitio fijo, siempre a la vista. -->
+          <div id="eAcciones">
+            <div id="editAviso" class="aviso hidden"></div>
+            <div class="msg" id="editMsg"></div>
+            <button class="primary" id="saveBtn">Guardar</button>
+            <button id="proposeBtn" class="hidden" title="Un editor la revisará antes de publicarla">Proponer publicación</button>
+            <button id="cancelEdit">Cancelar</button>
+            <button id="deleteBtn" class="hidden danger">Eliminar</button>
+          </div>
+        </div>
+      </aside>
       <div id="editSplit">
         <div class="pane">
           <div class="hd">Partitura <small>acordes entre llaves: {Am}</small>
             <span class="grow"></span>
             <button id="eDetect" class="tool" title="Marca las líneas que solo llevan acordes">
               <svg class="ic"><use href="#ac-notes"></use></svg><span>Detectar acordes</span></button>
+            <button id="eChords" class="tool" title="Elige qué digitación usa cada acorde en esta canción">
+              <svg class="ic"><use href="#ac-chord"></use></svg><span>Digitaciones</span></button>
           </div>
           <textarea id="eContent" spellcheck="false"
                     placeholder="#title: Título&#10;#artist: Autor&#10;---&#10;{Am} Primera línea"></textarea>
@@ -4111,67 +4849,6 @@ export const WEB_HTML = `<!doctype html>
           <div class="hd">Vista previa <small>tal cual se verá</small></div>
           <div id="ePreview"></div>
         </div>
-
-        <!-- Ajustes: lo que se rellena una vez y se mira de reojo. -->
-        <aside class="pane" id="eSide">
-          <div class="hd">Ficha</div>
-          <!-- La caja va aparte de la cabecera, igual que en las otras dos
-               columnas: así las tres empiezan y acaban a la misma altura. -->
-          <div id="eSideBox">
-            <div id="eSideBody">
-            <label>Título<input type="text" id="eTitle"></label>
-            <label>Artista<input type="text" id="eArtist"></label>
-            <label>Categoría <small>estilo musical</small>
-              <input type="text" id="eGenre" list="genreList" placeholder="Rock, bolero, folk…">
-              <datalist id="genreList"></datalist></label>
-            <label id="ePlaylistWrap">Lista
-              <select id="ePlaylist">
-                <option value="">Sin lista</option>
-              </select></label>
-            <label id="eVisibilityWrap">Visibilidad
-              <select id="eVisibility">
-                <option value="private">Privada (solo yo)</option>
-                <option value="public">Pública (cualquiera puede verla)</option>
-              </select>
-            </label>
-            <label id="eLockedWrap" class="row" style="gap:8px;align-items:center">
-              <input type="checkbox" id="eLocked" style="width:auto">
-              <span>Bloqueada <small>pide confirmación antes de editarla</small></span>
-            </label>
-
-            <div id="eVersionHead">
-              <label>Nombre de la versión <small>«Acústica», «En Do», «Tablatura»…</small>
-                <input type="text" id="eVersionName" placeholder="Acústica"></label>
-              <label id="eNoteWrap">Mensaje para quien la revise <small>opcional</small>
-                <input type="text" id="eNote" placeholder="Qué cambia y por qué"></label>
-            </div>
-
-            <div>
-              <div class="vv-kicker" style="margin-bottom:6px">Capo</div>
-              <div class="pills" id="eCapoPills"></div>
-            </div>
-
-            <label>URL de la partitura original <small>opcional</small>
-              <input type="url" id="eSource" placeholder="https://…"></label>
-            <label>Vídeo de YouTube <small>opcional; se ve junto a la partitura</small>
-              <input type="text" id="eTube" placeholder="https://youtu.be/…"></label>
-            <div class="row">
-              <button id="eTubeSearch" title="Abre la búsqueda en otra pestaña">Buscar en YouTube</button>
-              <span id="eTubeMsg" class="nota"></span>
-            </div>
-          </div>
-
-            <!-- Los botones cierran la columna: se llega a ellos sin buscar. -->
-            <div id="eAcciones">
-              <div id="editAviso" class="aviso hidden"></div>
-              <div class="msg" id="editMsg"></div>
-              <button class="primary" id="saveBtn">Guardar</button>
-              <button id="proposeBtn" class="hidden" title="Un editor la revisará antes de publicarla">Proponer publicación</button>
-              <button id="cancelEdit">Cancelar</button>
-              <button id="deleteBtn" class="hidden danger">Eliminar</button>
-            </div>
-          </div>
-        </aside>
       </div>
     </div>
   </section>
@@ -4187,7 +4864,7 @@ export const WEB_HTML = `<!doctype html>
       <label id="propMineWrap" class="row hidden" style="gap:6px">
         <input type="checkbox" id="propMine" style="width:auto"> Solo las mías</label>
       <span class="grow"></span>
-      <span id="propCount" class="vv-kicker"></span>
+      <span id="propCount" class="ui-kicker"></span>
     </div>
     <div class="msg" id="propMsg"></div>
     <div id="propList"></div>
@@ -4209,13 +4886,17 @@ export const WEB_HTML = `<!doctype html>
   <section id="chordsView" class="hidden">
     <div class="row" style="margin-bottom:12px">
       <input type="text" id="chordSearch" placeholder="Buscar acorde…" style="flex:1;min-width:160px">
+      <label class="filtro" for="chordInstr">Instrumento
+        <select id="chordInstr"></select></label>
       <button id="chordNew">+ Nuevo acorde</button>
       <button id="chordSeed" title="Añade los acordes que falten sin tocar los que ya has definido">Importar diccionario base</button>
+      <button id="chordImport" title="Sube un diccionario entero en JSON para el instrumento elegido">Importar JSON…</button>
+      <input type="file" id="chordFile" accept=".json,application/json" class="hidden">
     </div>
     <div class="row" style="margin-bottom:10px">
-      <span id="chordCount" class="vv-kicker"></span>
+      <span id="chordCount" class="ui-kicker"></span>
       <span class="grow"></span>
-      <span id="chordSaved" class="vv-kicker"></span>
+      <span id="chordSaved" class="ui-kicker"></span>
     </div>
     <div class="msg" id="chordMsg"></div>
     <div id="chordList" class="chordGrid"></div>
@@ -4234,7 +4915,7 @@ export const WEB_HTML = `<!doctype html>
       <button id="pmClose">Cerrar</button>
     </div>
     <div id="pmMeta" class="meta"></div>
-    <div id="pmBody" style="font-family:var(--vv-font-mono);font-size:15px;overflow:auto"></div>
+    <div id="pmBody" style="font-family:var(--ui-font-mono);font-size:15px;overflow:auto"></div>
   </div>
 </div>
 
@@ -4251,6 +4932,24 @@ export const WEB_HTML = `<!doctype html>
   </div>
 </div>
 
+<!-- qué digitación usa cada acorde EN ESTA canción -->
+<div id="varModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="vmTitulo">
+  <div class="modalBox" style="max-width:760px">
+    <div class="row">
+      <h3 id="vmTitulo" style="margin:0">Digitaciones de esta canción</h3>
+      <span class="grow"></span>
+      <label class="filtro" for="vmInstr">Instrumento
+        <select id="vmInstr"></select></label>
+      <button id="vmClose">Listo</button>
+    </div>
+    <p class="ui-kicker" style="margin:2px 0 10px">
+      Se guarda con la partitura: quien la abra verá la digitación que elijas aquí,
+      no la primera del diccionario.</p>
+    <div id="vmBody" class="chordGrid"></div>
+    <div id="vmEmpty" class="empty hidden"></div>
+  </div>
+</div>
+
 <!-- edición de un acorde (solo administración) -->
 <div id="chordEditor" class="modal hidden" role="dialog" aria-modal="true" aria-label="Editar acorde">
   <div class="modalBox">
@@ -4259,13 +4958,13 @@ export const WEB_HTML = `<!doctype html>
         <input type="text" id="chName" placeholder="Am7"></label>
       <button id="chClose">Cerrar</button>
     </div>
-    <div class="vv-kicker">Posiciones — trastes de la 6ª cuerda (Mi grave) a la 1ª; -1 no suena, 0 al aire</div>
+    <div class="ui-kicker">Posiciones — trastes de la 6ª cuerda (Mi grave) a la 1ª; -1 no suena, 0 al aire</div>
     <div id="chPositions"></div>
     <div class="msg" id="chMsg"></div>
     <div class="row">
       <button id="chAddPos">+ Posición</button>
       <span class="grow"></span>
-      <button id="chDelete" style="color:var(--vv-danger)">Eliminar acorde</button>
+      <button id="chDelete" style="color:var(--ui-danger)">Eliminar acorde</button>
       <button class="primary" id="chSave">Guardar</button>
     </div>
   </div>
@@ -4299,6 +4998,11 @@ export const WEB_HTML = `<!doctype html>
     </div>
     <!-- En estrecho, las acciones se mudan aquí dentro (ver colocarAcciones). -->
     <div id="vMenu" hidden></div>
+  </div>
+  <div id="vInstrWrap" class="instrBar hidden">
+    <label for="vInstr">Instrumento</label>
+    <select id="vInstr"></select>
+    <span class="pista">Los diagramas y la variante elegida son de este instrumento.</span>
   </div>
   <div id="vChordBar" class="chordBar hidden"></div>
   <div id="vMain">
@@ -4407,8 +5111,8 @@ export const WEB_HTML = `<!doctype html>
   </div>
 </div>
 
-<script src="/static/vivace.js" defer></script>
-<script src="/static/vivace-app.js" defer></script>
+<script src="/static/accordio.js" defer></script>
+<script src="/static/accordio-app.js" defer></script>
 
 </body>
 </html>`;

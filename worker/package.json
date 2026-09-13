@@ -1,14 +1,14 @@
 {
-  "name": "guitarchords-sync-worker",
+  "name": "accordio-worker",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Cloudflare Worker fronting an R2 bucket for GuitarChords song sync",
+  "description": "Accordio · Cloudflare Worker: web, API y sincronización",
   "scripts": {
     "dev": "wrangler dev --local-protocol https",
     "deploy": "wrangler deploy",
     "check": "node --check src/index.js && node --check src/api.js && node --check src/sync.js && node check-pages.mjs",
-    "test": "node test-detect.mjs && node --test test/"
+    "test": "node test-detect.mjs && node --test \"test/*.test.mjs\""
   },
   "devDependencies": {
     "wrangler": "^3.78.0"

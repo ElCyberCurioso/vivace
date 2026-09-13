@@ -1,5 +1,5 @@
 /*
- * Vivace · categorías automáticas.
+ * Accordio · categorías automáticas.
  *
  * Adivinar el estilo de una canción por su título y su artista es, por
  * definición, aproximado: esto es un punto de partida para no tener el catálogo

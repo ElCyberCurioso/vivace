@@ -57,9 +57,9 @@ test("el diccionario pasa la validación del Worker", () => {
 });
 
 test("el dibujante coloca los puntos con la misma convención", () => {
-  const vChordSvg = new Function(CLIENT_JS + "\nreturn vChordSvg;")();
+  const acChordSvg = new Function(CLIENT_JS + "\nreturn acChordSvg;")();
   // Bb con cejilla: x13331 sobre el traste base 1 → cinco puntos y una cejilla.
-  const svg = vChordSvg(dict["Bb"].positions[0], 110);
+  const svg = acChordSvg(dict["Bb"].positions[0], 110);
   assert.equal((svg.match(/<circle/g) || []).length, 5);
   assert.match(svg, /rx="/);           // la barra de la cejilla
 });

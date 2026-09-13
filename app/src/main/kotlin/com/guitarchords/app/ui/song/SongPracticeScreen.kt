@@ -33,6 +33,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -49,6 +50,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.guitarchords.app.R
 import com.guitarchords.app.chords.ChordDiagram
 import com.guitarchords.app.chords.ChordLibrary
+import com.guitarchords.app.chords.InstrumentPrefs
 import com.guitarchords.app.chords.SongChords
 import com.guitarchords.app.metronome.MetronomeEngine
 import com.guitarchords.app.ui.components.EmptyState
@@ -74,6 +76,7 @@ fun SongPracticeScreen(
         song?.content?.let { SongChords.distinctChords(it) }.orEmpty()
     }
     val pairs = remember(chords) { SongChords.changePairs(chords) }
+    val instrument by InstrumentPrefs.current.collectAsState()
 
     val engine = remember { MetronomeEngine() }
     val scope = rememberCoroutineScope()
@@ -126,7 +129,9 @@ fun SongPracticeScreen(
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 for (name in listOf(pair.first, pair.second)) {
-                    ChordLibrary.find(name)?.variations?.firstOrNull()?.let { shape ->
+                    // Se practica con el instrumento que se esté usando: quien
+                    // toca el ukelele necesita ver el cambio en ukelele.
+                    ChordLibrary.find(name, instrument)?.variations?.firstOrNull()?.let { shape ->
                         ChordDiagram(
                             shape = shape,
                             name = name,

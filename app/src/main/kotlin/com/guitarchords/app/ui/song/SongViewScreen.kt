@@ -277,7 +277,7 @@ fun SongViewScreen(
                             else base.copy(
                                 content = ChordTransposer.transposeContent(activeContent, semitones, useFlats)
                             )
-                            PrintAdapter.print(ctx, shifted)
+                            PrintAdapter.print(ctx, shifted, semitones)
                         }
                     }) { Icon(Icons.Default.Print, stringResource(R.string.print)) }
                     IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, stringResource(R.string.edit)) }

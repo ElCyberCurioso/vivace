@@ -246,32 +246,61 @@ object ChordLibrary {
         return normalize(m.value)
     }
 
-    fun find(name: String): Chord? {
+    /**
+     * Digitaciones de un acorde para [instrument]. La guitarra tiene plantillas
+     * escritas a mano (las formas de Mi, La y Re) además del diccionario; el
+     * resto de instrumentos van con el diccionario si lo hay y, si no, con el
+     * generador automático, que solo necesita saber cómo están afinadas las
+     * cuerdas al aire.
+     */
+    fun find(name: String, instrument: Instrument = Instrument.DEFAULT): Chord? {
         val (root, qual) = parseName(name) ?: return null
-        return build(root, qual, name, parseBass(name))
+        return build(root, qual, name, parseBass(name), instrument)
     }
 
     private fun build(
         root: String,
         quality: String,
         displayName: String = root + quality,
-        bass: String? = null
+        bass: String? = null,
+        instrument: Instrument = Instrument.DEFAULT
     ): Chord? {
         val rIdx = rootIndex(root)
         if (rIdx < 0) return null
         val bassIdx = bass?.let { rootIndex(it) }?.takeIf { it >= 0 && it != rIdx }
 
-        // Las digitaciones del usuario van siempre primero.
-        val custom = CustomChords.shapesFor(root + quality)
+        // Las digitaciones del usuario son de guitarra: se guardan con seis
+        // trastes y no dicen de qué instrumento son.
+        val custom = if (instrument == Instrument.GUITAR) {
+            CustomChords.shapesFor(root + quality)
+        } else emptyList()
 
         // Prefer the bundled chords-db voicings when available.
-        val dbShapes = ChordDb.shapes(root, quality)
+        val dbShapes = ChordDb.shapes(root, quality, instrument)
         if (dbShapes.isNotEmpty()) {
-            return Chord(displayName, root, quality, applyBass(custom + dbShapes, bassIdx))
+            return Chord(displayName, root, quality, applyBass(custom + dbShapes, bassIdx, instrument))
         }
 
         val variations = mutableListOf<ChordShape>()
         val fullName = root + quality
+
+        /*
+         * Las plantillas y los acordes abiertos son formas de GUITARRA: seis
+         * cuerdas afinadas mi-la-re-sol-si-mi. Para otro instrumento no valen
+         * ni trasladadas, así que se va directo al generador.
+         */
+        if (instrument != Instrument.GUITAR) {
+            val intervals = ChordRecognizer.QUALITY_INTERVALS[quality]
+            if (intervals != null) {
+                autoVoicing(rIdx, intervals, instrument)?.let { variations += it }
+                // Una segunda postura más arriba del mástil, si la hay: con una
+                // sola el carrusel de digitaciones no tiene nada que enseñar.
+                autoVoicing(rIdx, intervals, instrument, desde = 3)
+                    ?.takeIf { otra -> variations.none { it.frets == otra.frets } }
+                    ?.let { variations += it }
+            }
+            return Chord(displayName, root, quality, applyBass(custom + variations, bassIdx, instrument))
+        }
 
         openChords[fullName]?.let { variations += it }
 
@@ -305,7 +334,7 @@ object ChordLibrary {
             }
         }
 
-        return Chord(displayName, root, quality, applyBass(custom + variations, bassIdx))
+        return Chord(displayName, root, quality, applyBass(custom + variations, bassIdx, instrument))
     }
 
     /**
@@ -313,16 +342,25 @@ object ChordLibrary {
      * bajo indicado (D/F# → marca F# en la 6ª cuerda, traste 2). Si en alguna
      * variación no hay forma razonable de colocar el bajo, se deja tal cual.
      */
-    private fun applyBass(shapes: List<ChordShape>, bassIdx: Int?): List<ChordShape> {
+    private fun applyBass(
+        shapes: List<ChordShape>,
+        bassIdx: Int?,
+        instrument: Instrument = Instrument.DEFAULT
+    ): List<ChordShape> {
         if (bassIdx == null) return shapes
         val bassPc = ((bassIdx % 12) + 12) % 12
-        return shapes.map { withBass(it, bassPc) ?: it }
+        return shapes.map { withBass(it, bassPc, instrument) ?: it }
     }
 
-    private fun withBass(shape: ChordShape, bassPc: Int): ChordShape? {
+    private fun withBass(
+        shape: ChordShape,
+        bassPc: Int,
+        instrument: Instrument = Instrument.DEFAULT
+    ): ChordShape? {
+        val openPc = instrument.openPitchClasses
         val lowest = shape.frets.indexOfFirst { it >= 0 }
         if (lowest < 0) return null
-        val lowestPc = (OPEN_STRING_PC[lowest] + shape.frets[lowest]) % 12
+        val lowestPc = (openPc[lowest] + shape.frets[lowest]) % 12
         if (lowestPc == bassPc) return shape
 
         // Trastes alcanzables sin salir de la posición de la mano.
@@ -336,10 +374,12 @@ object ChordLibrary {
             addAll(from..to)
         }
 
-        // El bajo debe quedar en una de las tres cuerdas graves y pasar a ser
-        // la nota más grave del acorde (las cuerdas por debajo se silencian).
-        for (s in 0..2) {
-            val f = candidates.firstOrNull { (OPEN_STRING_PC[s] + it) % 12 == bassPc } ?: continue
+        // El bajo debe quedar en una de las cuerdas graves y pasar a ser la nota
+        // más grave del acorde (las cuerdas por debajo se silencian). En un
+        // instrumento de cuatro cuerdas "las graves" son dos, no tres.
+        val gravas = if (instrument.strings >= 6) 2 else instrument.strings / 2 - 1
+        for (s in 0..gravas) {
+            val f = candidates.firstOrNull { (openPc[s] + it) % 12 == bassPc } ?: continue
             val newFrets = shape.frets.toMutableList()
             for (i in 0 until s) newFrets[i] = -1
             newFrets[s] = f
@@ -351,14 +391,12 @@ object ChordLibrary {
             // Las cejillas que quedaran colgando sobre cuerdas mudas se descartan.
             val newBarres = shape.barres.filter { b ->
                 val hi = maxOf(b.fromString, b.toString)
-                6 - hi >= s
+                instrument.strings - hi >= s
             }
             return ChordShape(newFrets, newFingers, newBarres, shape.customId)
         }
         return null
     }
-
-    private val OPEN_STRING_PC = intArrayOf(4, 9, 2, 7, 11, 4) // E A D G B e
 
     /**
      * Greedy chord-voicing generator used when no manual template exists.
@@ -370,22 +408,40 @@ object ChordLibrary {
      * Permits omitting the 5th if every other tone is covered (common practice
      * for extended chords on a 6-string guitar).
      */
-    private fun autoVoicing(rootIdx: Int, intervals: Set<Int>): ChordShape? {
+    private fun autoVoicing(
+        rootIdx: Int,
+        intervals: Set<Int>,
+        instrument: Instrument = Instrument.DEFAULT,
+        desde: Int = 0
+    ): ChordShape? {
+        val openPc = instrument.openPitchClasses
+        val cuerdas = instrument.strings
         val targetPcs = intervals.map { ((rootIdx + it) % 12 + 12) % 12 }.toSet()
         val rootPc = rootIdx % 12
         val fifthPc = ((rootIdx + 7) % 12 + 12) % 12
+        /*
+         * Que la cuerda más grave lleve la fundamental es una regla de la
+         * GUITARRA. En el ukelele la afinación estándar es reentrante —la cuarta
+         * cuerda suena más aguda que la tercera—, así que ahí no hay "bajo" que
+         * valga: exigirlo devolvía posturas altísimas en vez del Do al aire que
+         * toca todo el mundo.
+         */
+        val exigirRaizEnElBajo = instrument == Instrument.GUITAR
+        // Con cuatro cuerdas no caben todas las notas de un acorde extendido:
+        // se pide una menos que cuerdas hay, y nunca menos de tres.
+        val minimoSonando = minOf(3, cuerdas)
 
-        for (baseFret in 0..12) {
+        for (baseFret in desde..12) {
             val low = if (baseFret <= 4) 0 else baseFret
             val high = baseFret + 4
-            val frets = IntArray(6) { -1 }
+            val frets = IntArray(cuerdas) { -1 }
             val pcsUsed = mutableSetOf<Int>()
             var bassAssigned = false
 
-            for (s in 0..5) {
-                val open = OPEN_STRING_PC[s]
+            for (s in 0 until cuerdas) {
+                val open = openPc[s]
                 val range = (low..high).toList()
-                if (!bassAssigned) {
+                if (exigirRaizEnElBajo && !bassAssigned) {
                     val f = range.firstOrNull { ((open + it) % 12) == rootPc }
                     if (f != null) {
                         frets[s] = f
@@ -408,16 +464,19 @@ object ChordLibrary {
                 }
             }
 
-            if (!bassAssigned) continue
+            if (exigirRaizEnElBajo && !bassAssigned) continue
             val sounded = frets.count { it >= 0 }
-            if (sounded < 3) continue
+            if (sounded < minimoSonando) continue
 
             val essential = targetPcs - setOf(fifthPc)
             if (!pcsUsed.containsAll(essential)) continue
-            // Lowest sounded string must hold the root.
-            val lowestIdx = frets.indexOfFirst { it >= 0 }
-            val bassPc = (OPEN_STRING_PC[lowestIdx] + frets[lowestIdx]) % 12
-            if (bassPc != rootPc) continue
+            // La fundamental tiene que sonar en alguna parte, aunque no sea abajo.
+            if (rootPc !in pcsUsed) continue
+            if (exigirRaizEnElBajo) {
+                val lowestIdx = frets.indexOfFirst { it >= 0 }
+                val bassPc = (openPc[lowestIdx] + frets[lowestIdx]) % 12
+                if (bassPc != rootPc) continue
+            }
 
             return ChordShape(frets.toList())
         }
@@ -439,11 +498,11 @@ object ChordLibrary {
         return ChordShape(frets, fingers, barres)
     }
 
-    fun all(): List<Chord> {
+    fun all(instrument: Instrument = Instrument.DEFAULT): List<Chord> {
         val list = mutableListOf<Chord>()
         for (r in ROOTS) {
             for (q in QUALITIES) {
-                build(r, q, r + q)?.let { list += it }
+                build(r, q, r + q, null, instrument)?.let { list += it }
             }
         }
         return list

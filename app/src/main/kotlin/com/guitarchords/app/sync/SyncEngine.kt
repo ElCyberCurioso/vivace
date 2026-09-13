@@ -32,7 +32,7 @@ import java.util.Locale
 class SyncEngine(
     private val repo: Repository,
     private val prefs: SyncPrefs,
-    private val clientFactory: (String, String) -> VivaceClient = { url, token -> VivaceClient(url, token) }
+    private val clientFactory: (String, String) -> AccordioClient = { url, token -> AccordioClient(url, token) }
 ) {
     private val mutex = Mutex()
 
@@ -73,7 +73,7 @@ class SyncEngine(
 
     /* --------------------------------- bajar --------------------------------- */
 
-    private suspend fun pull(client: VivaceClient): SyncResult {
+    private suspend fun pull(client: AccordioClient): SyncResult {
         var downloaded = 0
         var deleted = 0
         val conflictos = mutableListOf<ResolvedConflict>()
@@ -226,7 +226,7 @@ class SyncEngine(
 
     /* --------------------------------- subir --------------------------------- */
 
-    private suspend fun push(client: VivaceClient): SyncResult {
+    private suspend fun push(client: AccordioClient): SyncResult {
         var uploaded = 0
         var deleted = 0
         val conflictos = mutableListOf<ResolvedConflict>()

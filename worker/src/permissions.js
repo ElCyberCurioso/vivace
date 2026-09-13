@@ -1,5 +1,5 @@
 /*
- * Vivace · reglas de acceso (lógica pura, testeable)
+ * Accordio · reglas de acceso (lógica pura, testeable)
  *
  * Visibilidad de una partitura:
  *  - `private`: solo la ve y edita su dueño.

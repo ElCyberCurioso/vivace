@@ -1,4 +1,4 @@
--- Vivace · esquema de la base de datos (Cloudflare D1)
+-- Accordio · esquema de la base de datos (Cloudflare D1)
 --
 -- Crear/actualizar con:
 --   npx wrangler d1 execute vivace --file=schema.sql            (local)
@@ -30,7 +30,10 @@ CREATE TABLE IF NOT EXISTS songs (
   visibility  TEXT NOT NULL DEFAULT 'private', -- 'private' | 'public'
   created_at  INTEGER NOT NULL,
   updated_at  INTEGER NOT NULL,
-  deleted_at  INTEGER NOT NULL DEFAULT 0    -- papelera (0 = activa)
+  deleted_at  INTEGER NOT NULL DEFAULT 0,   -- papelera (0 = activa)
+  -- Digitación elegida para cada acorde EN ESTA partitura, por instrumento:
+  -- {"guitarra":{"F":2},"ukelele":{}}. Vacío = la primera del diccionario.
+  chord_variants TEXT NOT NULL DEFAULT ''
 );
 
 CREATE INDEX IF NOT EXISTS idx_songs_owner      ON songs(owner_id, deleted_at);

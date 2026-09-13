@@ -28,7 +28,7 @@ for (const [nombre, html] of [["web-html.js", WEB_HTML]]) {
   });
 }
 
-// El grueso de la aplicación, que ahora se sirve aparte en /static/vivace-app.js.
+// El grueso de la aplicación, que ahora se sirve aparte en /static/accordio-app.js.
 try {
   new Function(WEB_APP_JS);
 } catch (e) {
@@ -36,7 +36,7 @@ try {
   failed++;
 }
 
-// La librería de cliente se sirve tal cual en /static/vivace.js: mismo riesgo.
+// La librería de cliente se sirve tal cual en /static/accordio.js: mismo riesgo.
 try {
   new Function(CLIENT_JS);
 } catch (e) {

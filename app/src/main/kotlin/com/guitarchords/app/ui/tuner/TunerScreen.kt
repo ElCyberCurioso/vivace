@@ -21,6 +21,14 @@ import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -50,24 +58,17 @@ import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.guitarchords.app.R
+import com.guitarchords.app.chords.Instrument
+import com.guitarchords.app.tuner.StringTarget
 import com.guitarchords.app.tuner.TunerEngine
-import com.guitarchords.app.ui.theme.VivaceMono
+import com.guitarchords.app.tuner.TunerPrefs
+import com.guitarchords.app.tuner.Tuning
+import com.guitarchords.app.tuner.Tunings
+import com.guitarchords.app.ui.theme.AccordioMono
 import com.guitarchords.app.ui.theme.extendedColors
 import kotlin.math.abs
-import kotlin.math.ln
 import kotlin.math.roundToInt
 import com.guitarchords.app.ui.theme.accordioTopBarColors
-
-private data class StringTarget(val name: String, val freq: Float)
-
-private val STANDARD = listOf(
-    StringTarget("E2", 82.4069f),
-    StringTarget("A2", 110.000f),
-    StringTarget("D3", 146.832f),
-    StringTarget("G3", 195.998f),
-    StringTarget("B3", 246.942f),
-    StringTarget("E4", 329.628f)
-)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -75,6 +76,14 @@ fun TunerScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val engine = remember { TunerEngine() }
+
+    /*
+     * El afinador solo sabía de la guitarra en estándar. Ahora la afinación es
+     * un dato: cualquiera del catálogo (Drop D, DADGAD, ukelele…) y se recuerda,
+     * porque quien toca en Mi bemol lo hace todos los días.
+     */
+    val prefs = remember { TunerPrefs(context) }
+    var tuning by remember { mutableStateOf(prefs.tuning) }
 
     var hasPerm by remember {
         mutableStateOf(
@@ -121,7 +130,15 @@ fun TunerScreen(onBack: () -> Unit) {
                     launcher.launch(Manifest.permission.RECORD_AUDIO)
                 })
             } else {
-                TunerContent(freq = freq, level = level)
+                TunerContent(
+                    freq = freq,
+                    level = level,
+                    tuning = tuning,
+                    onTuning = { elegida ->
+                        tuning = elegida
+                        prefs.tuning = elegida
+                    }
+                )
             }
         }
     }
@@ -147,12 +164,17 @@ private fun PermissionPrompt(onRequest: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TunerContent(freq: Float, level: Float) {
-    val target = remember(freq) { nearest(freq) }
+private fun TunerContent(
+    freq: Float,
+    level: Float,
+    tuning: Tuning,
+    onTuning: (Tuning) -> Unit
+) {
+    val target = remember(freq, tuning) { Tunings.nearest(tuning, freq) }
     val cents = remember(freq, target) {
-        if (freq <= 0f || target == null) 0f
-        else 1200f * (ln(freq / target.freq) / ln(2f))
+        if (target == null) 0f else Tunings.cents(freq, target)
     }
     val active = freq > 0f && level > 0.01f && target != null
     val inTune = active && abs(cents) < 5f
@@ -168,6 +190,7 @@ private fun TunerContent(freq: Float, level: Float) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
+        SelectorAfinacion(tuning = tuning, onTuning = onTuning)
         Text(
             if (active) target!!.name else "—",
             style = MaterialTheme.typography.displayLarge.copy(fontWeight = FontWeight.Bold),
@@ -175,7 +198,7 @@ private fun TunerContent(freq: Float, level: Float) {
         )
         Text(
             if (active) "%.1f Hz".format(freq) else stringResource(R.string.play_a_string),
-            style = MaterialTheme.typography.titleMedium.copy(fontFamily = VivaceMono)
+            style = MaterialTheme.typography.titleMedium.copy(fontFamily = AccordioMono)
         )
 
         Needle(
@@ -188,7 +211,7 @@ private fun TunerContent(freq: Float, level: Float) {
 
         Text(
             if (active) "${if (cents >= 0) "+" else ""}${cents.roundToInt()} cents" else " ",
-            style = MaterialTheme.typography.titleMedium.copy(fontFamily = VivaceMono),
+            style = MaterialTheme.typography.titleMedium.copy(fontFamily = AccordioMono),
             color = when {
                 !active -> MaterialTheme.colorScheme.onSurfaceVariant
                 inTune -> MaterialTheme.extendedColors.success
@@ -198,8 +221,83 @@ private fun TunerContent(freq: Float, level: Float) {
         )
 
         Spacer(Modifier.height(12.dp))
-        StringsRow(selected = target?.name)
+        StringsRow(targets = tuning.targets, selected = target?.name)
     }
+}
+
+/**
+ * Instrumento y afinación. El instrumento va en pastillas —son dos— y la
+ * afinación en un desplegable: solo de guitarra hay nueve y no caben en fila.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SelectorAfinacion(tuning: Tuning, onTuning: (Tuning) -> Unit) {
+    var abierto by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        SingleChoiceSegmentedButtonRow {
+            Instrument.entries.forEachIndexed { i, instrumento ->
+                SegmentedButton(
+                    selected = tuning.instrument == instrumento,
+                    onClick = {
+                        // Al cambiar de instrumento se va a SU estándar: la
+                        // afinación anterior no significa nada en otro mástil.
+                        if (tuning.instrument != instrumento) {
+                            onTuning(Tunings.defaultFor(instrumento))
+                        }
+                    },
+                    shape = SegmentedButtonDefaults.itemShape(i, Instrument.entries.size)
+                ) { Text(stringResource(etiquetaInstrumento(instrumento))) }
+            }
+        }
+
+        ExposedDropdownMenuBox(
+            expanded = abierto,
+            onExpandedChange = { abierto = it }
+        ) {
+            OutlinedTextField(
+                value = stringResource(tuning.labelRes),
+                onValueChange = {},
+                readOnly = true,
+                label = { Text(stringResource(R.string.tuning)) },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = abierto) },
+                modifier = Modifier
+                    .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                    .fillMaxWidth()
+            )
+            ExposedDropdownMenu(expanded = abierto, onDismissRequest = { abierto = false }) {
+                Tunings.forInstrument(tuning.instrument).forEach { opcion ->
+                    DropdownMenuItem(
+                        text = {
+                            Column {
+                                Text(stringResource(opcion.labelRes))
+                                Text(
+                                    opcion.notes.joinToString(" "),
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        fontFamily = AccordioMono
+                                    ),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        },
+                        onClick = {
+                            abierto = false
+                            onTuning(opcion)
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun etiquetaInstrumento(instrumento: Instrument): Int = when (instrumento) {
+    Instrument.GUITAR -> R.string.instrument_guitar
+    Instrument.UKULELE -> R.string.instrument_ukulele
 }
 
 @Composable
@@ -253,12 +351,12 @@ private fun Needle(
 }
 
 @Composable
-private fun StringsRow(selected: String?) {
+private fun StringsRow(targets: List<StringTarget>, selected: String?) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
-        STANDARD.forEach { t ->
+        targets.forEach { t ->
             val isSel = t.name == selected
             Card(
                 shape = RoundedCornerShape(12.dp),
@@ -279,7 +377,3 @@ private fun StringsRow(selected: String?) {
     }
 }
 
-private fun nearest(freq: Float): StringTarget? {
-    if (freq <= 0f) return null
-    return STANDARD.minByOrNull { abs(ln(freq / it.freq)) }
-}

@@ -12,7 +12,7 @@ import com.guitarchords.app.sync.SyncOutcome
 import com.guitarchords.app.sync.SyncPrefs
 import com.guitarchords.app.sync.SyncResult
 import com.guitarchords.app.sync.SyncWorker
-import com.guitarchords.app.sync.VivaceClient
+import com.guitarchords.app.sync.AccordioClient
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
@@ -122,7 +122,7 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
         _state.value = SyncUiState.Running
         viewModelScope.launch {
             try {
-                val anon = VivaceClient(prefs.baseUrl)
+                val anon = AccordioClient(prefs.baseUrl)
                 val auth = if (register) anon.register(email.trim(), password, name.trim())
                            else anon.login(email.trim(), password)
                 prefs.authToken = auth.token

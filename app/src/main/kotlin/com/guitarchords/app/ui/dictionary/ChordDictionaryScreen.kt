@@ -31,6 +31,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,6 +44,8 @@ import androidx.compose.ui.unit.dp
 import com.guitarchords.app.R
 import com.guitarchords.app.chords.ChordDiagram
 import com.guitarchords.app.chords.ChordLibrary
+import com.guitarchords.app.chords.Instrument
+import com.guitarchords.app.chords.InstrumentPrefs
 import com.guitarchords.app.ui.components.ChordModal
 import com.guitarchords.app.ui.components.EmptyState
 import com.guitarchords.app.ui.responsive.WidthClass
@@ -77,7 +80,14 @@ fun ChordDictionaryScreen(onBack: () -> Unit) {
     var selected by remember { mutableStateOf<String?>(null) }
     var tab by remember { mutableStateOf(DictTab.CHORDS) }
 
-    val all = remember { ChordLibrary.all() }
+    /*
+     * El diccionario es del instrumento que se esté mirando: un Do de ukelele
+     * no es la misma digitación que uno de guitarra. La elección se comparte con
+     * el resto de la aplicación (el modal del visor), que es lo que espera quien
+     * está tocando el ukelele toda la tarde.
+     */
+    val instrument by InstrumentPrefs.current.collectAsState()
+    val all = remember(instrument) { ChordLibrary.all(instrument) }
     val filtered = remember(root, quality, all) {
         all.filter {
             (root == null || it.root == root) &&
@@ -127,6 +137,21 @@ fun ChordDictionaryScreen(onBack: () -> Unit) {
             return@Scaffold
         }
         Column(Modifier.fillMaxSize().padding(pv)) {
+            InstrumentRow(
+                selected = instrument,
+                onSelect = { InstrumentPrefs.set(it) }
+            )
+            if (instrument == Instrument.UKULELE) {
+                // Mientras no venga el diccionario de ukelele, las posturas las
+                // calcula la aplicación. Se dice, para que nadie las tome por
+                // digitaciones revisadas una a una.
+                Text(
+                    stringResource(R.string.ukulele_no_dictionary),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
+                )
+            }
             FilterRow(
                 label = stringResource(R.string.root),
                 options = ChordLibrary.ROOTS,
@@ -200,6 +225,39 @@ fun ChordDictionaryScreen(onBack: () -> Unit) {
     selected?.let { name ->
         ChordModal(chordName = name, onDismiss = { selected = null })
     }
+}
+
+/**
+ * Guitarra o ukelele. No es un filtro más —no hay opción "todos"—: el
+ * diccionario entero es de un instrumento o del otro.
+ */
+@Composable
+private fun InstrumentRow(selected: Instrument, onSelect: (Instrument) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            stringResource(R.string.instrument) + ":",
+            style = MaterialTheme.typography.labelLarge,
+            modifier = Modifier.padding(end = 8.dp)
+        )
+        Instrument.entries.forEach { opcion ->
+            FilterChip(
+                selected = selected == opcion,
+                onClick = { onSelect(opcion) },
+                label = { Text(stringResource(nombreDe(opcion))) },
+                modifier = Modifier.padding(end = 4.dp)
+            )
+        }
+    }
+}
+
+private fun nombreDe(instrumento: Instrument): Int = when (instrumento) {
+    Instrument.GUITAR -> R.string.instrument_guitar
+    Instrument.UKULELE -> R.string.instrument_ukulele
 }
 
 @Composable

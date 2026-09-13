@@ -1,5 +1,5 @@
 /*
- * Vivace · sincronización por lotes (la usa la app Android en segundo plano).
+ * Accordio · sincronización por lotes (la usa la app Android en segundo plano).
  *
  *   GET  /api/sync/changes?songs=<cur>&playlists=<cur>&versions=<cur>&limit=
  *   POST /api/sync/push    { playlists: [...], songs: [...], versions: [...] }

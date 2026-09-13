@@ -1,5 +1,5 @@
 /*
- * Vivace · diccionario base de acordes.
+ * Accordio · diccionario base de acordes.
  *
  * Generado desde chords-db (MIT), el mismo origen que usa la app Android
  * (app/src/main/assets/chords/guitar.json). Solo se conservan los sufijos que

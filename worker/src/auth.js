@@ -1,5 +1,5 @@
 /*
- * Vivace · autenticación
+ * Accordio · autenticación
  * ----------------------
  * Contraseñas: PBKDF2-SHA256 con sal aleatoria por usuario (WebCrypto, sin
  * dependencias). Formato almacenado: `pbkdf2$<iteraciones>$<salt>$<hash>`.

@@ -140,16 +140,17 @@ export function fakeD1(inicial = {}) {
         id: v[0], owner_id: v[1], r2_key: v[2], title: v[3], artist: v[4], genre: v[5],
         capo: v[6], source_url: v[7], locked: v[8], visibility: v[9],
         created_at: v[10], updated_at: v[11], deleted_at: 0, youtube_url: v[12],
-        favorite: v[13], position: v[14], playlist_id: v[15], rev: 1
+        favorite: v[13], position: v[14], playlist_id: v[15], chord_variants: v[16], rev: 1
       });
       return;
     }
     if (q.startsWith("UPDATE songs SET title")) {
-      const s = t.songs.find((x) => x.id === v[12]);
+      const s = t.songs.find((x) => x.id === v[13]);
       if (s) Object.assign(s, {
         title: v[0], artist: v[1], genre: v[2], capo: v[3], source_url: v[4],
         locked: v[5], visibility: v[6], youtube_url: v[7], favorite: v[8],
-        position: v[9], playlist_id: v[10], updated_at: v[11], rev: (s.rev || 1) + 1
+        position: v[9], playlist_id: v[10], chord_variants: v[11],
+        updated_at: v[12], rev: (s.rev || 1) + 1
       });
       return;
     }

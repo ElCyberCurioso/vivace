@@ -1,5 +1,5 @@
 /*
- * Vivace · migración de las partituras que ya existen en R2.
+ * Accordio · migración de las partituras que ya existen en R2.
  *
  * Antes del multiusuario todo el contenido vivía en R2 bajo `songs/` sin dueño.
  * Este proceso las indexa en D1 como partituras del administrador, SIN mover ni

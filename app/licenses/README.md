@@ -1,6 +1,6 @@
 # Fuentes empaquetadas
 
-La app incluye las dos tipografías del paquete de marca Vivace, en su versión
+La app incluye las dos tipografías del paquete de marca Accordio, en su versión
 **variable** (un solo fichero cubre todos los pesos), tal como las publica
 Google Fonts:
 
@@ -26,5 +26,5 @@ Tipografías del paquete de marca Accordio: **Montserrat** para titulares y
   (https://github.com/itfoundry/Poppins). No hay variable: van los tres pesos
   que gasta la interfaz (Regular, Medium, SemiBold).
 
-Space Grotesk, la tipografía del paquete anterior (Vivace · Nocturno), se
+Space Grotesk, la tipografía del paquete anterior (Accordio · Nocturno (paquete anterior)), se
 retiró al adoptar Accordio: ya no la usaba nadie y eran 136 KB en cada APK.

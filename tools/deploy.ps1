@@ -1,9 +1,9 @@
 <#
 .SYNOPSIS
-    Prepara el entorno de despliegue de Vivace y publica el Worker y la app.
+    Prepara el entorno de despliegue de Accordio y publica el Worker y la app.
 
 .DESCRIPTION
-    Un solo script para las tres cosas que hacen falta para poner Vivace en
+    Un solo script para las tres cosas que hacen falta para poner Accordio en
     produccion:
 
       1. -Setup        Comprueba e instala las herramientas: Node LTS, un JDK
@@ -606,7 +606,7 @@ function Publish-App {
         notes       = $Notes
         apkUrl      = "/update/apk"
     }
-    $latestPath = Join-Path $env:TEMP "vivace-latest.json"
+    $latestPath = Join-Path $env:TEMP "accordio-latest.json"
     ($latest | ConvertTo-Json -Compress) | Set-Content -Path $latestPath -Encoding UTF8
     Write-Info ("latest.json: " + (Get-Content $latestPath -Raw).Trim())
 
@@ -909,7 +909,7 @@ if (-not ($Setup -or $InitBackend -or $Worker -or $App -or $PublishCatalog -or $
 $script:BaseUrlResuelta = $BaseUrl.TrimEnd("/")
 $script:EsquemaAplicado = $false
 
-Write-Host "Vivace - entorno y despliegue" -ForegroundColor White
+Write-Host "Accordio - entorno y despliegue" -ForegroundColor White
 Write-Host "Repositorio: $Root" -ForegroundColor DarkGray
 
 # -PublishCatalog solo habla por HTTP con el Worker ya desplegado: no necesita

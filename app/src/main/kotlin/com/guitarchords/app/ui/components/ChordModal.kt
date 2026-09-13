@@ -20,6 +20,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -43,6 +44,8 @@ import androidx.compose.ui.unit.dp
 import com.guitarchords.app.R
 import com.guitarchords.app.chords.ChordDiagram
 import com.guitarchords.app.chords.ChordLibrary
+import com.guitarchords.app.chords.Instrument
+import com.guitarchords.app.chords.InstrumentPrefs
 import com.guitarchords.app.chords.CustomChords
 import com.guitarchords.app.chords.MusicTheory
 import com.guitarchords.app.ui.icons.AccordioIcons
@@ -57,11 +60,25 @@ fun ChordModal(
     // Las digitaciones personalizadas pueden cambiar mientras el modal está
     // abierto (alta/edición/borrado): la revisión fuerza re-resolver el acorde.
     val revision by CustomChords.revision.collectAsState()
-    val chord = remember(chordName, revision) { ChordLibrary.find(chordName) }
-    val chordKey = remember(chordName) {
-        ChordLibrary.parseName(chordName)?.let { (root, qual) -> root + qual }
+    /*
+     * El acorde se resuelve para el instrumento que se esté mirando: el mismo
+     * nombre, otra digitación. La elección se comparte con el diccionario, así
+     * que quien la cambia aquí la encuentra puesta allí.
+     */
+    val instrument by InstrumentPrefs.current.collectAsState()
+    val chord = remember(chordName, revision, instrument) {
+        ChordLibrary.find(chordName, instrument)
     }
-    var index by remember(chordName) { mutableIntStateOf(0) }
+    /*
+     * Las digitaciones propias se guardan con seis trastes y sin decir de qué
+     * instrumento son, así que el editor solo se ofrece en guitarra: en ukelele
+     * dibujaría un mástil de seis cuerdas y guardaría algo que nadie sabría leer.
+     */
+    val chordKey = remember(chordName, instrument) {
+        if (instrument != Instrument.GUITAR) null
+        else ChordLibrary.parseName(chordName)?.let { (root, qual) -> root + qual }
+    }
+    var index by remember(chordName, instrument) { mutableIntStateOf(0) }
     val player = rememberChordPlayer()
 
     // null = cerrado; (customId?, fretsIniciales?) = editor abierto.
@@ -73,6 +90,19 @@ fun ChordModal(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Instrument.entries.forEach { opcion ->
+                    FilterChip(
+                        selected = instrument == opcion,
+                        onClick = { InstrumentPrefs.set(opcion) },
+                        label = { Text(stringResource(etiquetaDe(opcion))) }
+                    )
+                }
+            }
+            Spacer(Modifier.height(12.dp))
             if (chord == null) {
                 Text(stringResource(R.string.unknown_chord, chordName), style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(16.dp))
@@ -231,4 +261,9 @@ fun ChordModal(
             }
         )
     }
+}
+
+private fun etiquetaDe(instrumento: Instrument): Int = when (instrumento) {
+    Instrument.GUITAR -> R.string.instrument_guitar
+    Instrument.UKULELE -> R.string.instrument_ukulele
 }

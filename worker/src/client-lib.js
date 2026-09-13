@@ -1,5 +1,5 @@
 /*
- * Vivace · librería de cliente (se sirve tal cual en /static/vivace.js)
+ * Accordio · librería de cliente (se sirve tal cual en /static/accordio.js)
  *
  * Lógica compartida por la web: pintar acordes sobre la letra, transponer y
  * el metrónomo. Es JavaScript de navegador, no del Worker: aquí solo viaja
@@ -18,13 +18,13 @@ export const CLIENT_JS = `
  * tiene cargado: si uno quitara tildes y el otro no, los resultados del
  * servidor desaparecerían al pintarlos.
  */
-var V_VOCALES = [["á","a"],["à","a"],["é","e"],["è","e"],["í","i"],["ì","i"],
+var AC_VOCALES = [["á","a"],["à","a"],["é","e"],["è","e"],["í","i"],["ì","i"],
                  ["ó","o"],["ò","o"],["ú","u"],["ù","u"],["ü","u"]];
 
-function vNormalizarBusqueda(q) {
+function acNormalizarBusqueda(q) {
   var t = String(q == null ? "" : q).trim().toLowerCase();
-  for (var i = 0; i < V_VOCALES.length; i++) {
-    t = t.split(V_VOCALES[i][0]).join(V_VOCALES[i][1]);
+  for (var i = 0; i < AC_VOCALES.length; i++) {
+    t = t.split(AC_VOCALES[i][0]).join(AC_VOCALES[i][1]);
   }
   return t;
 }
@@ -34,7 +34,7 @@ function vNormalizarBusqueda(q) {
  * "a" o "la" se buscaría media base de datos, y los espacios y signos no
  * cuentan como escribir.
  */
-function vLetrasYCifras(q) {
+function acLetrasYCifras(q) {
   var t = String(q == null ? "" : q);
   var n = 0;
   for (var i = 0; i < t.length; i++) {
@@ -46,7 +46,7 @@ function vLetrasYCifras(q) {
 
 /* ---------- render de partituras ---------- */
 
-function vEsc(s) {
+function acEsc(s) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
@@ -55,38 +55,38 @@ function vEsc(s) {
  * exactas y solo se sustituyen las llaves {X} por el acorde resaltado, así el
  * acorde queda justo encima de su sílaba.
  */
-function vRenderLine(line) {
+function acRenderLine(line) {
   var html = "", i = 0;
   while (i < line.length) {
     if (line[i] === "{") {
       var end = line.indexOf("}", i);
       if (end !== -1) {
-        html += '<span class="chord">' + vEsc(line.slice(i + 1, end)) + "</span>";
+        html += '<span class="chord">' + acEsc(line.slice(i + 1, end)) + "</span>";
         i = end + 1;
         continue;
       }
     }
-    html += vEsc(line[i]);
+    html += acEsc(line[i]);
     i++;
   }
   return html;
 }
 
-function vRenderSong(text) {
+function acRenderSong(text) {
   var lines = (text || "").replace(/\\r\\n/g, "\\n").split("\\n");
   var html = "", inTab = false;
   for (var i = 0; i < lines.length; i++) {
     var line = lines[i];
     var t = line.trim();
     if (t === "{tab}" || t === "{/tab}") { inTab = (t === "{tab}"); continue; }
-    if (inTab) { html += '<div class="tab">' + (vEsc(line) || "&nbsp;") + "</div>"; continue; }
-    html += '<div class="ln">' + (vRenderLine(line) || "&nbsp;") + "</div>";
+    if (inTab) { html += '<div class="tab">' + (acEsc(line) || "&nbsp;") + "</div>"; continue; }
+    html += '<div class="ln">' + (acRenderLine(line) || "&nbsp;") + "</div>";
   }
   return html;
 }
 
 /** Separa las cabeceras #clave: valor del cuerpo de la partitura. */
-function vParseSong(text) {
+function acParseSong(text) {
   var lines = (text || "").replace(/\\r\\n/g, "\\n").split("\\n");
   var head = {}, i = 0;
   var RE = /^#([A-Za-z]+):[ \\t]?(.*)$/;
@@ -109,7 +109,7 @@ function vParseSong(text) {
  * donde la barra invertida se colapsa, y el regex acababa siendo /^https?:/
  * seguido de un comentario. Aceptaba cualquier cosa, "javascript:" incluido.
  */
-function vUrlSegura(url) {
+function acUrlSegura(url) {
   // Sin barras invertidas a propósito: dentro de un template literal se
   // colapsan y el regex queda roto (así se rompió la comprobación anterior).
   var u = String(url || "").trim().toLowerCase();
@@ -122,7 +122,7 @@ function vUrlSegura(url) {
  * Acordes que aparecen en una partitura, en orden de aparición y sin repetir.
  * Los bloques {tab} se saltan: ahí las llaves no son acordes.
  */
-function vSongChords(text) {
+function acSongChords(text) {
   var fuera = [], vistos = {}, inTab = false, i = 0;
   var t = text || "";
   while (i < t.length) {
@@ -160,9 +160,16 @@ function vSongChords(text) {
  * acorde con baseFret > 1 —media biblioteca: cejillas, posiciones altas— salía
  * con los puntos corridos o directamente sin ellos.
  */
-function vChordSvg(pos, ancho) {
+function acChordSvg(pos, ancho) {
   var W = ancho || 96;
-  var cuerdas = 6, trastes = 5;
+  /*
+   * Cuántas cuerdas se dibujan sale de la propia digitación: la guitarra trae
+   * seis valores y el ukelele cuatro. Antes estaba fijo en seis, así que un
+   * acorde de ukelele se habría pintado con dos cuerdas de sobra.
+   */
+  var cuerdas = (pos && pos.frets && pos.frets.length) || 6;
+  if (cuerdas < 3 || cuerdas > 8) cuerdas = 6;
+  var trastes = 5;
   var mx = W * 0.14, my = W * 0.20;
   var gw = W - mx * 2;
   var alto = my + gw * 1.15 + W * 0.10;
@@ -253,15 +260,15 @@ function vChordSvg(pos, ancho) {
 // Sus acordes se envuelven en {X}; como al pintar se quitan las llaves, las
 // columnas sobre la letra no se desplazan. No toca bloques {tab} ni líneas que
 // ya tengan alguna llave.
-var V_CHORD_RE = /^\\(?[A-G][#b]?(?:maj|min|sus|add|aug|dim|m|M|º|°|\\+|-|b|#|\\d)*(?:\\/[A-G][#b]?)?\\)?$/;
-var V_SEP_RE = /^(?:\\||\\/|-+|–|%|x\\d+|\\(x\\d+\\)|N\\.?C\\.?)$/i;
+var AC_CHORD_RE = /^\\(?[A-G][#b]?(?:maj|min|sus|add|aug|dim|m|M|º|°|\\+|-|b|#|\\d)*(?:\\/[A-G][#b]?)?\\)?$/;
+var AC_SEP_RE = /^(?:\\||\\/|-+|–|%|x\\d+|\\(x\\d+\\)|N\\.?C\\.?)$/i;
 
 /**
  * Marca los acordes de un texto. Devuelve { text, marked }: el texto con los
  * acordes entre llaves y cuántos ha marcado, para poder decírselo a quien
  * pulsa el botón.
  */
-function vDetectChords(text) {
+function acDetectChords(text) {
   var lines = (text || "").replace(/\\r\\n/g, "\\n").split("\\n");
   var inTab = false, marked = 0;
   var out = lines.map(function (line) {
@@ -271,13 +278,13 @@ function vDetectChords(text) {
     if (inTab || !t || line.indexOf("{") >= 0) return line;
     var chords = 0, tokens = t.split(/\\s+/), corta = false;
     for (var i = 0; i < tokens.length; i++) {
-      if (V_CHORD_RE.test(tokens[i])) chords++;
-      else if (!V_SEP_RE.test(tokens[i])) { corta = true; break; }  // token de letra
+      if (AC_CHORD_RE.test(tokens[i])) chords++;
+      else if (!AC_SEP_RE.test(tokens[i])) { corta = true; break; }  // token de letra
     }
     if (corta || !chords) return line;
     marked += chords;
     return line.split(/(\\s+)/).map(function (part) {
-      return part && !/^\\s/.test(part) && V_CHORD_RE.test(part) ? "{" + part + "}" : part;
+      return part && !/^\\s/.test(part) && AC_CHORD_RE.test(part) ? "{" + part + "}" : part;
     }).join("");
   });
   return { text: out.join("\\n"), marked: marked };
@@ -290,7 +297,7 @@ function vDetectChords(text) {
 // test/youtube.test.mjs las compara caso por caso para que no se separen.
 var V_YT_ID = /^[A-Za-z0-9_-]{11}$/;
 
-function vYoutubeId(url) {
+function acYoutubeId(url) {
   var texto = String(url == null ? "" : url).trim();
   if (!texto) return "";
   if (V_YT_ID.test(texto)) return texto;
@@ -318,8 +325,8 @@ function vYoutubeId(url) {
 }
 
 /** URL para incrustar, en el dominio sin cookies. Vacio si no se reconoce. */
-function vEmbedUrl(url) {
-  var id = vYoutubeId(url);
+function acEmbedUrl(url) {
+  var id = acYoutubeId(url);
   return id ? "https://www.youtube-nocookie.com/embed/" + id : "";
 }
 
@@ -329,12 +336,12 @@ var V_SHARP = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
 var V_FLAT  = ["C","Db","D","Eb","E","F","Gb","G","Ab","A","Bb","B"];
 var V_NORM  = { Db:"C#", Eb:"D#", Gb:"F#", Ab:"G#", Bb:"A#", Cb:"B", Fb:"E" };
 
-function vTransposeChord(name, semis, flats) {
+function acTransposeChord(name, semis, flats) {
   if ((semis === 0 && !flats) || !name) return name;
   var slash = name.indexOf("/");
   if (slash >= 0) {
-    return vTransposeChord(name.slice(0, slash), semis, flats) + "/" +
-           vTransposeChord(name.slice(slash + 1), semis, flats);
+    return acTransposeChord(name.slice(0, slash), semis, flats) + "/" +
+           acTransposeChord(name.slice(slash + 1), semis, flats);
   }
   var root = (name.length >= 2 && (name[1] === "#" || name[1] === "b"))
     ? name.slice(0, 2) : name.slice(0, 1);
@@ -346,7 +353,7 @@ function vTransposeChord(name, semis, flats) {
 }
 
 /** Transpone solo los {acordes}; el texto y los bloques {tab} no se tocan. */
-function vTransposeBody(text, semis, flats) {
+function acTransposeBody(text, semis, flats) {
   if (semis === 0 && !flats) return text;
   var out = "", i = 0, inTab = false;
   while (i < text.length) {
@@ -357,7 +364,7 @@ function vTransposeBody(text, semis, flats) {
         if (low === "tab") { inTab = true; out += text.slice(i, end + 1); }
         else if (low === "/tab") { inTab = false; out += text.slice(i, end + 1); }
         else if (inTab) out += text.slice(i, end + 1);
-        else out += "{" + vTransposeChord(text.slice(i + 1, end).trim(), semis, flats) + "}";
+        else out += "{" + acTransposeChord(text.slice(i + 1, end).trim(), semis, flats) + "}";
         i = end + 1;
         continue;
       }
@@ -370,7 +377,7 @@ function vTransposeBody(text, semis, flats) {
 
 /* ---------- metrónomo (Web Audio) ---------- */
 
-function VMetronome() {
+function AcMetronome() {
   this.ctx = null;
   this.timer = null;
   this.bpm = 100;
@@ -379,7 +386,7 @@ function VMetronome() {
   this.onBeat = null;
 }
 
-VMetronome.prototype.click = function (accent) {
+AcMetronome.prototype.click = function (accent) {
   var ctx = this.ctx;
   var osc = ctx.createOscillator();
   var gain = ctx.createGain();
@@ -392,7 +399,7 @@ VMetronome.prototype.click = function (accent) {
   osc.stop(ctx.currentTime + 0.06);
 };
 
-VMetronome.prototype.start = function () {
+AcMetronome.prototype.start = function () {
   if (this.timer) return;
   if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
   if (this.ctx.state === "suspended") this.ctx.resume();
@@ -407,14 +414,14 @@ VMetronome.prototype.start = function () {
   tick();
 };
 
-VMetronome.prototype.stop = function () {
+AcMetronome.prototype.stop = function () {
   if (this.timer) clearTimeout(this.timer);
   this.timer = null;
   this.beat = 0;
   if (this.onBeat) this.onBeat(0);
 };
 
-VMetronome.prototype.isRunning = function () { return !!this.timer; };
+AcMetronome.prototype.isRunning = function () { return !!this.timer; };
 
 /* ---------- ZIP (copia de seguridad) ---------- */
 /*
@@ -431,12 +438,12 @@ var V_CRC_TABLE = (() => {
   }
   return t;
 })();
-function vCrc32(bytes) {
+function acCrc32(bytes) {
   let c = 0xFFFFFFFF;
   for (let i = 0; i < bytes.length; i++) c = V_CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
   return (c ^ 0xFFFFFFFF) >>> 0;
 }
-function vBuildZip(entries) {            // entries: [{ name, data: Uint8Array }]
+function acBuildZip(entries) {            // entries: [{ name, data: Uint8Array }]
   const enc = new TextEncoder();
   const parts = [], central = [];
   let offset = 0;
@@ -445,7 +452,7 @@ function vBuildZip(entries) {            // entries: [{ name, data: Uint8Array }
   const dosDate = (((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate()) & 0xFFFF;
   for (const e of entries) {
     const name = enc.encode(e.name);
-    const crc = vCrc32(e.data);
+    const crc = acCrc32(e.data);
     const lh = new DataView(new ArrayBuffer(30));
     lh.setUint32(0, 0x04034b50, true);  // local file header
     lh.setUint16(4, 20, true);          // versión mínima
@@ -482,7 +489,7 @@ function vBuildZip(entries) {            // entries: [{ name, data: Uint8Array }
                   { type: "application/zip" });
 }
 
-async function vReadZip(buf) {
+async function acReadZip(buf) {
   const dv = new DataView(buf);
   const u8 = new Uint8Array(buf);
   let eocd = -1;

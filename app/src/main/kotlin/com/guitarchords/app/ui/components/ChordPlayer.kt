@@ -6,6 +6,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import com.guitarchords.app.chords.ChordAudio
+import com.guitarchords.app.chords.Instrument
 import com.guitarchords.app.training.ToneEngine
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -36,7 +37,9 @@ class ChordPlayerState internal constructor(
     /** Toca una sola cuerda, si no está muda. */
     fun pluck(stringIdx: Int, frets: List<Int>) {
         val fret = frets.getOrNull(stringIdx) ?: return
-        val midi = ChordAudio.midiOf(stringIdx, fret) ?: return
+        // El instrumento sale del número de cuerdas de la digitación.
+        val instrument = Instrument.forStringCount(frets.size)
+        val midi = ChordAudio.midiOf(stringIdx, fret, instrument) ?: return
         job?.cancel()
         job = scope.launch { tone.play(midi, durationMs = 1100) }
     }
