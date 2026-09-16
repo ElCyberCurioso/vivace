@@ -710,19 +710,25 @@ export async function findProposalById(db, id) {
 }
 
 /** Cola de revisión, o el historial de quien la envió. */
-export async function listProposals(db, { status = "pending", authorId = null } = {}) {
+export async function listProposals(db, { status = "pending", authorId = null, limit, offset } = {}) {
   const condiciones = [];
   const valores = [];
   if (status && status !== "all") { condiciones.push("p.status = ?"); valores.push(status); }
   if (authorId) { condiciones.push("p.author_id = ?"); valores.push(authorId); }
   const where = condiciones.length ? "WHERE " + condiciones.join(" AND ") : "";
+  /*
+   * Acotada como los demás listados. Era la única consulta que devolvía la
+   * tabla entera: una cola de revisión con años de propuestas ya resueltas
+   * (`?status=all`) se traía todo el historial en cada visita al panel.
+   */
+  const pagina = clampPage({ limit, offset });
   const sql = `SELECT p.*, u.name AS author_name, s.title AS song_title, s.artist AS song_artist
      FROM proposals p
      LEFT JOIN users u ON u.id = p.author_id
      LEFT JOIN songs s ON s.id = p.song_id
-     ${where} ORDER BY p.created_at DESC`;
-  const stmt = valores.length ? db.prepare(sql).bind(...valores) : db.prepare(sql);
-  const { results } = await stmt.all();
+     ${where} ORDER BY p.created_at DESC LIMIT ? OFFSET ?`;
+  valores.push(pagina.limit, pagina.offset);
+  const { results } = await db.prepare(sql).bind(...valores).all();
   return results || [];
 }
 

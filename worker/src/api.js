@@ -122,8 +122,18 @@ async function register(request, env, cors) {
   if (!freno.ok) {
     return fail(`demasiados intentos; prueba en ${freno.retryAfter} s`, cors, 429);
   }
+  /*
+   * Mensaje sin detalles a propósito. Decir «ese email ya está registrado»
+   * permite comprobar cuentas una a una desde fuera, que es justo lo que el
+   * login evita con cuidado unas líneas más abajo. El freno de arriba lo hace
+   * lento, no imposible.
+   *
+   * Neutralidad completa exigiría verificar el correo: responder siempre 201 y
+   * mandar un email distinto según el caso. Mientras eso no exista, al menos no
+   * se confirma nada por escrito.
+   */
   if (await findUserByEmail(env.DB, email)) {
-    return fail("ese email ya está registrado", cors, 409);
+    return fail("no se ha podido crear la cuenta con esos datos", cors, 409);
   }
   // El primer usuario que se da de alta administra la instalación.
   const primerUsuario = (await countUsers(env.DB)) === 0;
@@ -289,14 +299,50 @@ async function deleteSong(env, cors, user, id) {
  * De quién es el catálogo que se enseña: por defecto, del administrador más
  * antiguo; `?owner=all` enseña lo publicado por todo el mundo.
  */
+/*
+ * Quién es el administrador más antiguo cambia como mucho una vez en la vida de
+ * la instalación, pero se preguntaba a D1 en CADA carga del catálogo, que es la
+ * página que ve todo el mundo y la única que no necesita sesión. Se recuerda un
+ * rato en la propia instancia del Worker; al caducar se vuelve a preguntar, así
+ * que un cambio de administrador tarda como mucho ese rato en notarse.
+ */
+let adminRecordado = { id: null, cuando: 0 };
+const ADMIN_TTL_MS = 5 * 60 * 1000;
+
 async function catalogOwnerId(env, url) {
   const owner = url.searchParams.get("owner");
   if (owner === "all") return null;
   if (owner) return owner;
+  const ahora = Date.now();
+  if (adminRecordado.id && ahora - adminRecordado.cuando < ADMIN_TTL_MS) {
+    return adminRecordado.id;
+  }
   const admin = await env.DB.prepare(
     "SELECT id FROM users WHERE role = 'admin' ORDER BY created_at ASC LIMIT 1"
   ).first();
-  return admin?.id || null;
+  const id = admin?.id || null;
+  if (id) adminRecordado = { id, cuando: ahora };
+  return id;
+}
+
+/*
+ * Freno de escrituras. El límite de intentos solo cubría `/auth/*`, así que una
+ * sesión válida podía crear partituras, comentarios o propuestas en bucle sin
+ * que nada la parase: D1 y R2 se pagan, y el primero que lo nota es el dueño de
+ * la cuenta de Cloudflare.
+ *
+ * Es holgado a propósito (un minuto, sesenta escrituras): quien usa la
+ * aplicación a mano no lo roza ni guardando a manotazos, y quien la usa con un
+ * script se encuentra la puerta.
+ */
+const WRITE_MAX = 60;
+const WRITE_WINDOW_MS = 60 * 1000;
+
+async function frenoDeEscritura(env, request, user, cors) {
+  const freno = await rateLimit(
+    env.DB, rateKey("write", user.id, request), Date.now(), WRITE_MAX, WRITE_WINDOW_MS);
+  if (freno.ok) return null;
+  return fail(`demasiadas escrituras seguidas; prueba en ${freno.retryAfter} s`, cors, 429);
 }
 
 /**
@@ -662,6 +708,8 @@ export async function handleApi(request, env, url, cors) {
   }
   if (path === "/api/songs" && method === "POST") {
     if (!user) return fail("inicia sesión", cors, 401);
+    const frenada = await frenoDeEscritura(env, request, user, cors);
+    if (frenada) return frenada;
     return createSong(request, env, cors, user);
   }
 
@@ -797,6 +845,8 @@ export async function handleApi(request, env, url, cors) {
     }
     if (method === "POST") {
       if (!canComment(user, song)) return fail("inicia sesión para comentar", cors, 401);
+      const frenada = await frenoDeEscritura(env, request, user, cors);
+      if (frenada) return frenada;
       return createComment(request, env, cors, user, song);
     }
   }
@@ -834,6 +884,8 @@ export async function handleApi(request, env, url, cors) {
     if (!user) return fail("inicia sesión", cors, 401);
     const song = await findSongById(env.DB, propuestasDe[1]);
     if (!canView(user, song)) return fail("no encontrada", cors, 404);
+    const frenada = await frenoDeEscritura(env, request, user, cors);
+    if (frenada) return frenada;
     return createProposal(request, env, cors, user, song);
   }
 
@@ -842,9 +894,11 @@ export async function handleApi(request, env, url, cors) {
     if (!user) return fail("inicia sesión", cors, 401);
     const status = url.searchParams.get("status") || "pending";
     const mias = url.searchParams.get("mine") === "1" || !canReview(user);
+    const { limit, offset } = paginaDe(url);
     const proposals = await listProposals(env.DB, {
       status,
-      authorId: mias ? user.id : null
+      authorId: mias ? user.id : null,
+      limit, offset
     });
     return json({
       proposals: proposals.map(publicProposal),

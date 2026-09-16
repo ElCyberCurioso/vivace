@@ -23,6 +23,8 @@ export const MAX_CHORDS_BLOB = 1024 * 1024;
 /** Intentos de sesión permitidos por clave (email+IP) y ventana. */
 export const AUTH_MAX_ATTEMPTS = 10;
 export const AUTH_WINDOW_MS = 15 * 60 * 1000;
+/** Edad a partir de la cual una ventana ya no frena a nadie y se puede borrar. */
+export const RATE_PURGE_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Comprueba un campo de texto corto. Devuelve el mensaje de error o null.
@@ -87,18 +89,27 @@ export function rateDecision(row, now, limit = AUTH_MAX_ATTEMPTS, windowMs = AUT
  * Si no hay base de datos no bloquea a nadie: el objetivo es frenar la fuerza
  * bruta, no dejar la API inservible cuando falta el binding.
  */
-export async function rateLimit(db, key, now = Date.now()) {
+export async function rateLimit(db, key, now = Date.now(),
+                                limit = AUTH_MAX_ATTEMPTS, windowMs = AUTH_WINDOW_MS) {
   if (!db) return { ok: true, retryAfter: 0 };
   const row = await db
     .prepare("SELECT count, window_start FROM auth_attempts WHERE key = ?")
     .bind(key).first();
-  const { action, retryAfter } = rateDecision(row, now);
+  const { action, retryAfter } = rateDecision(row, now, limit, windowMs);
   if (action === "block") return { ok: false, retryAfter };
   if (action === "start") {
     await db.prepare(
       "INSERT INTO auth_attempts (key, count, window_start) VALUES (?, 1, ?) " +
       "ON CONFLICT(key) DO UPDATE SET count = 1, window_start = excluded.window_start"
     ).bind(key, now).run();
+    /*
+     * De paso se barren las ventanas viejas. Hasta ahora la tabla solo se
+     * limpiaba al ACERTAR la contraseña (`clearRate`), así que los intentos de
+     * quien nunca entra —justo los de la fuerza bruta— se quedaban ahí para
+     * siempre, una fila por cada email+IP probado.
+     */
+    await db.prepare("DELETE FROM auth_attempts WHERE window_start < ?")
+      .bind(now - RATE_PURGE_MS).run();
   } else {
     await db.prepare("UPDATE auth_attempts SET count = count + 1 WHERE key = ?")
       .bind(key).run();

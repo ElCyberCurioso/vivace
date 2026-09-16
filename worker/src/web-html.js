@@ -2479,6 +2479,11 @@ function openSong(id) {
     vArtist.textContent = d.song.artist || "";
     vSep.classList.toggle("hidden", !d.song.artist);
     vTitle.textContent = d.song.title || "(sin título)";
+    // La pestaña, el historial y los marcadores dicen QUÉ partitura es. Antes
+    // todo ponía "Accordio", así que dos pestañas abiertas eran indistinguibles
+    // y un marcador no decía nada de lo que guardaba.
+    document.title = (d.song.title || "(sin título)") +
+      (d.song.artist ? " · " + d.song.artist : "") + " · Accordio";
     setCapo(d.song.capo);
     // Solo http(s): un href con javascript: en la cabecera sería un agujero.
     var origen = String(d.song.sourceUrl || "");
@@ -2634,6 +2639,7 @@ function cerrarVisor() {
   stopScroll();
   if (metro.isRunning()) toggleMetro();
   viewer.classList.remove("on");
+  document.title = "Accordio";
 }
 
 /** Cerrar el visor es VOLVER: a la pantalla de la que se vino. */

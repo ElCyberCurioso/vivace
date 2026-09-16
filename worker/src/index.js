@@ -151,12 +151,61 @@ function canonicalRedirect(request, url) {
  * claro). Un año, subdominios incluidos; sin `preload`, que es irreversible a
  * corto plazo y obliga a que TODO subdominio futuro hable HTTPS.
  */
-function conHsts(url, res) {
-  if (url.protocol !== "https:" || esLocal(url.hostname)) return res;
+function conCabecerasSeguras(url, res) {
   const salida = new Response(res.body, res);
-  salida.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  // HSTS solo tiene sentido sobre HTTPS y fuera de localhost (ver arriba).
+  if (url.protocol === "https:" && !esLocal(url.hostname)) {
+    salida.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  }
+  /*
+   * El resto van siempre, también en local, para que un fallo de política se
+   * vea mientras se desarrolla y no al desplegar.
+   *
+   * - nosniff: sin esto el navegador puede decidir por su cuenta que el texto
+   *   de una partitura es HTML y ejecutarlo.
+   * - X-Frame-Options: nadie debe poder meter Accordio en un iframe ajeno y
+   *   recoger las pulsaciones por encima. La CSP de abajo dice lo mismo con
+   *   `frame-ancestors`, pero mientras esté en modo informe solo avisa.
+   * - Referrer-Policy: al seguir el enlace de origen de una partitura no se
+   *   manda la ruta completa de donde se venía.
+   */
+  salida.headers.set("X-Content-Type-Options", "nosniff");
+  salida.headers.set("X-Frame-Options", "DENY");
+  salida.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  salida.headers.set("Permissions-Policy", "camera=(), geolocation=(), microphone=()");
+  salida.headers.set("Content-Security-Policy-Report-Only", CSP);
   return salida;
 }
+
+/*
+ * Política de contenidos. Va en modo INFORME (`-Report-Only`) a propósito: una
+ * CSP mal ajustada no avisa de nada, simplemente deja la página en blanco, y
+ * aquí no hay navegador con el que comprobarla. Así el navegador escribe en su
+ * consola lo que HABRÍA bloqueado, sin romper nada.
+ *
+ * Para pasarla a obligatoria, cuando se haya recorrido catálogo, visor, editor
+ * y diccionario sin quejas en la consola: renombrar la cabecera de arriba a
+ * `Content-Security-Policy`.
+ *
+ * `'unsafe-inline'` en script-src es la deuda conocida: queda el `<script>` del
+ * tema en el `<head>` para que la página no parpadee en blanco antes de saber
+ * si toca modo oscuro (CONTEXTO.md §7). Cuando salga de ahí se puede cambiar
+ * por un hash y cerrar el hueco del todo.
+ */
+const CSP = [
+  "default-src 'self'",
+  "base-uri 'none'",
+  "object-src 'none'",
+  "frame-ancestors 'none'",
+  // El visor incrusta el vídeo de la canción, y solo desde el dominio sin cookies.
+  "frame-src https://www.youtube-nocookie.com",
+  "img-src 'self' data:",
+  "font-src 'self' data:",
+  "style-src 'self' 'unsafe-inline'",
+  "script-src 'self' 'unsafe-inline'",
+  "connect-src 'self'",
+  "form-action 'none'",
+].join("; ");
 
 /*
  * La entrada solo se ocupa del transporte (HTTPS y host canónico) y le pone
@@ -170,7 +219,7 @@ const app = {
     const url = new URL(request.url);
     const canonico = canonicalRedirect(request, url);
     if (canonico) return canonico;
-    return conHsts(url, await app.ruta(request, env));
+    return conCabecerasSeguras(url, await app.ruta(request, env));
   },
 
   async ruta(request, env) {
@@ -245,7 +294,23 @@ const app = {
       const apiResponse = await handleApi(request, env, url, cors);
       if (apiResponse) return apiResponse;
     } catch (err) {
-      return new Response(JSON.stringify({ error: String(err && err.message) }), {
+      /*
+       * El detalle se queda en el registro y NO viaja al cliente: el mensaje de
+       * una excepción de D1 lleva nombres de tabla y de columna, que es justo el
+       * mapa que busca quien anda probando la API. Al cliente le va un
+       * identificador corto para que pueda decir cuál de los errores fue el suyo
+       * y se pueda encontrar en `wrangler tail`.
+       */
+      const id = crypto.randomUUID().slice(0, 8);
+      console.error(JSON.stringify({
+        evento: "api_error",
+        id,
+        metodo: request.method,
+        ruta: path,
+        mensaje: String(err && err.message),
+        pila: err && err.stack ? String(err.stack) : null,
+      }));
+      return new Response(JSON.stringify({ error: "error interno del servidor", id }), {
         status: 500, headers: { ...cors, "Content-Type": "application/json" }
       });
     }

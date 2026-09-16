@@ -184,8 +184,37 @@ backend() {
 aplicar_esquema() {
   titulo "Esquema de la base de producción"
   nota "schema.sql solo CREA lo que falta; no borra ni reescribe datos."
-  (cd "$WORKER" && npx --no-install wrangler d1 execute vivace --remote --yes --file=schema.sql)
-  ok "schema.sql aplicado"
+  #
+  # Se manda por --command, NO por --file.
+  #
+  # `--file` no ejecuta el SQL: lo sube a un almacén y luego pide a la API que lo
+  # importe (POST /d1/database/<id>/import). Ese segundo paso falla desde aquí
+  # con un «fetch failed» tan seco que parece falta de red, y no lo es: el mismo
+  # SQL por --command entra sin despeinarse. Tampoco es cosa de la versión, que
+  # con wrangler 4 falla igual. Dejaba el despliegue muerto en su PRIMER paso,
+  # antes de tocar nada.
+  #
+  # Las sentencias van todas en una sola llamada, que D1 acepta de sobra. Si
+  # algo falla se repiten una a una, solo para poder decir CUÁL: un error aquí
+  # no debería existir —todo el fichero es CREATE ... IF NOT EXISTS— y si
+  # aparece hay que verlo, no adivinarlo.
+  local sql sentencia
+  sql="$(sentencias_de "$WORKER/schema.sql" | sed 's/$/;/' | tr '\n' ' ')"
+  if (cd "$WORKER" && npx --no-install wrangler d1 execute vivace \
+        --remote --yes --command "$sql") >/dev/null 2>&1; then
+    ok "schema.sql aplicado"
+  else
+    aviso "schema.sql ha fallado; repasando sentencia a sentencia para señalar cuál…"
+    while IFS= read -r sentencia; do
+      [ -n "$sentencia" ] || continue
+      (cd "$WORKER" && npx --no-install wrangler d1 execute vivace \
+          --remote --yes --command "$sentencia") >/dev/null 2>&1 \
+        || error "falla esta sentencia de schema.sql: $(printf '%s' "$sentencia" | cut -c1-70)"
+    done <<EOF_ESQUEMA
+$(sentencias_de "$WORKER/schema.sql")
+EOF_ESQUEMA
+    error "schema.sql falla entero pero ninguna sentencia falla suelta: vuelve a intentarlo"
+  fi
 
   # migrations.sql son ALTER TABLE, y SQLite no tiene "ADD COLUMN IF NOT EXISTS".
   #

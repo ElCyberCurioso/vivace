@@ -5,6 +5,13 @@ name = "guitarchords-sync"
 main = "src/index.js"
 compatibility_date = "2024-09-23"
 
+# Registro de errores. Sin esto, un fallo en producción no deja rastro ninguno:
+# `wrangler tail` solo enseña lo que pasa mientras uno está mirando, y nadie
+# mira a las tres de la mañana. Con esto, los `console.error` del Worker quedan
+# guardados y se pueden consultar después desde el panel de Cloudflare.
+[observability]
+enabled = true
+
 # R2 bucket binding. Change bucket_name to your own bucket.
 # Create it first with:  wrangler r2 bucket create guitarchords
 [[r2_buckets]]

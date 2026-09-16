@@ -6,7 +6,8 @@
   "description": "Accordio · Cloudflare Worker: web, API y sincronización",
   "scripts": {
     "dev": "wrangler dev --local-protocol https",
-    "deploy": "wrangler deploy",
+    "deploy": "node -e \"process.stderr.write('No publiques con esto. Usa ../tools/deploy.sh release (o tools/deploy.ps1): aplica migrations.sql y comprueba que la base tiene las columnas ANTES de publicar. Un wrangler deploy a secas ya dejo una vez la web sin poder guardar partituras. Emergencias: npm run deploy:raw\\n'); process.exit(1)\"",
+    "deploy:raw": "wrangler deploy",
     "check": "node --check src/index.js && node --check src/api.js && node --check src/sync.js && node check-pages.mjs",
     "test": "node test-detect.mjs && node --test \"test/*.test.mjs\""
   },
