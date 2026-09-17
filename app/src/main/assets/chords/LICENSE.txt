@@ -1,9 +1,14 @@
-Chord voicing data (guitar.json) from chords-db
+Chord voicing data (guitar.json, ukulele.json) from chords-db
 https://github.com/tombatossals/chords-db
+
+guitar.json was taken from the repository; ukulele.json from the published
+package @tombatossals/chords-db 0.5.1, whose LICENSE names a different
+copyright holder. Both notices are reproduced below.
 
 The MIT License (MIT)
 
 Copyright (c) 2017 David Avellaneda
+Copyright (c) 2016 David Rubert
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

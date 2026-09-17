@@ -70,6 +70,60 @@ class UkuleleChordsTest {
         }
     }
 
+    /*
+     * El diccionario empaquetado, leído del árbol y no de los assets: en la JVM
+     * no hay AssetManager, pero el fichero está ahí y las pruebas corren con la
+     * carpeta del módulo como raíz.
+     *
+     * Lo que vigila es que nadie deje caer ahí un fichero de SEIS cuerdas. Sería
+     * un fallo silencioso de los peores: `ChordDb.toShape` descarta la postura
+     * por tamaño y devuelve lista vacía, así que el ukelele seguiría dibujando
+     * —con las posturas calculadas de ChordLibrary— y nadie se enteraría de que
+     * el diccionario entero se está ignorando.
+     */
+    @Test
+    fun `el diccionario empaquetado de ukelele es de cuatro cuerdas`() {
+        val fichero = java.io.File("src/main/assets/chords/ukulele.json")
+        assertTrue("falta el asset: ${fichero.absolutePath}", fichero.exists())
+
+        val raiz = kotlinx.serialization.json.Json
+            .parseToJsonElement(fichero.readText()) as kotlinx.serialization.json.JsonObject
+        val main = raiz["main"] as kotlinx.serialization.json.JsonObject
+        assertEquals(
+            "4",
+            (main["strings"] as kotlinx.serialization.json.JsonPrimitive).content
+        )
+
+        val chords = raiz["chords"] as kotlinx.serialization.json.JsonObject
+        for (clave in listOf("C", "A", "F", "G")) {
+            assertTrue("el diccionario no trae la clave $clave", chords.containsKey(clave))
+        }
+    }
+
+    @Test
+    fun `las posturas del diccionario empaquetado traen cuatro trastes`() {
+        val fichero = java.io.File("src/main/assets/chords/ukulele.json")
+        val raiz = kotlinx.serialization.json.Json
+            .parseToJsonElement(fichero.readText()) as kotlinx.serialization.json.JsonObject
+        val chords = raiz["chords"] as kotlinx.serialization.json.JsonObject
+
+        var revisadas = 0
+        for (clave in chords.keys) {
+            val acordes = chords[clave] as kotlinx.serialization.json.JsonArray
+            for (acorde in acordes) {
+                val posiciones = (acorde as kotlinx.serialization.json.JsonObject)["positions"]
+                    as kotlinx.serialization.json.JsonArray
+                for (posicion in posiciones) {
+                    val trastes = (posicion as kotlinx.serialization.json.JsonObject)["frets"]
+                        as kotlinx.serialization.json.JsonArray
+                    assertEquals("digitación de $clave con ${trastes.size} cuerdas", 4, trastes.size)
+                    revisadas++
+                }
+            }
+        }
+        assertTrue("el diccionario está vacío", revisadas > 1000)
+    }
+
     @Test
     fun `el audio de una digitacion de ukelele usa sus cuerdas`() {
         // Do al aire: sol4 do4 mi4 y la4 en el tercer traste (do5).

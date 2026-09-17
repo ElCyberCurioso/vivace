@@ -24,9 +24,9 @@ jobs:
       run:
         working-directory: worker
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           # La 22 es la que se usa en local. `cache: npm` necesita saber dónde
           # está el lock, que no vive en la raíz del repositorio.
