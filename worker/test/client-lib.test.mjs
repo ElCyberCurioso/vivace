@@ -5,7 +5,8 @@ import { CLIENT_JS } from "../src/client-lib.js";
 // La librería se sirve como texto al navegador: se evalúa aquí para poder
 // probar de verdad el render y la transposición que verá el usuario.
 const lib = new Function(
-  CLIENT_JS + "\nreturn { acRenderSong, acTransposeBody, acTransposeChord, acParseSong };"
+  CLIENT_JS + "\nreturn { acRenderSong, acTransposeBody, acTransposeChord, acParseSong," +
+              " acStripChords };"
 )();
 
 test("los acordes se resaltan y cada línea se mantiene", () => {
@@ -56,6 +57,34 @@ test("las cabeceras se separan del cuerpo", () => {
 test("una partitura sin cabeceras se queda entera como cuerpo", () => {
   const parsed = lib.acParseSong("{C}solo letra");
   assert.equal(parsed.body, "{C}solo letra");
+});
+
+test("solo letra: las líneas de acordes se van enteras", () => {
+  const src = "{C}      {G}\nCasa árbol\n\nD  A\nsegunda línea";
+  assert.equal(lib.acStripChords(src), "Casa árbol\n\nsegunda línea");
+});
+
+test("solo letra: el acorde intercalado no deja un agujero en la frase", () => {
+  assert.equal(lib.acStripChords("{Am} Casa   {C} árbol"), "Casa árbol");
+});
+
+test("solo letra: la tablatura es cifra, no letra", () => {
+  const src = "letra\n{tab}\ne|--0--3--\n{/tab}\nmás letra";
+  assert.equal(lib.acStripChords(src), "letra\nmás letra");
+});
+
+test("solo letra: los blancos no se amontonan ni sobran al final", () => {
+  assert.equal(lib.acStripChords("uno\n\n\n{C}\n\ndos\n{G}\n\n"), "uno\n\ndos");
+});
+
+test("solo letra: la sangría de la letra y los rótulos se respetan", () => {
+  assert.equal(lib.acStripChords("[Estribillo]\n   sangrada\n{C}canta"),
+               "[Estribillo]\n   sangrada\ncanta");
+});
+
+test("solo letra: una letra sin cifrar se queda igual", () => {
+  const src = "A mi manera no le toques nada\nsegunda";
+  assert.equal(lib.acStripChords(src), src);
 });
 
 test("acUrlSegura solo acepta http y https", () => {

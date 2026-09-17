@@ -312,6 +312,14 @@ La misma URL del Worker sirve **Accordio** en `/`: catálogo publicado (visible 
 el artista en la cabecera, el número de hoja en el pie, y el capo y el tono
 transpuesto en la píldora amarilla de estado — las mismas herramientas que en el móvil.
 
+El visor tiene además **Solo letra**, para quien solo quiere cantar: quita el
+cifrado de la pantalla y del PDF —líneas de acordes, tablaturas y las llaves de
+las líneas mixtas, cerrando el hueco que sujetaba cada acorde sobre su sílaba— y
+deja la letra sola, con su sangría y sus estrofas. Con el modo puesto, tono y
+diagramas se deshabilitan (no hay nada que transponer) y el papel lleva la
+píldora «Solo letra» en vez de las de capo y tono. La elección se recuerda. En
+la app Android todavía no está: es tarea pendiente (`CONTEXTO.md` §7).
+
 En **Mis partituras** hay dos filtros rápidos además de los desplegables:
 **Favoritas** y **Solo privadas**. Este último **viene puesto**: ahí lo que se
 va a hacer es rematar lo que falta, y lo ya publicado es justo lo que no necesita

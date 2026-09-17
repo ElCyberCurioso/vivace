@@ -969,6 +969,11 @@ export const WEB_CSS = `  /* Accordio · paquete de estilo de marca (accordio-we
                         --tono-glifo:var(--ui-chord); }
   .herr.tono .tool    { --tono:var(--ac-action);    --tono-texto:var(--ac-on-action);
                         --tono-glifo:var(--ui-accent); }
+  /* «Solo letra» es un estado de la VISTA, como el filtro de privadas: turquesa.
+     Ni coral —que aquí llamaría a los acordes, y este botón es justo el que los
+     quita— ni amarillo, que está reservado a capo y pendientes. */
+  .herr.letra .tool.soloLetra { --tono:var(--ac-active); --tono-texto:var(--ac-primary-800);
+                        --tono-glifo:var(--ui-beat); }
   .tool.compartir     { --tono:var(--ac-highlight); --tono-glifo:var(--ui-chord);
                         --tono-texto:var(--ac-on-highlight); }
   .tool.imprimir      { --tono:var(--ac-action); --tono-glifo:var(--ui-accent); }
@@ -2268,16 +2273,21 @@ function printViewer() {
     return;
   }
   // current.body ya es lo que se está leyendo: el Original o la versión
-  // elegida, y capoActual es el capo de eso mismo (ver setCapo).
-  var lineas = acRenderSong(acTransposeBody(current.body || "", semis, flats));
+  // elegida, y capoActual es el capo de eso mismo (ver setCapo). Con «solo
+  // letra» puesto se imprime eso mismo: lo que se ve es lo que sale.
+  var lineas = acRenderSong(soloLetra ? acStripChords(current.body || "")
+                                      : acTransposeBody(current.body || "", semis, flats));
   var capo = capoActual;
   var titulo = current.song.title || "Partitura";
   var autor = current.song.artist || "";
   var fuente = acUrlSegura(current.song.sourceUrl) ? current.song.sourceUrl : "";
 
-  var estados =
-    (capo > 0 ? '<span class="etq">Capo ' + capo + '</span>' : '') +
-    (semis !== 0 ? '<span class="etq tono">Tono ' + (semis > 0 ? '+' : '') + semis + '</span>' : '');
+  // Sin acordes, capo y tono no dicen nada de lo que hay en la hoja; lo que hay
+  // que saber al cogerla es que es la letra sola y no una partitura incompleta.
+  var estados = soloLetra
+    ? '<span class="etq tono">Solo letra</span>'
+    : (capo > 0 ? '<span class="etq">Capo ' + capo + '</span>' : '') +
+      (semis !== 0 ? '<span class="etq tono">Tono ' + (semis > 0 ? '+' : '') + semis + '</span>' : '');
 
   var doc = '<!doctype html><html lang="es"><head><meta charset="utf-8">' +
     '<title>' + acEsc(titulo) + (autor ? ' · ' + acEsc(autor) : '') + '</title>' +
@@ -2618,11 +2628,40 @@ function renderViewer() {
   vTone.textContent = (semis > 0 ? "+" : semis < 0 ? "" : "±") + semis;
   vFlat.style.fontWeight = flats ? "700" : "400";
   var keep = vBody.scrollTop;
+  // Con la letra sola no hay nada que transponer: lo que se pinta sale del
+  // cuerpo original sin cifrado, no del transpuesto.
   vSheet.innerHTML = '<div class="sheet">' +
-                     acRenderSong(acTransposeBody(current.body, semis, flats)) + "</div>";
+                     acRenderSong(soloLetra ? acStripChords(current.body)
+                                            : acTransposeBody(current.body, semis, flats)) + "</div>";
   vBody.style.setProperty("--fs", fontSize + "px");
   vBody.scrollTop = keep;
   renderChordBar();
+}
+
+/*
+ * «Solo letra»: la partitura sin cifrado, para quien va a cantar y no a tocar.
+ *
+ * Es un modo de la VISTA, no un cambio del texto: current.body se queda como
+ * está y el cifrado se quita al pintar (y al imprimir), igual que el tono y el
+ * capo. Así se puede ir y volver sin haber tocado la canción de nadie.
+ *
+ * Con el modo puesto, tono, bemoles y diagramas se apagan: no hay nada que
+ * transponer ni digitación que enseñar, y un botón que no puede hacer nada se
+ * deshabilita en vez de fallar en silencio.
+ */
+var soloLetra = false;
+
+function ponerSoloLetra(valor) {
+  soloLetra = !!valor;
+  // Mismo patrón que «Acordes»: el icono se queda y cambian la palabra y el
+  // estado, que es lo que leen el ojo (relleno turquesa) y el lector de pantalla.
+  vLyrics.setAttribute("aria-pressed", soloLetra ? "true" : "false");
+  vLyrics.querySelector("span").textContent = soloLetra ? "Con acordes" : "Solo letra";
+  [vUp, vDown, vFlat, vChords].forEach(function (b) { b.disabled = soloLetra; });
+  if (soloLetra && chordBarOn) toggleChordBar();
+  hideChordHover();
+  try { localStorage.setItem("accordio_letra", soloLetra ? "1" : ""); } catch (e) {}
+  if (current) renderViewer();
 }
 
 /**
@@ -4551,6 +4590,10 @@ vFlat.onclick = function () { flats = !flats; renderViewer(); };
  */
 vFontUp.onclick = function () { fontSize = Math.min(40, fontSize + 1); renderViewer(); };
 vFontDown.onclick = function () { fontSize = Math.max(8, fontSize - 1); renderViewer(); };
+vLyrics.onclick = function () { ponerSoloLetra(!soloLetra); };
+// Quien lee solo la letra lo hace siempre, no una vez: se recuerda entre
+// sesiones, como el tema y el instrumento.
+try { ponerSoloLetra(localStorage.getItem("accordio_letra") === "1"); } catch (e) {}
 vMetro.onclick = toggleMetro;
 vBpm.oninput = function () { vBpmVal.textContent = vBpm.value; metro.bpm = +vBpm.value; };
 document.addEventListener("keydown", function (e) {
@@ -5045,6 +5088,10 @@ export const WEB_HTML = `<!doctype html>
         <button id="vFontDown" class="tool" title="Letra más pequeña">A-</button>
         <button id="vFontUp" class="tool" title="Letra más grande">A+</button>
         <span class="grow"></span>
+        <button id="vLyrics" class="tool soloLetra" aria-pressed="false"
+                title="Ver e imprimir solo la letra, sin acordes">
+          <svg class="ic"><use href="#ic-letra"></use></svg><span>Solo letra</span>
+        </button>
       </div>
       <div class="row herr acordes">
         <button id="vChords" class="tool" aria-pressed="false" title="Diagramas de los acordes de esta partitura">
@@ -5095,6 +5142,7 @@ export const WEB_HTML = `<!doctype html>
   <symbol id="ac-notes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.6" cy="17" r="2.7"></circle><circle cx="17" cy="15" r="2.7"></circle><path d="M10.3 17V7.2l9.4-2.4V15"></path><path d="M10.3 9.6l9.4-2.4" stroke="var(--ac-icon-accent, #FF6B6B)"></path></symbol>
   <symbol id="ic-candado" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4.6" y="10.4" width="14.8" height="9.6" rx="2.4"></rect><path d="M8.2 10.4V7.6a3.8 3.8 0 0 1 7.6 0v2.8"></path><circle cx="12" cy="15.2" r="1.6" fill="var(--ac-icon-accent, #FF6B6B)" stroke="none"></circle></symbol>
   <symbol id="ic-pausa" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.6"></circle><path d="M10.2 9v6M13.8 9v6" stroke="var(--ac-icon-accent, #FF6B6B)"></path></symbol>
+  <symbol id="ic-letra" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.4 7h15.2M4.4 11.4h15.2M4.4 15.8h11.4"></path><path d="M4.4 20.2h7.4" stroke="var(--ac-icon-accent, #FF6B6B)"></path></symbol>
   <symbol id="ic-stop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.2 4h5.6l4.4 16.4H4.8z"></path><path d="M6.2 14.6h11.6"></path><rect x="9.6" y="8.4" width="4.8" height="4.8" rx="1" fill="var(--ac-icon-accent, #FF6B6B)" stroke="var(--ac-icon-accent, #FF6B6B)"></rect></symbol>
 </svg>
 

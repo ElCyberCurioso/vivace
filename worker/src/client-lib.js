@@ -85,6 +85,70 @@ function acRenderSong(text) {
   return html;
 }
 
+/**
+ * Deja SOLO la letra: la misma partitura sin cifrado, para quien va a cantar y
+ * no a tocar. Devuelve texto en el mismo formato, así que lo que sale de aquí
+ * se pinta con acRenderSong y se imprime con el mismo papel de siempre.
+ *
+ * El cifrado tiene estructura de sobra para quitarlo sin tocar la letra:
+ *
+ *  - Una línea que, quitadas las llaves, se queda en blanco es una línea de
+ *    acordes: se va entera. Borrar solo el acorde dejaría un renglón de espacios
+ *    en medio de cada estrofa.
+ *  - Una línea SIN llaves cuyos tokens son todos acordes o separadores también
+ *    se va: es cifrado que nadie llegó a marcar. El criterio es el mismo que usa
+ *    acDetectChords, para que las dos funciones no discrepen sobre qué es un
+ *    acorde.
+ *  - En una línea mixta ({Am} Casa {C} árbol) se quita la llave Y el hueco que
+ *    dejaba: esos espacios estaban para que el acorde cayera sobre su sílaba, y
+ *    sin acorde encima son un agujero en mitad de la frase. Las líneas sin
+ *    acordes conservan su sangría tal cual: ahí el espacio lo puso quien
+ *    escribió la canción.
+ *  - La tablatura se va: es cifra, no letra.
+ *
+ * Los blancos se colapsan al final: quitando las líneas de acordes quedaban
+ * tres renglones vacíos entre estrofa y estrofa.
+ */
+function acStripChords(text) {
+  var lines = (text || "").replace(/\\r\\n/g, "\\n").split("\\n");
+  var out = [], inTab = false;
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i];
+    var t = line.trim();
+    if (t === "{tab}") { inTab = true; continue; }
+    if (t === "{/tab}") { inTab = false; continue; }
+    if (inTab) continue;
+
+    var conAcordes = line.indexOf("{") >= 0;
+    var limpia = line.replace(/\\{[^}]*\\}/g, "");
+    if (conAcordes && !limpia.trim()) continue;              // línea de solo acordes
+    if (!conAcordes && t && acLineaDeAcordes(t)) continue;   // cifrado sin marcar
+    // El hueco que sujetaba el acorde sobra en cuanto el acorde no está.
+    if (conAcordes) limpia = limpia.replace(/[ \\t]{2,}/g, " ").replace(/^[ \\t]+/, "");
+    limpia = limpia.replace(/[ \\t]+$/, "");
+
+    if (!limpia) {
+      // Un blanco entre estrofas sí; tres seguidos, no.
+      if (!out.length || !out[out.length - 1]) continue;
+      out.push("");
+      continue;
+    }
+    out.push(limpia);
+  }
+  while (out.length && !out[out.length - 1]) out.pop();
+  return out.join("\\n");
+}
+
+/** ¿Esta línea es cifrado que nadie marcó? Mismo criterio que acDetectChords. */
+function acLineaDeAcordes(t) {
+  var tokens = t.split(/\\s+/), acordes = 0;
+  for (var i = 0; i < tokens.length; i++) {
+    if (AC_CHORD_RE.test(tokens[i])) acordes++;
+    else if (!AC_SEP_RE.test(tokens[i])) return false;
+  }
+  return acordes > 0;
+}
+
 /** Separa las cabeceras #clave: valor del cuerpo de la partitura. */
 function acParseSong(text) {
   var lines = (text || "").replace(/\\r\\n/g, "\\n").split("\\n");

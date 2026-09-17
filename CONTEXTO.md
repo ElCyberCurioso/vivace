@@ -285,6 +285,20 @@ Todo commiteado, subido y —lo del servidor— desplegado. 38 ficheros,
 - `print/PrintAdapter.kt` reescrito para dar **el mismo documento** que la web
   (ver §4.26). `PrintAdapter.print()` recibe `semitones` para la píldora de tono.
 
+### 3.9 Solo letra (web)
+- La partitura se puede leer e imprimir **sin cifrado**, para quien solo canta.
+  Interruptor «Solo letra» en los mandos del visor (bloque Letra), y el PDF sale
+  de lo mismo que se está viendo, como ya hacía con el tono y el capo.
+- La lógica es una función pura en `client-lib.js`, `acStripChords`, servida a
+  la web y cubierta por `test/client-lib.test.mjs`. Quita los bloques `{tab}`,
+  las líneas que solo llevan acordes —con llaves o sin ellas, mismo criterio que
+  `acDetectChords`, para que las dos no discrepen— y, en las líneas mixtas, la
+  llave **y el hueco** que sujetaba el acorde sobre su sílaba.
+- Con el modo puesto, tono, bemoles y diagramas se **deshabilitan**: no hay nada
+  que transponer ni digitación que enseñar. La elección se recuerda en
+  `accordio_letra` (`localStorage`), como el tema y el instrumento.
+- **Falta en la app Android**, y está apuntado en §7 con lo que hay que portar.
+
 ### 3.8 Renombrado Vivace → Accordio y carpeta
 - Ver la nota del principio. La carpeta del proyecto pasó de
   `~/Desktop/projects/vivace` a **`~/Desktop/projects/accordio`**; hay que abrir
@@ -582,6 +596,17 @@ del blob, por si hace falta subirlo a mano con
 servidor rechaza los de seis. `seed` solo siembra guitarra.
 
 **Mejoras identificadas y no abordadas**
+- [ ] **«Solo letra» en la app Android.** La web ya lo tiene (§3.9): visor e
+      impresión sin cifrado. En la app hay que repetirlo en los dos sitios, y la
+      lógica NO se reescribe a ojo: se porta `acStripChords` a Kotlin —sitio
+      natural, `chords/SongChords.kt` o un `ChordStripper.kt` al lado— con los
+      mismos casos que `test/client-lib.test.mjs`, que el criterio de «esto es
+      una línea de acordes» ya está duplicado entre la web y `ChordParser.kt` y
+      no conviene que se separe una tercera vez. Luego: interruptor en
+      `ui/song/SongViewScreen.kt` (mismo papel que en la web: estado turquesa, y
+      con él puesto no hay tono ni diagramas que tocar) y el mismo texto para
+      `print/PrintAdapter.kt`, que hoy da el documento idéntico al de la web y
+      tiene que seguir dándolo.
 - [ ] Sincronizar el progreso del entrenamiento (mismo patrón que los acordes).
 - [ ] Niveles 4-5 del curriculum en el resto de áreas.
 - [ ] El parser de cabeceras está tres veces: `SongTextFormat.kt`, `acParseSong`
