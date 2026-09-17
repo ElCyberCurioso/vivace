@@ -67,3 +67,8 @@ worker/.wrangler/
 # (incluida la cuenta de Cloudflare).
 .wrangler/
 worker/node_modules/
+# Salida por defecto de tools/generar-ukelele.mjs: 200 KB derivados del fichero
+# que la app ya trae empaquetado. Se genera para subirlo con el PUT del
+# diccionario y no tiene por qué vivir en el repositorio; versionar la copia
+# sería justo lo que el generador viene a evitar, dos ficheros que se separan.
+worker/tools/ukelele-diccionario.json
