@@ -4,7 +4,12 @@ Documento de traspaso: qué es el proyecto, cómo está montado hoy, **por qué*
 tomaron ciertas decisiones (para no deshacerlas sin querer) y qué queda
 pendiente.
 
-Última actualización: 2026-09-13 · Rama `master` · último commit `9e9eaa9`.
+Última actualización: 2026-09-17 · Rama `master` · último commit `03317c6`.
+
+> Todo lo que describe este documento está **commiteado y subido** a
+> `origin/master`, y el servidor está **desplegado** (versión `84a93ad9`). Lo
+> único sin publicar es la app: sigue en `versionCode 2`, y no debe publicarse
+> sin probarla antes en un móvil de verdad (§7).
 
 > **El proyecto se llama Accordio**, y desde el renombrado también por dentro:
 > código, comentarios, documentación, tokens de estilo, rutas de los estáticos y
@@ -91,6 +96,7 @@ separador `---` y cuerpo con acordes entre llaves.
 | `src/chords.js` | Diccionarios globales por instrumento (guitarra/ukelele) y variantes de digitación por partitura. |
 | `src/chords-db.js` | Biblioteca de acordes (generada; ver `tools/generar-chords-db.mjs`). |
 | `src/chords-seed.js` | Semilla curada de 348 acordes, anterior a la biblioteca. |
+| `eslint.config.mjs` | Reglas de lint (pocas y elegidas; `no-undef` es la que importa). |
 
 `src/admin-html.js` **se ha borrado** junto con las rutas de token compartido.
 
@@ -130,8 +136,10 @@ Las rutas heredadas con token compartido (`/list`, `/object`, `/bodies`,
 **Transporte**: el Worker atiende `accordio.site` y `www.accordio.site` como
 dominios propios (`custom_domain` en `wrangler.toml`). Antes de mirar la ruta,
 `canonicalRedirect` manda todo a HTTPS y al apex —301 en GET/HEAD, 308 en el
-resto— y `conHsts` añade HSTS de un año a lo que salga por HTTPS. `localhost`
-está exento de las dos cosas.
+resto— y `conCabecerasSeguras` añade HSTS de un año a lo que salga por HTTPS,
+más `nosniff`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` y la
+CSP en modo informe. `localhost` está exento del HSTS y de los redirects, no de
+las demás cabeceras: así un fallo de política se ve mientras se desarrolla.
 
 ### Almacenamiento
 - **D1** (`vivace`, nombre real del recurso; ver la nota del principio): usuarios,
@@ -140,19 +148,91 @@ está exento de las dos cosas.
 - **R2** (`guitarchords`): el **texto** de cada partitura (`songs/*.txt`), el blob
   de acordes por usuario (`users/<id>/chords.json`), los diccionarios globales
   —`chords/global-chords.json` (guitarra) y `chords/global-chords-ukelele.json`
-  (ukelele, **vacío hasta que se suba**)— y el APK (`app/`).
+  (ukelele, **vacío hasta que se importe**; el fichero para subirlo se genera con
+  `tools/generar-ukelele.mjs`, ver §7)— y el APK (`app/`).
 - `songs.r2_key` apunta a la clave original: **la migración no mueve ficheros**.
 
 ---
 
-## 3. Trabajo realizado en la última sesión
+## 3. Trabajo realizado en las últimas sesiones
 
-Lo de la sesión anterior (dominio propio, marca Accordio, buscador en el
-servidor, biblioteca de acordes, papel A4 y app 2.0) **ya está commiteado** en
-`9e9eaa9`; el detalle, en el mensaje de ese commit.
+### 3.0 Sesión 16–17/09/2026 · siete commits, `b4f8fd0` … `03317c6`
 
-**Nada de lo que sigue está commiteado**: 60 ficheros con cambios y 7 nuevos. El
-mensaje ya redactado está en `COMMIT_MESSAGE.txt`.
+Todo commiteado, subido y —lo del servidor— desplegado. 38 ficheros,
++2.864/−52. Orden de los commits:
+
+| Commit | Qué |
+|---|---|
+| `b4f8fd0` | Cabeceras de seguridad, errores sin filtrar, freno de escritura, despliegue del esquema |
+| `af41fd2` | CI en GitHub Actions, ESLint y más casos en el test de URLs |
+| `d2ee0a7` | El esquema se prueba contra SQLite de verdad |
+| `c732e69` | Diccionario de ukelele |
+| `a1d9489` | No versionar la salida del generador |
+| `e1c40e9` | `chordVariants` en la app (y el fallo de sync que destapó) |
+| `03317c6` | Subir de verdad la base a la versión 18 |
+
+**Dos fallos que estaban en producción y ya no están**
+
+1. **El despliegue no podía aplicar el esquema.** `wrangler d1 execute --file`
+   no ejecuta el SQL: lo sube y luego pide a la API que lo importe
+   (`POST /d1/database/<id>/import`), y ese paso falla desde esta máquina con un
+   «fetch failed» que parece falta de red. Reproducido con un fichero de una
+   línea, y también con wrangler 4, así que actualizar no arregla nada.
+   `aplicar_esquema` manda ahora `schema.sql` por `--command` en una sola
+   llamada, con repaso sentencia a sentencia de reserva para señalar la culpable.
+2. **El push de sincronización borraba las variantes de acorde.**
+   `stmtUpdateSongMeta` reescribe la fila entera con `meta.chord_variants || ""`,
+   y `sync.js` no nombraba la columna: cada sincronización desde el móvil se
+   llevaba por delante lo elegido en la web. La ruta `PUT /api/songs/:id` sí se
+   protegía; esta se quedó fuera y sin prueba que lo viera. Ahora se conservan
+   salvo que el cliente diga otra cosa, y `null` cuenta como «no las toques»
+   (la app serializa con `encodeDefaults`, así que un campo vacío viaja como
+   null explícito). Dos pruebas lo fijan. **Lo ya perdido no vuelve.**
+
+**Servidor**
+- `conHsts` pasa a `conCabecerasSeguras`: `nosniff`, `X-Frame-Options: DENY`,
+  `Referrer-Policy`, `Permissions-Policy` y CSP **en modo informe**
+  (`Content-Security-Policy-Report-Only`). Para hacerla obligatoria, ver §7.
+- El catch global ya no serializa `err.message` al cliente —daba nombres de
+  tablas y columnas—: registra el detalle con un id corto y devuelve ese id.
+- Freno de escritura (60/min por usuario) en crear partitura, comentario y
+  propuesta; `rateLimit` acepta tope y ventana propios y `auth_attempts` se
+  barre sola pasadas 24 h.
+- El registro deja de confirmar si un email ya tiene cuenta.
+- `listProposals` paginada; el administrador del catálogo se recuerda 5 minutos
+  en vez de preguntarlo a D1 en cada carga de la portada.
+- `[observability]` en `wrangler.toml`: antes un fallo no dejaba rastro ninguno.
+- La pestaña del navegador dice `Título · Autor · Accordio` al abrir partitura.
+
+**Calidad**
+- **CI** (`.github/workflows/ci.yml`): worker (`npm ci`, `check`, `test`) y app
+  (`./gradlew test`), en push, PR y a mano.
+- **ESLint** encadenado a `npm run check`; nada más ponerlo cazó dos imports
+  muertos. Los `catch (e)` que no miran la excepción pasan a `catch` a secas.
+- `test/esquema.test.mjs`: `schema.sql` y `migrations.sql` contra SQLite real
+  (`node:sqlite`), incluida la invariante de la que vive el despliegue —repetirlo
+  no cambia el esquema—. Worker: **212 pruebas**.
+- `npm run deploy` **falla a propósito** y remite a `tools/deploy.sh`; queda
+  `deploy:raw` para emergencias.
+
+**Ukelele y digitaciones**
+- `app/src/main/assets/chords/ukulele.json` (chords-db, MIT): 552 acordes,
+  2.114 digitaciones. `tools/generar-ukelele.mjs` produce el diccionario del
+  servidor **desde ese mismo fichero** —una sola copia en el repositorio— y
+  añade los alias en sostenidos, porque chords-db escribe el ukelele en bemoles
+  y quien teclee `{C#m}` no encontraría nada. Salen 777 nombres.
+- `chords/global-chords-ukelele.json` **sigue vacío**: falta importarlo (§7).
+- La app lee y escribe `chordVariants`: `ChordVariants` (puro, 8 pruebas),
+  columna `chord_variants`, **migración de Room 17 → 18**, baja y sube por
+  sincronización, y el modal de acorde abre por la postura elegida y deja fijar
+  otra. Sin partitura delante (diccionario, buscador) el botón no aparece.
+
+> **Cuidado con Room.** `version = 18` se quedó sin aplicar en un primer intento
+> y Room, sin quejarse, exportó el esquema con la columna nueva **llamándolo
+> 17.json**. En un móvil con datos eso cierra la app al arrancar («Room cannot
+> verify the data integrity»). Corregido en `03317c6`: versión 18, `17.json`
+> restaurado y `18.json` exportado. Al tocar entidades, **comprobar siempre que
+> aparece el `<versión>.json` nuevo**.
 
 ### 3.1 Web: cada pantalla es una ruta
 - Antes las pantallas se abrían llamándose entre ellas y se apilaban: al editor
@@ -442,7 +522,9 @@ Estado actual de producción:
 | R2 | `guitarchords` |
 | Secreto | `AUTH_SECRET` puesto (obligatorio; sin él la API responde 503) |
 | Datos | 1 usuario (admin) · 426 partituras |
-| App | `versionCode 2` / `2.0` publicada en `/update`, firmada con la clave de siempre (SHA-256 `e6a53587…`) |
+| Worker | Versión `84a93ad9`, desplegada el 17/09/2026 con `./tools/deploy.sh release` |
+| App | `versionCode 2` / `2.0` publicada en `/update`, firmada con la clave de siempre (SHA-256 `e6a53587…`). **Los cambios del 16–17/09 NO están publicados** |
+| CI | GitHub Actions en cada push y PR; en verde |
 | Diccionario | biblioteca completa sembrada en el diccionario global (14.424 nombres) |
 | Estilo web | paquete de marca Accordio (claro + oscuro); fuentes en `worker/brand/` |
 | Estilo app | mismo paquete: paleta, Montserrat+Poppins, formas, barra teal e iconos del kit |
@@ -453,26 +535,33 @@ Estado actual de producción:
 ## 7. Pendiente
 
 **Lo primero de todo**
-- [ ] **COMMIT.** 60 ficheros con cambios y 7 nuevos: todo lo de §3 vive solo en
-      el árbol de trabajo. Mensaje en `COMMIT_MESSAGE.txt`; el último commit es
-      `9e9eaa9`.
-- [ ] **Desplegar la web con `./tools/deploy.sh release`**, NO con un
-      `wrangler deploy` a secas: hay columna nueva (§6). No consta ningún
-      despliegue posterior a `9e9eaa9`; el último documentado llegaba hasta «el
-      papel como documento», así que probablemente falten también el capo en el
-      PDF, el editor y el logo del papel de aquella sesión. Tras desplegar,
-      Ctrl+F5: los estáticos cambian de ruta (`/static/accordio.*`).
-- [ ] **Publicar la app** con los cambios de esta sesión (ukelele, afinador, PDF,
-      renombrado): subir `versionCode`/`versionName` y
-      `./tools/deploy.sh app <apk> --url https://accordio.site`.
 - [ ] **Copia de seguridad de la clave de firma** fuera de esta máquina (§9).
-      Sin ella no se puede volver a actualizar la app nunca.
-- [ ] **Probar la app en un dispositivo real.** Compila y sus 121 tests pasan,
-      pero **no se ha visto ejecutándose**: aquí no hay emulador. Mirar la
-      migración de Room 16 → 17 sobre una base con datos, la prueba del modo
-      avión (§5), el selector del afinador, los diagramas de ukelele, el PDF
-      impreso y que tras actualizar **se conserve la sesión** (mudanza de
-      `guitarchords_sync` → `accordio_sync`).
+      Sin ella no se puede volver a actualizar la app nunca. Sigue pendiente
+      desde hace sesiones y es lo único irreversible de esta lista.
+- [ ] **Probar la app en un dispositivo real.** Compila y sus tests pasan, pero
+      **no se ha visto ejecutándose**: aquí no hay emulador. Ahora pesa más que
+      antes, porque la base cambió de versión. Mirar:
+      - la **migración de Room 17 → 18** sobre una base con datos (§3.0);
+      - que tras actualizar **se conserve la sesión** (mudanza de
+        `guitarchords_sync` → `accordio_sync`);
+      - los diagramas de ukelele, que ahora vienen del diccionario empaquetado
+        y ya no de las posturas calculadas;
+      - elegir una digitación en el visor, sincronizar y verla puesta en la web;
+      - el modo avión (§5), el selector del afinador y el PDF impreso.
+- [ ] **Importar el diccionario de ukelele en la web.** Generarlo con
+      `node tools/generar-ukelele.mjs` (deja `worker/tools/ukelele-diccionario.json`,
+      ~214 KB, ignorado por git) y subirlo desde **Acordes → Instrumento:
+      Ukelele → Importar JSON…**. Hasta entonces la web sigue sin posturas de
+      ukelele; la app ya las trae dentro.
+- [ ] **Publicar la app** cuando lo anterior esté probado: subir
+      `versionCode`/`versionName` y
+      `./tools/deploy.sh app <apk> --url https://accordio.site`.
+- [ ] **Pasar la CSP a obligatoria.** Hoy va como
+      `Content-Security-Policy-Report-Only` porque no había navegador con el que
+      probarla. Recorrer catálogo, visor con vídeo, editor y diccionario con la
+      consola abierta; si no se queja, renombrar la cabecera en
+      `conCabecerasSeguras` (`index.js`). Si protesta, ajustar la política, no
+      quitarla.
 
 **Convendría, sin prisa**
 - [ ] Activar **Always Use HTTPS** y **Minimum TLS 1.2** en la zona de Cloudflare
@@ -482,23 +571,15 @@ Estado actual de producción:
 - [ ] Sembrar el diccionario en producción si no se ha hecho: pestaña Acordes →
       **Importar diccionario base** (una vez; solo añade).
 
-**Ukelele: falta el contenido**
-- [ ] **Subir el diccionario de ukelele.** La estructura está hecha; el blob
-      (`chords/global-chords-ukelele.json`) está vacío. Dos formas de llenarlo:
-      pestaña **Acordes → Instrumento: Ukelele → Importar JSON…**, o
-      `PUT /api/chords/global?instrument=ukelele` con
-      `{"chords": {"Am": [{"frets":[2,0,0,0],"fingers":[2,0,0,0],"baseFret":1,"barres":[]}]}}`.
-      **Cuatro valores por digitación**, de la 4ª cuerda (Sol) a la 1ª (La); el
-      servidor rechaza los de seis. No hay semilla de ukelele: `seed` solo
-      siembra guitarra.
-- [ ] **Empaquetar el diccionario de ukelele en la app**: cuando exista, va a
-      `app/src/main/assets/chords/ukulele.json` con el formato de chords-db
-      (cuatro trastes por posición). `ChordDb` ya lo busca ahí; mientras no
-      esté, las posturas las calcula `ChordLibrary` y la pantalla lo avisa.
-- [ ] Llevar las **variantes por partitura** (`chordVariants`) a la app: hoy el
-      móvil no las lee (la API se las conserva al guardar desde el móvil, así
-      que no se pierden). El ukelele ya lo conoce: diccionario, diagramas,
-      sonido y afinador.
+**Ukelele y digitaciones: hecho en la sesión del 16–17/09**
+
+Queda solo importar el blob en la web (arriba). El diccionario ya viaja en la
+app, el generador existe y `chordVariants` funciona de punta a punta. Formato
+del blob, por si hace falta subirlo a mano con
+`PUT /api/chords/global?instrument=ukelele`:
+`{"chords": {"Am": [{"frets":[2,0,0,0],"fingers":[2,0,0,0],"baseFret":1,"barres":[]}]}}`.
+**Cuatro valores por digitación**, de la 4ª cuerda (Sol) a la 1ª (La); el
+servidor rechaza los de seis. `seed` solo siembra guitarra.
 
 **Mejoras identificadas y no abordadas**
 - [ ] Sincronizar el progreso del entrenamiento (mismo patrón que los acordes).
@@ -506,8 +587,16 @@ Estado actual de producción:
 - [ ] El parser de cabeceras está tres veces: `SongTextFormat.kt`, `acParseSong`
       y `migrate.js`. El de YouTube, dos (cliente y servidor), con un test que
       compara ambas para que no se separen.
-- [ ] CSP: ya no queda JS de la aplicación en línea, pero sigue habiendo un
-      `<script>` mínimo en `<head>` para aplicar el tema sin parpadeo.
+- [ ] El `<script>` mínimo del `<head>` (tema sin parpadeo) es lo que obliga a
+      `'unsafe-inline'` en la CSP. Sacándolo se puede cambiar por un hash y
+      cerrar ese hueco del todo.
+- [ ] Tests de migración de Room con `MigrationTestHelper`: ya hay dos esquemas
+      (`17.json` y `18.json`) con los que contrastar, pero no existe `androidTest`
+      ni Robolectric en el repositorio, así que no hay dónde ejecutarlos.
+- [ ] Plan por fases de mejora (fases 3 a 5): Google Play —variantes `play` y
+      `direct`, R8, páginas de privacidad y términos, borrado y exportación de
+      cuenta—, PWA, accesibilidad, layout de tablet, i18n de la web y FTS5 en la
+      búsqueda cuando el catálogo lo pida.
 - [ ] i18n de `ui/dictionary/TheoryGuide.kt` (contenido largo en español).
 - [ ] Layout de tablet tipo lista-detalle.
 - [ ] Quedan emoji en la web (`🔒` de bloqueada, `♩`, `♦`, `▶`): el kit tiene
