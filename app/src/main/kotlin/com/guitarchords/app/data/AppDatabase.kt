@@ -15,7 +15,7 @@ import com.guitarchords.app.training.TrainingArea
         TrainingProfile::class, AreaProgress::class, ExerciseResult::class,
         AchievementUnlock::class
     ],
-    version = 17,
+    version = 18,
     // El esquema se exporta a app/schemas/ (ver ksp {} en build.gradle.kts).
     exportSchema = true
 )
