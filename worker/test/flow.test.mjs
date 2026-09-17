@@ -30,7 +30,7 @@ async function pedir(env, method, path, { body, token } = {}) {
   const res = await worker.fetch(req, env);
   const texto = await res.text();
   let datos = {};
-  try { datos = texto ? JSON.parse(texto) : {}; } catch (e) { datos = { raw: texto }; }
+  try { datos = texto ? JSON.parse(texto) : {}; } catch { datos = { raw: texto }; }
   return { status: res.status, datos, headers: res.headers };
 }
 

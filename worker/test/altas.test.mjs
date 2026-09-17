@@ -23,7 +23,7 @@ async function pedir(env, method, path, { body, token } = {}) {
   }), env);
   const texto = await res.text();
   let datos = {};
-  try { datos = texto ? JSON.parse(texto) : {}; } catch (e) { datos = { raw: texto }; }
+  try { datos = texto ? JSON.parse(texto) : {}; } catch { datos = { raw: texto }; }
   return { status: res.status, datos };
 }
 

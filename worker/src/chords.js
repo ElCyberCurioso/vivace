@@ -183,7 +183,7 @@ export async function readGlobalChords(env, instrumento = INSTRUMENTO_POR_DEFECT
       instrument: nombre,
       chords: datos.chords || {}
     };
-  } catch (e) {
+  } catch {
     // Un blob corrupto no puede tumbar la lectura de una partitura.
     return emptyDictionary(nombre);
   }
@@ -226,7 +226,7 @@ function sanitizeVariantMap(fuente) {
     let nombre;
     try {
       nombre = normalizeChordName(bruto);
-    } catch (e) {
+    } catch {
       continue;                      // un nombre imposible se ignora, no rompe el guardado
     }
     if (indice === 0) continue;      // la primera es el valor por defecto: no se guarda
@@ -264,7 +264,7 @@ export function decodeVariants(texto) {
   if (!texto) return emptyVariants();
   try {
     return sanitizeVariants(JSON.parse(texto));
-  } catch (e) {
+  } catch {
     return emptyVariants();
   }
 }

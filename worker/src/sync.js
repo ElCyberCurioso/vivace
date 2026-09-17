@@ -392,7 +392,7 @@ async function push(request, env, cors, user) {
   let body;
   try {
     body = await request.json();
-  } catch (e) {
+  } catch {
     return fail("cuerpo JSON no válido", cors, 400);
   }
   const listas = Array.isArray(body.playlists) ? body.playlists : [];

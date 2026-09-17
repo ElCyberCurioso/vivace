@@ -55,7 +55,7 @@ export async function readSetting(db, key, porDefecto = null) {
   try {
     const fila = await db.prepare("SELECT value FROM settings WHERE key = ?").bind(key).first();
     return fila ? fila.value : porDefecto;
-  } catch (e) {
+  } catch {
     // La tabla puede no existir todavía (despliegue nuevo, migración sin pasar).
     // Quedarse sin ajustes no puede tumbar el registro ni la web.
     return porDefecto;

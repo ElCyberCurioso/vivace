@@ -92,7 +92,7 @@ export async function verifyToken(token, secret) {
     const now = Math.floor(Date.now() / 1000);
     if (typeof payload.exp !== "number" || payload.exp < now) return null;
     return payload;
-  } catch (e) {
+  } catch {
     return null;
   }
 }

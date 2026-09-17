@@ -27,7 +27,7 @@ export function youtubeId(url) {
   let u;
   try {
     u = new URL(texto.indexOf("//") < 0 ? "https://" + texto : texto);
-  } catch (e) {
+  } catch {
     return "";
   }
   const host = u.hostname.replace(/^www\./, "").toLowerCase();

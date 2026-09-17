@@ -60,13 +60,19 @@ test("una partitura sin cabeceras se queda entera como cuerpo", () => {
 
 test("acUrlSegura solo acepta http y https", () => {
   const acUrlSegura = new Function(CLIENT_JS + "; return acUrlSegura;")();
-  for (const buena of ["http://a.test", "https://a.test/x?y=1", "HTTPS://A.TEST"]) {
+  for (const buena of ["http://a.test", "https://a.test/x?y=1", "HTTPS://A.TEST",
+                       // Pegar una dirección suele traerse espacios de sobra.
+                       "  https://a.test/x  "]) {
     assert.equal(acUrlSegura(buena), true, buena);
   }
   // El caso que importa: esto acababa en el href del enlace "Original ↗", que
   // ve cualquiera que abra la partitura.
   for (const mala of ["javascript:alert(1)", "JavaScript:alert(1)", "data:text/html,x",
-                      "//evil.test", "ftp://a.test", "", null, undefined, "   "]) {
+                      "//evil.test", "ftp://a.test", "", null, undefined, "   ",
+                      // Los otros esquemas que ejecutan o incrustan contenido.
+                      "vbscript:msgbox(1)", "file:///etc/passwd", "blob:https://a.test/x",
+                      // Y lo que ni siquiera es texto: así llega desde la API.
+                      42]) {
     assert.equal(acUrlSegura(mala), false, String(mala));
   }
 });

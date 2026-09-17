@@ -40,7 +40,7 @@ import {
 import {
   canAddVersion, canComment, canDeleteComment, canRate,
   canEdit, canEditChords, canManageRoles, canManageSettings, canPropose, canReview,
-  canManageTrashed, canSetVisibility, canView, canWithdrawProposal, editDenialReason, isEditor,
+  canManageTrashed, canSetVisibility, canView, canWithdrawProposal, editDenialReason,
   isValidRole, isValidVisibility
 } from "./permissions.js";
 import {
@@ -53,7 +53,7 @@ import { FALLBACK_GENRE, guessGenre } from "./genres.js";
 import { isValidYoutube, youtubeSearch } from "./youtube.js";
 import { handleSync } from "./sync.js";
 import {
-  MAX_CHORDS_BLOB, checkContent, checkField, checkSongFields, clearRate,
+  MAX_CHORDS_BLOB, checkField, checkSongFields, clearRate,
   rateKey, rateLimit
 } from "./limits.js";
 
@@ -101,7 +101,7 @@ export async function currentUser(request, env) {
 async function readJson(request) {
   try {
     return await request.json();
-  } catch (e) {
+  } catch {
     return null;
   }
 }
@@ -628,7 +628,7 @@ export async function handleApi(request, env, url, cors) {
     let body;
     try {
       body = await request.json();
-    } catch (e) {
+    } catch {
       return fail("cuerpo JSON no válido", cors, 400);
     }
     try {
@@ -697,7 +697,7 @@ export async function handleApi(request, env, url, cors) {
       }
       try {
         JSON.parse(raw);
-      } catch (e) {
+      } catch {
         return fail("el diccionario personal no es JSON válido", cors, 400);
       }
       await env.BUCKET.put(key, raw, {
