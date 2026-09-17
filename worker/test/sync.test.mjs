@@ -177,6 +177,61 @@ test("con el rev correcto la edición entra y el rev sube", async () => {
   assert.equal(env.DB.tablas.songs[0].title, "Después");
 });
 
+test("el push del móvil NO borra las variantes elegidas en la web", async () => {
+  /*
+   * Regresión. `stmtUpdateSongMeta` reescribe la fila entera con
+   * `meta.chord_variants || ""`, y esta ruta no nombraba la columna: cada
+   * sincronización desde el móvil se llevaba por delante las digitaciones
+   * elegidas en el navegador. La ruta de edición normal sí se protegía; esta se
+   * quedó fuera, y no había prueba que lo viera.
+   */
+  const env = entorno({
+    songs: [{ id: "s1", owner_id: ANA.id, r2_key: "songs/s1.txt", title: "Antes", artist: "",
+      genre: "", capo: 0, source_url: "", locked: 0, visibility: "private", favorite: 0,
+      position: 0, playlist_id: null, rev: 1, created_at: 1, updated_at: 1, deleted_at: 0,
+      youtube_url: "", chord_variants: '{"guitarra":{"F":2}}' }]
+  }, { "songs/s1.txt": "antes" });
+
+  const datos = await (await llamar(env, "POST", "/api/sync/push", {
+    token: await tokenDe(ANA),
+    body: { songs: [{ id: "s1", baseRev: 1, title: "Después", content: "después" }] }
+  })).json();
+
+  assert.equal(datos.songs[0].ok, true);
+  assert.equal(
+    env.DB.tablas.songs[0].chord_variants, '{"guitarra":{"F":2}}',
+    "una app que no manda variantes no está pidiendo que se borren"
+  );
+});
+
+test("mandar variantes las cambia; mandar null las deja como estaban", async () => {
+  const conVariantes = () => entorno({
+    songs: [{ id: "s1", owner_id: ANA.id, r2_key: "songs/s1.txt", title: "T", artist: "",
+      genre: "", capo: 0, source_url: "", locked: 0, visibility: "private", favorite: 0,
+      position: 0, playlist_id: null, rev: 1, created_at: 1, updated_at: 1, deleted_at: 0,
+      youtube_url: "", chord_variants: '{"guitarra":{"F":2}}' }]
+  }, { "songs/s1.txt": "t" });
+
+  const cambia = conVariantes();
+  await llamar(cambia, "POST", "/api/sync/push", {
+    token: await tokenDe(ANA),
+    body: { songs: [{ id: "s1", baseRev: 1, chordVariants: { guitarra: { F: 3 } } }] }
+  });
+  assert.equal(JSON.parse(cambia.DB.tablas.songs[0].chord_variants).guitarra.F, 3);
+
+  /*
+   * `null` es lo que manda la app: serializa con `encodeDefaults`, así que un
+   * campo sin valor viaja como null explícito en vez de faltar. Tiene que
+   * significar «no las toques», no «déjalas vacías».
+   */
+  const respeta = conVariantes();
+  await llamar(respeta, "POST", "/api/sync/push", {
+    token: await tokenDe(ANA),
+    body: { songs: [{ id: "s1", baseRev: 1, chordVariants: null }] }
+  });
+  assert.equal(respeta.DB.tablas.songs[0].chord_variants, '{"guitarra":{"F":2}}');
+});
+
 test("el borrado del móvil llega al servidor como papelera, no como olvido", async () => {
   const env = entorno({
     songs: [{ id: "s1", owner_id: ANA.id, r2_key: "songs/s1.txt", title: "Adiós", artist: "",

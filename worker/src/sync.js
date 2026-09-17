@@ -31,6 +31,7 @@ import {
 } from "./permissions.js";
 import { checkSongFields } from "./limits.js";
 import { isValidYoutube } from "./youtube.js";
+import { encodeVariants } from "./chords.js";
 
 /**
  * Cuántos elementos por tanda. Cada partitura o versión con texto es UNA
@@ -311,7 +312,24 @@ async function pushSongs(env, user, entradas, mapaListas, mapaCanciones) {
         position: item.position ?? existente.position,
         playlist_id: item.playlistId !== undefined || item.playlistClientId
           ? resolveRef(item, mapaListas, "playlistId", "playlistClientId")
-          : existente.playlist_id
+          : existente.playlist_id,
+        /*
+         * Las variantes se CONSERVAN salvo que el cliente diga otra cosa.
+         *
+         * `stmtUpdateSongMeta` reescribe la fila entera con `meta.chord_variants
+         * || ""`, así que no nombrarlas aquí no era dejarlas en paz: era
+         * borrarlas. Cada sincronización desde el móvil se llevaba por delante
+         * las digitaciones elegidas en la web, sin avisar y sin que ninguna
+         * prueba lo viera. La ruta de edición normal (PUT /api/songs/:id) sí se
+         * protegía; esta se quedó fuera.
+         *
+         * `null` cuenta como «no las toques», y no como «déjalas vacías»: la app
+         * serializa con `encodeDefaults`, de modo que un campo sin valor viaja
+         * como null explícito en vez de faltar.
+         */
+        chord_variants: item.chordVariants !== undefined && item.chordVariants !== null
+          ? encodeVariants(item.chordVariants)
+          : (existente.chord_variants || "")
       });
       if (item.clientId) mapaCanciones[item.clientId] = actualizada.id;
       salida.push({ ...resultado, ok: true, id: actualizada.id, rev: actualizada.rev, updatedAt: actualizada.updated_at });

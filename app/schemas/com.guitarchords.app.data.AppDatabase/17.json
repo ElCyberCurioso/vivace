@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 17,
-    "identityHash": "db10e1cb7f4541d9f9b98ee804760ce0",
+    "identityHash": "19e986e0d3430d32bf09e50b2688b458",
     "entities": [
       {
         "tableName": "playlists",
@@ -68,7 +68,7 @@
       },
       {
         "tableName": "songs",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `playlist_id` INTEGER, `title` TEXT NOT NULL, `artist` TEXT NOT NULL, `genre` TEXT NOT NULL, `content` TEXT NOT NULL, `favorite` INTEGER NOT NULL, `capo` INTEGER NOT NULL, `source_url` TEXT NOT NULL, `remote_key` TEXT, `remote_id` TEXT, `visibility` TEXT NOT NULL, `remote_etag` TEXT, `remote_updated_at` INTEGER NOT NULL, `remote_rev` INTEGER NOT NULL, `dirty` INTEGER NOT NULL, `locked` INTEGER NOT NULL, `position` INTEGER NOT NULL, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, `deleted_at` INTEGER NOT NULL, FOREIGN KEY(`playlist_id`) REFERENCES `playlists`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `playlist_id` INTEGER, `title` TEXT NOT NULL, `artist` TEXT NOT NULL, `genre` TEXT NOT NULL, `content` TEXT NOT NULL, `favorite` INTEGER NOT NULL, `capo` INTEGER NOT NULL, `source_url` TEXT NOT NULL, `remote_key` TEXT, `remote_id` TEXT, `visibility` TEXT NOT NULL, `remote_etag` TEXT, `remote_updated_at` INTEGER NOT NULL, `remote_rev` INTEGER NOT NULL, `dirty` INTEGER NOT NULL, `locked` INTEGER NOT NULL, `position` INTEGER NOT NULL, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, `deleted_at` INTEGER NOT NULL, `chord_variants` TEXT NOT NULL, FOREIGN KEY(`playlist_id`) REFERENCES `playlists`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )",
         "fields": [
           {
             "fieldPath": "id",
@@ -194,6 +194,12 @@
             "fieldPath": "deletedAt",
             "columnName": "deleted_at",
             "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "chordVariants",
+            "columnName": "chord_variants",
+            "affinity": "TEXT",
             "notNull": true
           }
         ],
@@ -703,7 +709,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'db10e1cb7f4541d9f9b98ee804760ce0')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '19e986e0d3430d32bf09e50b2688b458')"
     ]
   }
 }

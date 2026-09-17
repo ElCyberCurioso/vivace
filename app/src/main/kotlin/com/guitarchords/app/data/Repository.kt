@@ -1,6 +1,8 @@
 package com.guitarchords.app.data
 
 import androidx.room.withTransaction
+import com.guitarchords.app.chords.ChordVariants
+import com.guitarchords.app.chords.Instrument
 import com.guitarchords.app.sync.RemoteSong
 import com.guitarchords.app.sync.SongTextFormat
 import kotlinx.coroutines.flow.Flow
@@ -319,7 +321,8 @@ class Repository(
                 remoteRev = remote.rev,
                 visibility = remote.visibility,
                 dirty = false,
-                position = remote.position
+                position = remote.position,
+                chordVariants = ChordVariants.encode(remote.chordVariants)
             )
         )
     }
@@ -345,7 +348,8 @@ class Repository(
                 position = remote.position,
                 deletedAt = 0,
                 dirty = false,
-                updatedAt = System.currentTimeMillis()
+                updatedAt = System.currentTimeMillis(),
+                chordVariants = ChordVariants.encode(remote.chordVariants)
             )
         )
     }
@@ -359,6 +363,28 @@ class Repository(
     suspend fun applyRemoteFlags(local: Song, remote: RemoteSong) {
         if (remote.locked != local.locked) songDao.setLocked(local.id, remote.locked)
         if (remote.visibility != local.visibility) songDao.setVisibility(local.id, remote.visibility)
+    }
+
+    /**
+     * Fija qué digitación usa esta partitura para un acorde, en un instrumento.
+     *
+     * Se marca `dirty` como cualquier otro cambio local: la elección viaja al
+     * servidor y de ahí a la web, que es donde se podía hacer hasta ahora. Si no
+     * cambia nada no se toca la fila, para no encender `dirty` por abrir el
+     * modal y volver a cerrar.
+     */
+    suspend fun setChordVariant(
+        songId: Long,
+        instrument: Instrument,
+        chord: String,
+        index: Int
+    ) = db.withTransaction {
+        val song = songOnce(songId) ?: return@withTransaction
+        val actualizado = ChordVariants.withChoice(song.chordVariants, instrument, chord, index)
+        if (actualizado == song.chordVariants) return@withTransaction
+        songDao.update(song.copy(chordVariants = actualizado))
+        songDao.touch(songId, now())
+        notifyChange()
     }
 
     /** Cambia quién puede ver la partitura (se subirá en el próximo push). */

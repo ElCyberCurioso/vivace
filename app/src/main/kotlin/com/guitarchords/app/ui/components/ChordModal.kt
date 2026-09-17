@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import com.guitarchords.app.R
 import com.guitarchords.app.chords.ChordDiagram
 import com.guitarchords.app.chords.ChordLibrary
+import com.guitarchords.app.chords.ChordVariants
 import com.guitarchords.app.chords.Instrument
 import com.guitarchords.app.chords.InstrumentPrefs
 import com.guitarchords.app.chords.CustomChords
@@ -54,7 +55,21 @@ import com.guitarchords.app.ui.icons.AccordioIcons
 @Composable
 fun ChordModal(
     chordName: String,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    /**
+     * Elecciones de la partitura que se está mirando (`songs.chord_variants`).
+     * Se pasa el JSON entero y no un índice ya resuelto porque quien sabe cuántas
+     * posturas hay —y qué instrumento se está mirando, que aquí se puede cambiar—
+     * es este modal. El diccionario y el buscador no pasan ninguna y entran por
+     * la primera, que es lo de siempre.
+     */
+    variantsJson: String? = null,
+    /**
+     * Fija esta postura para la partitura que se está mirando. Null donde no hay
+     * partitura de por medio (diccionario, buscador): allí no habría dónde
+     * guardarla, y el botón ni aparece.
+     */
+    onChoose: ((Int) -> Unit)? = null
 ) {
     val sheetState = rememberModalBottomSheetState()
     // Las digitaciones personalizadas pueden cambiar mientras el modal está
@@ -78,7 +93,16 @@ fun ChordModal(
         if (instrument != Instrument.GUITAR) null
         else ChordLibrary.parseName(chordName)?.let { (root, qual) -> root + qual }
     }
-    var index by remember(chordName, instrument) { mutableIntStateOf(0) }
+    /*
+     * Se abre por la postura que ESTA partitura tenga elegida para este
+     * instrumento, no siempre por la primera. Al cambiar de instrumento dentro
+     * del modal se recalcula: cada uno guarda la suya.
+     */
+    var index by remember(chordName, instrument, chord) {
+        mutableIntStateOf(
+            ChordVariants.indexFor(variantsJson, instrument, chordName, chord?.variations?.size ?: 0)
+        )
+    }
     val player = rememberChordPlayer()
 
     // null = cerrado; (customId?, fretsIniciales?) = editor abierto.
@@ -195,6 +219,28 @@ fun ChordModal(
                         SuggestionChip(
                             onClick = {},
                             label = { Text(stringResource(R.string.custom_shape)) }
+                        )
+                    }
+                }
+                /*
+                 * Fijar la postura para ESTA partitura. Solo aparece con una
+                 * partitura detrás (el visor) y cuando hay más de una donde
+                 * elegir: en el diccionario no habría dónde guardarla.
+                 */
+                if (onChoose != null && total > 1) {
+                    Spacer(Modifier.height(8.dp))
+                    val yaElegida = safe == ChordVariants.indexFor(
+                        variantsJson, instrument, chordName, total
+                    )
+                    if (yaElegida) {
+                        SuggestionChip(
+                            onClick = {},
+                            label = { Text(stringResource(R.string.shape_used_in_song)) }
+                        )
+                    } else {
+                        AssistChip(
+                            onClick = { onChoose(safe) },
+                            label = { Text(stringResource(R.string.use_shape_in_song)) }
                         )
                     }
                 }

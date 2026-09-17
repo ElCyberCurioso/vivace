@@ -47,7 +47,13 @@ data class RemoteSong(
     val createdAt: Long = 0,
     val updatedAt: Long = 0,
     /** Texto de la partitura, incrustado por el feed de cambios. */
-    val content: String = ""
+    val content: String = "",
+    /**
+     * Digitación elegida para cada acorde, por instrumento:
+     * `{"guitarra":{"F":2}}`. El servidor siempre manda el objeto, vacío si no
+     * hay ninguna elección.
+     */
+    val chordVariants: Map<String, Map<String, Int>> = emptyMap()
 )
 
 @Serializable
@@ -129,7 +135,14 @@ data class PushSong(
     val content: String = "",
     val deleted: Boolean = false,
     /** true = borrado definitivo (se va la fila y el objeto). */
-    val purge: Boolean = false
+    val purge: Boolean = false,
+    /**
+     * Digitaciones elegidas. `null` significa «no las toques», y es lo que va
+     * mientras esta partitura no tenga ninguna: el serializador manda los nulos
+     * explícitos (`encodeDefaults`), y el servidor los trata como ausencia para
+     * no pisar lo que se haya elegido desde la web.
+     */
+    val chordVariants: Map<String, Map<String, Int>>? = null
 )
 
 @Serializable

@@ -491,4 +491,6 @@
     <string name="understood">Entendido</string>
     <string name="sync_session_expired_title">Sesión caducada</string>
     <string name="sync_session_expired_msg">La sesión ha caducado y la sincronización se ha parado. Vuelve a entrar: tus cambios siguen guardados en el móvil y subirán en cuanto haya sesión.</string>
+    <string name="use_shape_in_song">Usar en esta partitura</string>
+    <string name="shape_used_in_song">La que usa esta partitura</string>
 </resources>

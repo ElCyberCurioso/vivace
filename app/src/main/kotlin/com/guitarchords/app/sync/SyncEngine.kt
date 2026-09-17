@@ -1,5 +1,6 @@
 package com.guitarchords.app.sync
 
+import com.guitarchords.app.chords.ChordVariants
 import com.guitarchords.app.data.PendingDelete
 import com.guitarchords.app.data.Playlist
 import com.guitarchords.app.data.Repository
@@ -285,7 +286,10 @@ class SyncEngine(
         playlistId = playlistRemoteId,
         playlistClientId = if (playlistRemoteId == null && playlistId != null) "pl-$playlistId" else null,
         content = content,
-        deleted = deletedAt > 0
+        deleted = deletedAt > 0,
+        // Sin elecciones propias se manda null, que el servidor lee como «no las
+        // toques»: mandar un mapa vacío borraría las elegidas desde la web.
+        chordVariants = ChordVariants.decode(chordVariants).takeIf { it.isNotEmpty() }
     )
 
     private fun SongVersion.toPush(songRemoteId: String?) = PushVersion(

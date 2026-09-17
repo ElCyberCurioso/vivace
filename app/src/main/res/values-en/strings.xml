@@ -491,4 +491,6 @@
     <string name="understood">Got it</string>
     <string name="sync_session_expired_title">Session expired</string>
     <string name="sync_session_expired_msg">Your session expired and syncing stopped. Sign in again: your changes are still saved on the device and will upload once there is a session.</string>
+    <string name="use_shape_in_song">Use in this song</string>
+    <string name="shape_used_in_song">Used by this song</string>
 </resources>

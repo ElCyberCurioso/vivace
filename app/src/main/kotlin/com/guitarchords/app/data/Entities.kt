@@ -75,7 +75,15 @@ data class Song(
     @ColumnInfo(name = "created_at") val createdAt: Long = System.currentTimeMillis(),
     @ColumnInfo(name = "updated_at") val updatedAt: Long = System.currentTimeMillis(),
     /** Papelera: 0 = activa; >0 = momento del borrado (se purga a los 90 días). */
-    @ColumnInfo(name = "deleted_at") val deletedAt: Long = 0
+    @ColumnInfo(name = "deleted_at") val deletedAt: Long = 0,
+    /**
+     * Digitación elegida para cada acorde EN ESTA partitura, por instrumento:
+     * `{"guitarra":{"F":2}}`. Vacío = la primera del diccionario, que es lo de
+     * siempre. Se guarda tal cual viaja a la API, sin desmontar, para que el
+     * móvil no pierda las elecciones de instrumentos que todavía no conozca.
+     * Quien lo lee y lo escribe es [com.guitarchords.app.chords.ChordVariants].
+     */
+    @ColumnInfo(name = "chord_variants") val chordVariants: String = ""
 )
 
 /**

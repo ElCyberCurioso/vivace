@@ -91,6 +91,7 @@ import com.guitarchords.app.R
 import com.guitarchords.app.chords.ChordParser
 import com.guitarchords.app.chords.ChordTransposer
 import com.guitarchords.app.chords.ContentBlock
+import com.guitarchords.app.chords.InstrumentPrefs
 import com.guitarchords.app.chords.RenderedLine
 import com.guitarchords.app.data.SongVersion
 import com.guitarchords.app.metronome.MetronomeEngine
@@ -402,7 +403,17 @@ fun SongViewScreen(
     }
 
     selectedChord?.let {
-        ChordModal(chordName = it, onDismiss = { selectedChord = null })
+        ChordModal(
+            chordName = it,
+            onDismiss = { selectedChord = null },
+            // Con partitura delante, el modal abre por la digitación que ella
+            // tenga elegida y deja cambiarla; el cambio se sube como cualquier
+            // otro y aparece también en la web.
+            variantsJson = song?.chordVariants,
+            onChoose = { indice ->
+                vm.setChordVariant(it, InstrumentPrefs.current.value, indice)
+            }
+        )
     }
 
     if (showAddVersion) {

@@ -306,6 +306,23 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_17_18 = object : Migration(17, 18) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                /*
+                 * Digitación elegida por partitura y por instrumento. El
+                 * servidor la guarda desde hace tiempo y la web deja elegirla;
+                 * el móvil ni la leía, así que pintaba siempre la primera del
+                 * diccionario —a menudo una postura alta que nadie toca—.
+                 *
+                 * Nace vacía y NO se marca nada como pendiente de subir: lo que
+                 * haya elegido cada cual en la web es la verdad, y llegará en la
+                 * primera sincronización. Marcarlas `dirty` aquí subiría el
+                 * vacío del móvil y borraría justo eso.
+                 */
+                db.execSQL("ALTER TABLE songs ADD COLUMN chord_variants TEXT NOT NULL DEFAULT ''")
+            }
+        }
+
         /**
          * Filas semilla del entrenamiento (perfil único + una fila por área),
          * para que el código nunca encuentre un perfil inexistente. Se invoca
@@ -343,7 +360,7 @@ abstract class AppDatabase : RoomDatabase() {
                         MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10,
                         MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13,
                         MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16,
-                        MIGRATION_16_17
+                        MIGRATION_16_17, MIGRATION_17_18
                     )
                     .addCallback(object : Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) {

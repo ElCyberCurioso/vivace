@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.guitarchords.app.GuitarChordsApp
+import com.guitarchords.app.chords.Instrument
 import com.guitarchords.app.data.Repository
 import com.guitarchords.app.data.Song
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -77,4 +78,14 @@ class SongViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun deleteVersion(id: Long) = viewModelScope.launch { repo.deleteVersion(id) }
+
+    /**
+     * Guarda qué digitación usa esta partitura para un acorde. Hasta ahora solo
+     * se podía elegir desde la web; el móvil pintaba siempre la primera del
+     * diccionario, que a menudo es una postura alta que nadie toca.
+     */
+    fun setChordVariant(chord: String, instrument: Instrument, index: Int) =
+        viewModelScope.launch {
+            song.value?.let { repo.setChordVariant(it.id, instrument, chord, index) }
+        }
 }
